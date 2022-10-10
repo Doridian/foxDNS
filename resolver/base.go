@@ -4,16 +4,20 @@ import (
 	"container/list"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/FoxDenHome/foxdns/util"
 	"github.com/miekg/dns"
 )
 
 type Resolver struct {
-	Servers        []string
-	Client         *dns.Client
+	Servers []string
+	Client  *dns.Client
+
 	MaxConnections int
 	Retries        int
+	RetryWait      time.Duration
+	Timeout        time.Duration
 
 	AllowOnlyFromPrivate bool
 
@@ -35,11 +39,17 @@ func NewResolver(servers []string) *Resolver {
 		MaxConnections:       10,
 		Retries:              3,
 		AllowOnlyFromPrivate: true,
+		RetryWait:            time.Second,
 
 		connCond:        sync.NewCond(&sync.Mutex{}),
 		connections:     0,
 		freeConnections: list.New(),
 	}
+}
+
+func (r *Resolver) SetTimeout(timeout time.Duration) {
+	r.Client.ReadTimeout = timeout
+	r.Client.WriteTimeout = timeout
 }
 
 func (r *Resolver) acquireConn() (conn *dns.Conn, err error) {
@@ -101,6 +111,7 @@ func (r *Resolver) Exchange(m *dns.Msg) (resp *dns.Msg, err error) {
 		if err == nil {
 			return
 		}
+		time.Sleep(r.RetryWait)
 	}
 	return
 }

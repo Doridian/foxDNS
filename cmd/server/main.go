@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/FoxDenHome/foxdns/authority"
 	"github.com/FoxDenHome/foxdns/rdns"
 	"github.com/FoxDenHome/foxdns/resolver"
@@ -8,35 +10,73 @@ import (
 )
 
 func main() {
-	rdnsv6 := &rdns.RDNSv6Generator{
-		PTRSuffix: "ip6.foxden.network",
-	}
-	authv6 := authority.NewAuthorityHandler([]string{
-		rdnsv6.PTRSuffix,
-		"9.6.0.f.4.4.d.7.e.0.a.2.ip6.arpa",
-		"a.c.1.2.2.0.f.8.e.0.a.2.ip6.arpa",
-	}, []string{
-		"ns-int.foxden.network.",
-	}, "internal.foxden.network.")
-	authv6.Child = rdnsv6
+	config := LoadConfig("config.yml")
+	srv := server.NewServer()
 
-	rdnsv4 := &rdns.RDNSv4Generator{
-		PTRSuffix: "ip4.foxden.network",
-	}
-	authv4 := authority.NewAuthorityHandler([]string{
-		rdnsv4.PTRSuffix,
-		"10.in-addr.arpa",
-	}, []string{
-		"ns-int.foxden.network.",
-	}, "internal.foxden.network.")
-	authv4.Child = rdnsv4
+	if config.RDNS.IPv4.Enabled {
+		authv4 := authority.NewAuthorityHandler(append([]string{
+			config.RDNS.IPv4.Suffix,
+		}, config.RDNS.IPv4.Subnets...), config.Global.NameServers, config.Global.Mailbox)
 
-	resolv := resolver.NewResolver([]string{
-		"8.8.8.8:53",
-	})
-	s := server.NewServer()
-	authv6.Register(s.Mux)
-	authv4.Register(s.Mux)
-	s.Mux.Handle(".", resolv)
-	s.Serve()
+		authv4.Child = &rdns.RDNSv4Generator{
+			PTRSuffix: config.RDNS.IPv4.Suffix,
+		}
+
+		authv4.Register(srv.Mux)
+
+		log.Printf("IPv4 Auto-rDNS enabled")
+	} else {
+		log.Printf("IPv4 Auto-rDNS disabled")
+	}
+
+	if config.RDNS.IPv6.Enabled {
+		authv6 := authority.NewAuthorityHandler(append([]string{
+			config.RDNS.IPv6.Suffix,
+		}, config.RDNS.IPv6.Subnets...), config.Global.NameServers, config.Global.Mailbox)
+
+		authv6.Child = &rdns.RDNSv6Generator{
+			PTRSuffix: config.RDNS.IPv4.Suffix,
+		}
+
+		authv6.Register(srv.Mux)
+
+		log.Printf("IPv6 Auto-rDNS enabled")
+	} else {
+		log.Printf("IPv6 Auto-rDNS disabled")
+	}
+
+	if config.Resolver.Enabled {
+		resolv := resolver.NewResolver(config.Resolver.NameServers)
+		resolv.Client.TLSConfig.ServerName = config.Resolver.ServerName
+
+		resolv.AllowOnlyFromPrivate = config.Resolver.AllowOnlyFromPrivate
+
+		if config.Resolver.MaxConnections > 0 {
+			resolv.MaxConnections = config.Resolver.MaxConnections
+		}
+
+		if config.Resolver.Retries > 0 {
+			resolv.Retries = config.Resolver.Retries
+		}
+
+		if config.Resolver.RetryWait > 0 {
+			resolv.RetryWait = config.Resolver.RetryWait
+		}
+
+		if config.Resolver.Timeout > 0 {
+			resolv.SetTimeout(config.Resolver.Timeout)
+		}
+
+		srv.Mux.Handle(".", resolv)
+
+		log.Printf("Resolver enabled (only private clients: %v)", resolv.AllowOnlyFromPrivate)
+	} else {
+		log.Printf("Resolver disabled")
+	}
+
+	if config.Global.Listen != "" {
+		srv.ListenAddr = config.Global.Listen
+	}
+
+	srv.Serve()
 }

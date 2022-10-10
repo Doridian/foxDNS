@@ -1,0 +1,23 @@
+global:
+  nameservers:
+  - nameserver.example.com
+  mailbox: email.example.com
+  listen: :8053
+
+rdns:
+  ipv6:
+    enabled: true
+    suffix: v6.ip.example.com
+    subnets:
+      - c.f.ip6.arpa
+      - d.f.ip6.arpa
+  ipv4:
+    enabled: true
+    suffix: v4.ip.example.com
+    subnets:
+      - 10.in-addr.arpa
+      - 168.192.in-addr.arpa
+
+resolver:
+  enabled: true
+  nameservers: [8.8.8.8, 8.8.4.4]
