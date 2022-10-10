@@ -48,9 +48,9 @@ func (s *Server) serve(net string, addr string) {
 		WriteTimeout: util.DefaultTimeout,
 	}
 
-	log.Printf("Lisrening on %s net %s", s.Listen, net)
+	log.Printf("Lisrening on %s net %s", addr, net)
 	err := dnsServer.ListenAndServe()
 	if err != nil {
-		log.Printf("Error listening on %s net %s: %v", s.Listen, net, err)
+		log.Printf("Error listening on %s net %s: %v", addr, net, err)
 	}
 }
