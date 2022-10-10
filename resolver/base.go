@@ -102,9 +102,7 @@ func (r *Resolver) exchange(m *dns.Msg) (resp *dns.Msg, err error) {
 }
 
 func (r *Resolver) Exchange(m *dns.Msg) (resp *dns.Msg, err error) {
-	if r.Client.Net == "udp" {
-		m = m.SetEdns0(util.DNSMaxSize, true)
-	}
+	m.SetEdns0(util.DNSMaxSize, true)
 
 	for i := r.Retries; i > 0; i-- {
 		resp, err = r.exchange(m)

@@ -34,9 +34,5 @@ func FillHeader(rr dns.RR, name string, rtype uint16, ttl uint32) dns.RR {
 }
 
 func SetEDNS0(wr dns.ResponseWriter, msg *dns.Msg) {
-	net := wr.LocalAddr().Network()
-	if net != "udp" && net != "udp4" && net != "udp6" {
-		return
-	}
 	msg.SetEdns0(DNSMaxSize, true)
 }
