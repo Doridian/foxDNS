@@ -35,7 +35,7 @@ func main() {
 		}, config.RDNS.IPv6.Subnets...), config.Global.NameServers, config.Global.Mailbox)
 
 		authv6.Child = &rdns.RDNSv6Generator{
-			PTRSuffix: config.RDNS.IPv4.Suffix,
+			PTRSuffix: config.RDNS.IPv6.Suffix,
 		}
 
 		authv6.Register(srv.Mux)
