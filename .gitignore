@@ -1,0 +1,4 @@
+/foxdns
+*.exe
+.vscode
+.DS_Store
