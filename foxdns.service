@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=1
 WorkingDirectory=/opt/foxdns
-ExecStart=/opt/foxdns/server
+ExecStart=/opt/foxdns/foxdns
 
 [Install]
 WantedBy=multi-user.target
