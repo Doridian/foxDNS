@@ -74,8 +74,8 @@ func main() {
 		log.Printf("Resolver disabled")
 	}
 
-	if config.Global.Listen != "" {
-		srv.ListenAddr = config.Global.Listen
+	if len(config.Global.Listen) > 0 {
+		srv.Listen = config.Global.Listen
 	}
 
 	srv.Serve()

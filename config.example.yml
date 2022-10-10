@@ -2,7 +2,8 @@ global:
   nameservers:
   - nameserver.example.com
   mailbox: email.example.com
-  listen: :8053
+  listen:
+  - :8053
 
 rdns:
   ipv6:

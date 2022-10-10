@@ -17,7 +17,7 @@ type Config struct {
 	Global struct {
 		NameServers []string `yaml:"nameservers"`
 		Mailbox     string   `yaml:"mailbox"`
-		Listen      string   `yaml:"listen"`
+		Listen      []string `yaml:"listen"`
 	} `yaml:"global"`
 
 	RDNS struct {

@@ -10,35 +10,37 @@ import (
 )
 
 type Server struct {
-	Resolver   *resolver.Resolver
-	Mux        *dns.ServeMux
-	ListenAddr string
+	Resolver *resolver.Resolver
+	Mux      *dns.ServeMux
+	Listen   []string
 
 	serveWait sync.WaitGroup
 }
 
 func NewServer() *Server {
 	return &Server{
-		Mux:        dns.NewServeMux(),
-		ListenAddr: ":8053",
+		Mux:    dns.NewServeMux(),
+		Listen: []string{":8053"},
 	}
 }
 
 func (s *Server) Serve() {
-	s.serveWait.Add(1)
-	go s.serve("tcp")
+	for _, listen := range s.Listen {
+		s.serveWait.Add(1)
+		go s.serve("tcp", listen)
 
-	s.serveWait.Add(1)
-	go s.serve("udp")
+		s.serveWait.Add(1)
+		go s.serve("udp", listen)
+	}
 
 	s.serveWait.Wait()
 }
 
-func (s *Server) serve(net string) {
+func (s *Server) serve(net string, addr string) {
 	defer s.serveWait.Done()
 
 	dnsServer := &dns.Server{
-		Addr:         s.ListenAddr,
+		Addr:         addr,
 		Net:          net,
 		Handler:      s.Mux,
 		UDPSize:      util.DNSMaxSize,
@@ -46,9 +48,9 @@ func (s *Server) serve(net string) {
 		WriteTimeout: util.DefaultTimeout,
 	}
 
-	log.Printf("Lisrening on %s net %s", s.ListenAddr, net)
+	log.Printf("Lisrening on %s net %s", s.Listen, net)
 	err := dnsServer.ListenAndServe()
 	if err != nil {
-		log.Printf("Error listening on %s net %s: %v", s.ListenAddr, net, err)
+		log.Printf("Error listening on %s net %s: %v", s.Listen, net, err)
 	}
 }
