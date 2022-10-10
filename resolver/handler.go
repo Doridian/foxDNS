@@ -34,7 +34,8 @@ func (r *Resolver) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	reply.Rcode = recursionReply.Rcode
 	reply.Answer = recursionReply.Answer
-	reply.Extra = recursionReply.Extra
+	reply.Ns = recursionReply.Ns
+
 	if reply.Rcode == dns.RcodeSuccess {
 		util.SetEDNS0(reply)
 	}

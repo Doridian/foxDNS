@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 
 	"github.com/FoxDenHome/foxdns/authority"
@@ -31,7 +32,11 @@ func main() {
 
 	for _, resolvConf := range config.Resolvers {
 		resolv := resolver.NewResolver(resolvConf.NameServers)
-		resolv.Client.TLSConfig.ServerName = resolvConf.ServerName
+		if resolvConf.ServerName != "" {
+			resolv.Client.TLSConfig = &tls.Config{
+				ServerName: resolvConf.ServerName,
+			}
+		}
 
 		if len(resolvConf.Proto) > 0 {
 			resolv.Client.Net = resolvConf.Proto
