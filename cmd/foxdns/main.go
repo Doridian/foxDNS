@@ -18,20 +18,13 @@ func main() {
 			rdnsConf.Suffix,
 		}, rdnsConf.Subnets...), config.Global.NameServers, config.Global.Mailbox)
 
-		switch rdnsConf.IPVersion {
-		case 4:
-			rdnsAuth.Child = &rdns.RDNSv4Generator{
-				PTRSuffix: rdnsConf.Suffix,
-			}
-			log.Printf("Registered IPv4 rDNS for %s with %d subnet(s)", rdnsConf.Suffix, len(rdnsConf.Subnets))
-		case 6:
-			rdnsAuth.Child = &rdns.RDNSv6Generator{
-				PTRSuffix: rdnsConf.Suffix,
-			}
-			log.Printf("Registered IPv6 rDNS for %s with %d subnet(s)", rdnsConf.Suffix, len(rdnsConf.Subnets))
-		default:
+		rdnsGen := rdns.NewRDNSGenerator(rdnsConf.IPVersion)
+		if rdnsGen == nil {
 			log.Panicf("Unknown IP version: %d", rdnsConf.IPVersion)
 		}
+		rdnsGen.PTRSuffix = rdnsConf.Suffix
+
+		rdnsAuth.Child = rdnsGen
 
 		rdnsAuth.Register(srv.Mux)
 	}

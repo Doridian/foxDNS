@@ -1,5 +1,15 @@
 package rdns
 
+func NewRDNSGenerator(ipVersion int) *RDNSGenerator {
+	switch ipVersion {
+	case 4:
+		return NewRDNSv4Generator()
+	case 6:
+		return NewRDNSv6Generator()
+	}
+	return nil
+}
+
 func stringByteToByte(bs string) byte {
 	b := []byte(bs)[0]
 
