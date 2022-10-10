@@ -33,6 +33,6 @@ func FillHeader(rr dns.RR, name string, rtype uint16, ttl uint32) dns.RR {
 	return rr
 }
 
-func SetEDNS0(wr dns.ResponseWriter, msg *dns.Msg) {
+func SetEDNS0(msg *dns.Msg) {
 	msg.SetEdns0(DNSMaxSize, true)
 }

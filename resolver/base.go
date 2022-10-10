@@ -102,7 +102,7 @@ func (r *Resolver) exchange(m *dns.Msg) (resp *dns.Msg, err error) {
 }
 
 func (r *Resolver) Exchange(m *dns.Msg) (resp *dns.Msg, err error) {
-	m.SetEdns0(util.DNSMaxSize, true)
+	util.SetEDNS0(m)
 
 	for i := r.Retries; i > 0; i-- {
 		resp, err = r.exchange(m)
@@ -117,6 +117,7 @@ func (r *Resolver) Exchange(m *dns.Msg) (resp *dns.Msg, err error) {
 func (r *Resolver) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply := new(dns.Msg)
 	reply.SetRcode(msg, dns.RcodeServerFailure)
+	util.SetEDNS0(reply)
 	defer wr.WriteMsg(reply)
 
 	if r.AllowOnlyFromPrivate {
