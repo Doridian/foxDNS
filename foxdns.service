@@ -1,0 +1,14 @@
+[Unit]
+Description=FoxDNS
+StartLimitIntervalSec=0
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+WorkingDirectory=/opt/foxdns
+ExecStart=/opt/foxdns/server
+
+[Install]
+WantedBy=multi-user.target
