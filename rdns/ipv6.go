@@ -7,12 +7,12 @@ import (
 )
 
 func ipv6Decode(nameSplit []string) net.IP {
-	ipv6 := net.IP(make([]byte, net.IPv6len))
+	ip := net.IP(make([]byte, net.IPv6len))
 	for i := 0; i < 16; i++ {
 		j := 30 - (i * 2)
-		ipv6[i] = twoStringByteToByte(nameSplit[j], nameSplit[j+1])
+		ip[i] = twoStringByteToByte(nameSplit[j], nameSplit[j+1])
 	}
-	return ipv6
+	return ip
 }
 
 func ipv6MakeRec(ip net.IP) dns.RR {
