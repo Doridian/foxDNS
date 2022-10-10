@@ -46,6 +46,10 @@ func (r *RDNSv4Generator) serveA(name string) dns.RR {
 	if ipv4 == nil {
 		return nil
 	}
+	ipv4 = ipv4.To4()
+	if ipv4 == nil {
+		return nil
+	}
 
 	return &dns.A{
 		A: ipv4,

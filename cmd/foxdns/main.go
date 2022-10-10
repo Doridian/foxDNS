@@ -13,65 +13,54 @@ func main() {
 	config := LoadConfig("config.yml")
 	srv := server.NewServer()
 
-	if config.RDNS.IPv4.Enabled {
-		authv4 := authority.NewAuthorityHandler(append([]string{
-			config.RDNS.IPv4.Suffix,
-		}, config.RDNS.IPv4.Subnets...), config.Global.NameServers, config.Global.Mailbox)
+	for _, rdnsConf := range config.RDNS {
+		rdnsAuth := authority.NewAuthorityHandler(append([]string{
+			rdnsConf.Suffix,
+		}, rdnsConf.Subnets...), config.Global.NameServers, config.Global.Mailbox)
 
-		authv4.Child = &rdns.RDNSv4Generator{
-			PTRSuffix: config.RDNS.IPv4.Suffix,
+		switch rdnsConf.IPVersion {
+		case 4:
+			rdnsAuth.Child = &rdns.RDNSv4Generator{
+				PTRSuffix: rdnsConf.Suffix,
+			}
+			log.Printf("Registered IPv4 rDNS for %s with %d subnet(s)", rdnsConf.Suffix, len(rdnsConf.Subnets))
+		case 6:
+			rdnsAuth.Child = &rdns.RDNSv6Generator{
+				PTRSuffix: rdnsConf.Suffix,
+			}
+			log.Printf("Registered IPv6 rDNS for %s with %d subnet(s)", rdnsConf.Suffix, len(rdnsConf.Subnets))
+		default:
+			log.Panicf("Unknown IP version: %d", rdnsConf.IPVersion)
 		}
 
-		authv4.Register(srv.Mux)
-
-		log.Printf("IPv4 Auto-rDNS enabled")
-	} else {
-		log.Printf("IPv4 Auto-rDNS disabled")
+		rdnsAuth.Register(srv.Mux)
 	}
 
-	if config.RDNS.IPv6.Enabled {
-		authv6 := authority.NewAuthorityHandler(append([]string{
-			config.RDNS.IPv6.Suffix,
-		}, config.RDNS.IPv6.Subnets...), config.Global.NameServers, config.Global.Mailbox)
+	for _, resolvConf := range config.Resolvers {
+		resolv := resolver.NewResolver(resolvConf.NameServers)
+		resolv.Client.TLSConfig.ServerName = resolvConf.ServerName
 
-		authv6.Child = &rdns.RDNSv6Generator{
-			PTRSuffix: config.RDNS.IPv6.Suffix,
+		resolv.AllowOnlyFromPrivate = resolvConf.AllowOnlyFromPrivate
+
+		if resolvConf.MaxConnections > 0 {
+			resolv.MaxConnections = resolvConf.MaxConnections
 		}
 
-		authv6.Register(srv.Mux)
-
-		log.Printf("IPv6 Auto-rDNS enabled")
-	} else {
-		log.Printf("IPv6 Auto-rDNS disabled")
-	}
-
-	if config.Resolver.Enabled {
-		resolv := resolver.NewResolver(config.Resolver.NameServers)
-		resolv.Client.TLSConfig.ServerName = config.Resolver.ServerName
-
-		resolv.AllowOnlyFromPrivate = config.Resolver.AllowOnlyFromPrivate
-
-		if config.Resolver.MaxConnections > 0 {
-			resolv.MaxConnections = config.Resolver.MaxConnections
+		if resolvConf.Retries > 0 {
+			resolv.Retries = resolvConf.Retries
 		}
 
-		if config.Resolver.Retries > 0 {
-			resolv.Retries = config.Resolver.Retries
+		if resolvConf.RetryWait > 0 {
+			resolv.RetryWait = resolvConf.RetryWait
 		}
 
-		if config.Resolver.RetryWait > 0 {
-			resolv.RetryWait = config.Resolver.RetryWait
+		if resolvConf.Timeout > 0 {
+			resolv.SetTimeout(resolvConf.Timeout)
 		}
 
-		if config.Resolver.Timeout > 0 {
-			resolv.SetTimeout(config.Resolver.Timeout)
-		}
+		srv.Mux.Handle(resolvConf.Zone, resolv)
 
-		srv.Mux.Handle(".", resolv)
-
-		log.Printf("Resolver enabled (only private clients: %v)", resolv.AllowOnlyFromPrivate)
-	} else {
-		log.Printf("Resolver disabled")
+		log.Printf("Resolver enabled for zone %s (only private clients: %v)", resolvConf.Zone, resolv.AllowOnlyFromPrivate)
 	}
 
 	if len(config.Global.Listen) > 0 {

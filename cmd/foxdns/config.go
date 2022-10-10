@@ -7,12 +7,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type RDNSConfig struct {
-	Enabled bool
-	Suffix  string   `yaml:"suffix"`
-	Subnets []string `yaml:"subnets"`
-}
-
 type Config struct {
 	Global struct {
 		NameServers []string `yaml:"nameservers"`
@@ -20,13 +14,14 @@ type Config struct {
 		Listen      []string `yaml:"listen"`
 	} `yaml:"global"`
 
-	RDNS struct {
-		IPv4 RDNSConfig `yaml:"ipv4"`
-		IPv6 RDNSConfig `yaml:"ipv6"`
+	RDNS []struct {
+		IPVersion int      `yaml:"ip_version"`
+		Suffix    string   `yaml:"suffix"`
+		Subnets   []string `yaml:"subnets"`
 	} `yaml:"rdns"`
 
-	Resolver struct {
-		Enabled     bool     `yaml:"enabled"`
+	Resolvers []struct {
+		Zone        string   `yaml:"zone"`
 		NameServers []string `yaml:"nameservers"`
 
 		ServerName string `yaml:"server-name"`
@@ -37,12 +32,11 @@ type Config struct {
 		Timeout        time.Duration `yaml:"timeout"`
 
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
-	} `yaml:"resolver"`
+	} `yaml:"resolvers"`
 }
 
 func LoadConfig(file string) *Config {
 	config := new(Config)
-	config.Resolver.AllowOnlyFromPrivate = true // Safety!
 
 	fh, err := os.Open(file)
 	if err != nil {

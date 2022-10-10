@@ -41,6 +41,10 @@ func (r *RDNSv6Generator) serveAAAA(name string) dns.RR {
 	if ipv6 == nil {
 		return nil
 	}
+	ipv6 = ipv6.To16()
+	if ipv6 == nil {
+		return nil
+	}
 
 	return &dns.AAAA{
 		AAAA: ipv6,
