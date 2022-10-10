@@ -23,6 +23,7 @@ type Config struct {
 	Resolvers []struct {
 		Zone        string   `yaml:"zone"`
 		NameServers []string `yaml:"nameservers"`
+		Proto       string   `yaml:"proto"`
 
 		ServerName string `yaml:"server-name"`
 

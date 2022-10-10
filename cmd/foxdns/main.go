@@ -40,6 +40,10 @@ func main() {
 		resolv := resolver.NewResolver(resolvConf.NameServers)
 		resolv.Client.TLSConfig.ServerName = resolvConf.ServerName
 
+		if len(resolvConf.Proto) > 0 {
+			resolv.Client.Net = resolvConf.Proto
+		}
+
 		resolv.AllowOnlyFromPrivate = resolvConf.AllowOnlyFromPrivate
 
 		if resolvConf.MaxConnections > 0 {

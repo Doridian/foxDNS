@@ -23,6 +23,7 @@ type Resolver struct {
 
 	connCond        *sync.Cond
 	connections     int
+	lastServerIdx   int
 	freeConnections *list.List
 }
 
@@ -65,7 +66,13 @@ func (r *Resolver) acquireConn() (conn *dns.Conn, err error) {
 
 		if r.connections < r.MaxConnections {
 			r.connections++
-			srv := r.Servers[0]
+
+			srv := r.Servers[r.lastServerIdx]
+			r.lastServerIdx++
+			if r.lastServerIdx >= len(r.Servers) {
+				r.lastServerIdx = 0
+			}
+
 			r.connCond.L.Unlock()
 			conn, err = r.Client.Dial(srv)
 			return
