@@ -3,6 +3,7 @@ module github.com/FoxDenHome/foxdns
 go 1.19
 
 require (
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/miekg/dns v1.1.50
 	gopkg.in/yaml.v3 v3.0.1
 )

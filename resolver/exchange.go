@@ -20,7 +20,15 @@ func (r *Resolver) exchange(m *dns.Msg) (resp *dns.Msg, err error) {
 	return
 }
 
-func (r *Resolver) Exchange(m *dns.Msg) (resp *dns.Msg, err error) {
+func (r *Resolver) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
+	m := &dns.Msg{
+		Question: []dns.Question{*q},
+	}
+
+	m.Id = dns.Id()
+	m.Opcode = dns.OpcodeQuery
+	m.RecursionDesired = true
+
 	util.SetEDNS0(m)
 
 	for i := r.Retries; i > 0; i-- {

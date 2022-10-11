@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/FoxDenHome/foxdns/util"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"
 )
 
@@ -24,11 +25,15 @@ type Resolver struct {
 	connections     int
 	lastServerIdx   int
 	freeConnections *list.List
+
+	cache *lru.Cache
 }
 
 var _ dns.Handler = &Resolver{}
 
 func NewResolver(servers []string) *Resolver {
+	cache, _ := lru.New(4096)
+
 	return &Resolver{
 		Servers: servers,
 		Client: &dns.Client{
@@ -44,6 +49,8 @@ func NewResolver(servers []string) *Resolver {
 		connCond:        sync.NewCond(&sync.Mutex{}),
 		connections:     0,
 		freeConnections: list.New(),
+
+		cache: cache,
 	}
 }
 
