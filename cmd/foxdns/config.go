@@ -34,6 +34,8 @@ type Config struct {
 
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
 	} `yaml:"resolvers"`
+
+	Localizers map[string][]string `yaml:"localizers"`
 }
 
 func LoadConfig(file string) *Config {

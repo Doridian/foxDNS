@@ -3,5 +3,6 @@ package authority
 import "github.com/miekg/dns"
 
 type AuthoritativeHandler interface {
-	HandleQuestion(q dns.Question) []dns.RR
+	// USE dns.ResponseWriter READ ONLY
+	HandleQuestion(q dns.Question, wr dns.ResponseWriter) []dns.RR
 }

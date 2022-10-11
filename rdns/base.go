@@ -51,7 +51,7 @@ func (r *RDNSGenerator) serveRec(name string) dns.RR {
 	return r.makeRec(rdnsIp)
 }
 
-func (r *RDNSGenerator) HandleQuestion(q dns.Question) []dns.RR {
+func (r *RDNSGenerator) HandleQuestion(q dns.Question, _ dns.ResponseWriter) []dns.RR {
 	var resp dns.RR
 
 	switch q.Qtype {

@@ -87,7 +87,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 
 	if r.Child != nil && len(reply.Answer) < 1 {
-		reply.Answer = r.Child.HandleQuestion(q)
+		reply.Answer = r.Child.HandleQuestion(q, wr)
 	}
 
 	wr.WriteMsg(reply)

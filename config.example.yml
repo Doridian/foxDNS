@@ -20,3 +20,7 @@ rdns:
 resolvers:
   - zone: .
     nameservers: [8.8.8.8, 8.8.4.4]
+
+localizers:
+  x.example.com:
+  - 0.0.0.123/16

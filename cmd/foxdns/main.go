@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/FoxDenHome/foxdns/authority"
+	"github.com/FoxDenHome/foxdns/localizer"
 	"github.com/FoxDenHome/foxdns/rdns"
 	"github.com/FoxDenHome/foxdns/resolver"
 	"github.com/FoxDenHome/foxdns/server"
@@ -63,6 +64,24 @@ func main() {
 		srv.Mux.Handle(resolvConf.Zone, resolv)
 
 		log.Printf("Resolver enabled for zone %s (only private clients: %v)", resolvConf.Zone, resolv.AllowOnlyFromPrivate)
+	}
+
+	if len(config.Localizers) > 0 {
+		loc := localizer.NewLocalizer()
+		locZones := make([]string, 0, len(config.Localizers))
+
+		for locName, locIPs := range config.Localizers {
+			locZones = append(locZones, locName)
+			for _, ip := range locIPs {
+				loc.AddRecord(locName, ip)
+			}
+		}
+
+		locAuth := authority.NewAuthorityHandler(locZones, config.Global.NameServers, config.Global.Mailbox)
+		locAuth.Child = loc
+		locAuth.Register(srv.Mux)
+
+		log.Printf("Localizer enabled for %d zones", len(locZones))
 	}
 
 	if len(config.Global.Listen) > 0 {
