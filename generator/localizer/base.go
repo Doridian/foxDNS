@@ -15,14 +15,14 @@ type LocalizerRecord struct {
 }
 
 type LocalizedRecordGenerator struct {
-	ARecords    LocalizerRecordMap
-	AAAARecords LocalizerRecordMap
+	aRecords    LocalizerRecordMap
+	aaaaRecords LocalizerRecordMap
 }
 
-func NewLocalizer() *LocalizedRecordGenerator {
+func New() *LocalizedRecordGenerator {
 	return &LocalizedRecordGenerator{
-		ARecords:    make(LocalizerRecordMap),
-		AAAARecords: make(LocalizerRecordMap),
+		aRecords:    make(LocalizerRecordMap),
+		aaaaRecords: make(LocalizerRecordMap),
 	}
 }
 
@@ -47,9 +47,9 @@ func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string) e
 	var recMap LocalizerRecordMap
 	switch len(ip) {
 	case net.IPv4len:
-		recMap = r.ARecords
+		recMap = r.aRecords
 	case net.IPv6len:
-		recMap = r.AAAARecords
+		recMap = r.aaaaRecords
 	}
 
 	recArr := recMap[hostStr]
@@ -80,10 +80,10 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q dns.Question, wr dns.Respons
 
 	switch q.Qtype {
 	case dns.TypeA:
-		recsMap = r.ARecords
+		recsMap = r.aRecords
 		makeRecFunc = makeRecV4
 	case dns.TypeAAAA:
-		recsMap = r.AAAARecords
+		recsMap = r.aaaaRecords
 		makeRecFunc = makeRecV6
 	}
 

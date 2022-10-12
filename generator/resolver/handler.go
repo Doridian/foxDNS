@@ -7,7 +7,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (r *Resolver) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
+func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply := new(dns.Msg)
 	if len(msg.Question) != 1 {
 		wr.WriteMsg(reply.SetRcode(msg, dns.RcodeRefused))

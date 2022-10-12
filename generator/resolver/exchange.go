@@ -7,7 +7,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (r *Resolver) exchange(m *dns.Msg) (resp *dns.Msg, err error) {
+func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, err error) {
 	var conn *dns.Conn
 	conn, err = r.acquireConn()
 	if err != nil {
@@ -20,7 +20,7 @@ func (r *Resolver) exchange(m *dns.Msg) (resp *dns.Msg, err error) {
 	return
 }
 
-func (r *Resolver) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
+func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
 	m := &dns.Msg{
 		Question: []dns.Question{*q},
 	}

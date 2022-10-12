@@ -1,11 +1,11 @@
 package rdns
 
-func NewRDNSGenerator(ipVersion int) *RDNSGenerator {
+func NewRDNSGenerator(ipVersion int) *Generator {
 	switch ipVersion {
 	case 4:
-		return NewRDNSv4Generator()
+		return NewIPv4()
 	case 6:
-		return NewRDNSv6Generator()
+		return NewIPv6()
 	}
 	return nil
 }

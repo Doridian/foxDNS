@@ -30,8 +30,8 @@ func ipv4MakeRec(ip net.IP) dns.RR {
 	}
 }
 
-func NewRDNSv4Generator() *RDNSGenerator {
-	return &RDNSGenerator{
+func NewIPv4() *Generator {
+	return &Generator{
 		recordType:  dns.TypeA,
 		ipSegments:  4,
 		ipSeparator: ".",

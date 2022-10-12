@@ -4,10 +4,12 @@ import (
 	"crypto/tls"
 	"log"
 
-	"github.com/FoxDenHome/foxdns/authority"
-	"github.com/FoxDenHome/foxdns/localizer"
-	"github.com/FoxDenHome/foxdns/rdns"
-	"github.com/FoxDenHome/foxdns/resolver"
+	"github.com/FoxDenHome/foxdns/generator/authority"
+	"github.com/FoxDenHome/foxdns/generator/localizer"
+	"github.com/FoxDenHome/foxdns/generator/rdns"
+	"github.com/FoxDenHome/foxdns/generator/resolver"
+	"github.com/FoxDenHome/foxdns/generator/simple"
+	"github.com/FoxDenHome/foxdns/generator/static"
 	"github.com/FoxDenHome/foxdns/server"
 )
 
@@ -32,7 +34,7 @@ func main() {
 	}
 
 	for _, resolvConf := range config.Resolvers {
-		resolv := resolver.NewResolver(resolvConf.NameServers)
+		resolv := resolver.New(resolvConf.NameServers)
 		if resolvConf.ServerName != "" {
 			resolv.Client.TLSConfig = &tls.Config{
 				ServerName: resolvConf.ServerName,
@@ -67,7 +69,7 @@ func main() {
 	}
 
 	if len(config.Localizers) > 0 {
-		loc := localizer.NewLocalizer()
+		loc := localizer.New()
 		locZones := make([]string, 0, len(config.Localizers))
 
 		for locName, locIPs := range config.Localizers {
@@ -77,11 +79,30 @@ func main() {
 			}
 		}
 
-		locAuth := authority.NewAuthorityHandler(locZones, config.Global.NameServers, config.Global.Mailbox)
+		locAuth := simple.New(locZones)
 		locAuth.Child = loc
 		locAuth.Register(srv.Mux)
 
 		log.Printf("Localizer enabled for %d zones", len(locZones))
+	}
+
+	if len(config.StaticZones) > 0 {
+		stat := static.New()
+		statZones := make([]string, 0, len(config.StaticZones))
+
+		for statName, statFile := range config.StaticZones {
+			statZones = append(statZones, statName)
+			err := stat.LoadZoneFile(statFile, statName, 3600, false)
+			if err != nil {
+				log.Printf("Error loading static zone %s: %v", statName, err)
+			}
+		}
+
+		locAuth := simple.New(statZones)
+		locAuth.Child = stat
+		locAuth.Register(srv.Mux)
+
+		log.Printf("Static zones enabled for %d zones", len(statZones))
 	}
 
 	if len(config.Global.Listen) > 0 {

@@ -1,6 +1,7 @@
 package authority
 
 import (
+	"github.com/FoxDenHome/foxdns/generator/simple"
 	"github.com/FoxDenHome/foxdns/util"
 	"github.com/miekg/dns"
 )
@@ -12,7 +13,7 @@ type authData struct {
 
 type AuthorityHandler struct {
 	zones map[string]*authData
-	Child AuthoritativeHandler
+	Child simple.Handler
 }
 
 func fillAuthHeader(rr dns.RR, rtype uint16, zone string) dns.RR {

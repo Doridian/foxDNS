@@ -4,15 +4,13 @@ import (
 	"log"
 	"sync"
 
-	"github.com/FoxDenHome/foxdns/resolver"
 	"github.com/FoxDenHome/foxdns/util"
 	"github.com/miekg/dns"
 )
 
 type Server struct {
-	Resolver *resolver.Resolver
-	Mux      *dns.ServeMux
-	Listen   []string
+	Mux    *dns.ServeMux
+	Listen []string
 
 	serveWait sync.WaitGroup
 	initWait  sync.WaitGroup

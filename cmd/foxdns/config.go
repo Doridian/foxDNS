@@ -36,6 +36,8 @@ type Config struct {
 	} `yaml:"resolvers"`
 
 	Localizers map[string][]string `yaml:"localizers"`
+
+	StaticZones map[string]string `yaml:"static-zones"`
 }
 
 func LoadConfig(file string) *Config {

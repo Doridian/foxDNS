@@ -2,7 +2,7 @@ package resolver
 
 import "github.com/miekg/dns"
 
-func (r *Resolver) acquireConn() (conn *dns.Conn, err error) {
+func (r *Generator) acquireConn() (conn *dns.Conn, err error) {
 	r.connCond.L.Lock()
 
 	for {
@@ -31,7 +31,7 @@ func (r *Resolver) acquireConn() (conn *dns.Conn, err error) {
 	}
 }
 
-func (r *Resolver) returnConn(conn *dns.Conn, err error) {
+func (r *Generator) returnConn(conn *dns.Conn, err error) {
 	r.connCond.L.Lock()
 	defer r.connCond.L.Unlock()
 

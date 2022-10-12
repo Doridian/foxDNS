@@ -10,7 +10,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-type RDNSGenerator struct {
+type Generator struct {
 	PTRSuffix string
 
 	recordType  uint16
@@ -21,7 +21,7 @@ type RDNSGenerator struct {
 	makeRec          func(net.IP) dns.RR
 }
 
-func (r *RDNSGenerator) servePTR(name string) dns.RR {
+func (r *Generator) servePTR(name string) dns.RR {
 	nameSplit := strings.Split(name, ".")
 
 	if len(nameSplit) != r.ipSegments+3 {
@@ -36,7 +36,7 @@ func (r *RDNSGenerator) servePTR(name string) dns.RR {
 	}
 }
 
-func (r *RDNSGenerator) serveRec(name string) dns.RR {
+func (r *Generator) serveRec(name string) dns.RR {
 	nameSplit := strings.Split(name, ".")
 	if len(nameSplit) < 2 {
 		return nil
@@ -51,7 +51,7 @@ func (r *RDNSGenerator) serveRec(name string) dns.RR {
 	return r.makeRec(rdnsIp)
 }
 
-func (r *RDNSGenerator) HandleQuestion(q dns.Question, _ dns.ResponseWriter) []dns.RR {
+func (r *Generator) HandleQuestion(q dns.Question, _ dns.ResponseWriter) []dns.RR {
 	var resp dns.RR
 
 	switch q.Qtype {

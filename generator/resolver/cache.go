@@ -16,7 +16,7 @@ type cacheEntry struct {
 	expiry time.Time
 }
 
-func (r *Resolver) SetCacheSize(size int) {
+func (r *Generator) SetCacheSize(size int) {
 	r.cache.Resize(size)
 }
 
@@ -24,7 +24,7 @@ func cacheKey(q *dns.Question) string {
 	return fmt.Sprintf("%s:%d:%d", q.Name, q.Qclass, q.Qtype)
 }
 
-func (r *Resolver) getFromCache(q *dns.Question) *dns.Msg {
+func (r *Generator) getFromCache(q *dns.Question) *dns.Msg {
 	key := cacheKey(q)
 
 	res, ok := r.cache.Get(key)
@@ -52,7 +52,7 @@ func (r *Resolver) getFromCache(q *dns.Question) *dns.Msg {
 	return msg
 }
 
-func (r *Resolver) writeToCache(q *dns.Question, m *dns.Msg) {
+func (r *Generator) writeToCache(q *dns.Question, m *dns.Msg) {
 	if m.Rcode != dns.RcodeSuccess {
 		return
 	}

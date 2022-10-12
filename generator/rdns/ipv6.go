@@ -26,8 +26,8 @@ func ipv6MakeRec(ip net.IP) dns.RR {
 	}
 }
 
-func NewRDNSv6Generator() *RDNSGenerator {
-	return &RDNSGenerator{
+func NewIPv6() *Generator {
+	return &Generator{
 		recordType:  dns.TypeAAAA,
 		ipSegments:  32,
 		ipSeparator: ":",

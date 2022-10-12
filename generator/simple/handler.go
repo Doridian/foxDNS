@@ -1,8 +1,8 @@
-package authority
+package simple
 
 import "github.com/miekg/dns"
 
-type AuthoritativeHandler interface {
+type Handler interface {
 	// USE dns.ResponseWriter READ ONLY
 	HandleQuestion(q dns.Question, wr dns.ResponseWriter) []dns.RR
 }

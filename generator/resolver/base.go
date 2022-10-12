@@ -10,7 +10,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-type Resolver struct {
+type Generator struct {
 	Servers []string
 	Client  *dns.Client
 
@@ -29,12 +29,12 @@ type Resolver struct {
 	cache *lru.Cache
 }
 
-var _ dns.Handler = &Resolver{}
+var _ dns.Handler = &Generator{}
 
-func NewResolver(servers []string) *Resolver {
+func New(servers []string) *Generator {
 	cache, _ := lru.New(4096)
 
-	return &Resolver{
+	return &Generator{
 		Servers: servers,
 		Client: &dns.Client{
 			Net:          "udp",
@@ -54,7 +54,7 @@ func NewResolver(servers []string) *Resolver {
 	}
 }
 
-func (r *Resolver) SetTimeout(timeout time.Duration) {
+func (r *Generator) SetTimeout(timeout time.Duration) {
 	r.Client.ReadTimeout = timeout
 	r.Client.WriteTimeout = timeout
 }
