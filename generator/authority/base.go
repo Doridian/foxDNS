@@ -56,13 +56,6 @@ func NewAuthorityHandler(zones []string, nsList []string, mbox string) *Authorit
 }
 
 func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
-	if len(msg.Question) != 1 {
-		resp := new(dns.Msg)
-		resp.SetRcode(msg, dns.RcodeRefused)
-		wr.WriteMsg(resp)
-		return
-	}
-
 	reply := new(dns.Msg)
 	reply.SetRcode(msg, dns.RcodeSuccess)
 	reply.Authoritative = true
@@ -71,6 +64,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	q := msg.Question[0]
 	if q.Qclass != dns.ClassINET {
+		reply.Rcode = dns.RcodeRefused
 		wr.WriteMsg(reply)
 		return
 	}

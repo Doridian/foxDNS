@@ -11,11 +11,16 @@ import (
 	"github.com/FoxDenHome/foxdns/generator/simple"
 	"github.com/FoxDenHome/foxdns/generator/static"
 	"github.com/FoxDenHome/foxdns/server"
+	"github.com/miekg/dns"
 )
 
 func main() {
 	config := LoadConfig("config.yml")
-	srv := server.NewServer()
+
+	srv := server.NewServer(config.Global.Listen)
+
+	// Load dynamic config begin
+	mux := dns.NewServeMux()
 
 	for _, rdnsConf := range config.RDNS {
 		rdnsAuth := authority.NewAuthorityHandler(append([]string{
@@ -30,7 +35,7 @@ func main() {
 
 		rdnsAuth.Child = rdnsGen
 
-		rdnsAuth.Register(srv.Mux)
+		rdnsAuth.Register(mux)
 	}
 
 	for _, resolvConf := range config.Resolvers {
@@ -63,7 +68,7 @@ func main() {
 			resolv.SetTimeout(resolvConf.Timeout)
 		}
 
-		srv.Mux.Handle(resolvConf.Zone, resolv)
+		mux.Handle(resolvConf.Zone, resolv)
 
 		log.Printf("Resolver enabled for zone %s (only private clients: %v)", resolvConf.Zone, resolv.AllowOnlyFromPrivate)
 	}
@@ -81,7 +86,7 @@ func main() {
 
 		locAuth := simple.New(locZones)
 		locAuth.Child = loc
-		locAuth.Register(srv.Mux)
+		locAuth.Register(mux)
 
 		log.Printf("Localizer enabled for %d zones", len(locZones))
 	}
@@ -100,14 +105,13 @@ func main() {
 
 		locAuth := simple.New(statZones)
 		locAuth.Child = stat
-		locAuth.Register(srv.Mux)
+		locAuth.Register(mux)
 
 		log.Printf("Static zones enabled for %d zones", len(statZones))
 	}
 
-	if len(config.Global.Listen) > 0 {
-		srv.Listen = config.Global.Listen
-	}
+	srv.SetHandler(mux)
+	// Load dynamic config end
 
 	srv.Serve()
 }
