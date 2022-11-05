@@ -29,6 +29,11 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.RecursionAvailable = true
 
 	q := &msg.Question[0]
+	if q.Qclass != dns.ClassINET || q.Qtype == dns.TypeAXFR || q.Qtype == dns.TypeIXFR || q.Qtype == dns.TypeMAILA || q.Qtype == dns.TypeMAILB || q.Qtype == dns.TypeANY {
+		reply.Rcode = dns.RcodeRefused
+		return
+	}
+	q.Name = dns.CanonicalName(q.Name)
 
 	recursionReply := r.getFromCache(q)
 	if recursionReply == nil {
