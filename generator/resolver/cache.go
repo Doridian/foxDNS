@@ -28,7 +28,7 @@ func cacheKey(q *dns.Question) string {
 func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	key := cacheKey(q)
 
-	entry := r.getFromCache(key)
+	entry := r.getFromCache(key, false)
 	if entry != nil {
 		return entry, nil
 	}
@@ -36,12 +36,12 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	cacheLock, loaded := r.cacheLock.LoadOrStore(key, wg)
-	cscheLockWG := cacheLock.(*sync.WaitGroup)
+	cacheLockWG := cacheLock.(*sync.WaitGroup)
 
 	if loaded {
-		cscheLockWG.Wait()
+		cacheLockWG.Wait()
 
-		entry := r.getFromCache(key)
+		entry := r.getFromCache(key, true)
 		if entry != nil {
 			return entry, nil
 		}
@@ -61,7 +61,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	return reply, nil
 }
 
-func (r *Generator) getFromCache(key string) *dns.Msg {
+func (r *Generator) getFromCache(key string, allowChange bool) *dns.Msg {
 	res, ok := r.cache.Get(key)
 	if !ok {
 		return nil
@@ -70,7 +70,9 @@ func (r *Generator) getFromCache(key string) *dns.Msg {
 	entry := res.(*cacheEntry)
 	now := time.Now()
 	if entry.expiry.Before(now) {
-		r.cache.Remove(key)
+		if allowChange {
+			r.cache.Remove(key)
+		}
 		return nil
 	}
 
