@@ -26,7 +26,8 @@ type Generator struct {
 	lastServerIdx   int
 	freeConnections *list.List
 
-	cache *lru.Cache
+	cache     *lru.Cache
+	cacheLock *sync.Map
 }
 
 var _ dns.Handler = &Generator{}
@@ -50,7 +51,8 @@ func New(servers []string) *Generator {
 		connections:     0,
 		freeConnections: list.New(),
 
-		cache: cache,
+		cache:     cache,
+		cacheLock: &sync.Map{},
 	}
 }
 

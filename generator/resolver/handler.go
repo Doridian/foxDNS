@@ -35,15 +35,10 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 	q.Name = dns.CanonicalName(q.Name)
 
-	recursionReply := r.getFromCache(q)
-	if recursionReply == nil {
-		var err error
-		recursionReply, err = r.exchangeWithRetry(q)
-		if err != nil {
-			log.Printf("Error handling DNS request: %v", err)
-			return
-		}
-		r.writeToCache(q, recursionReply)
+	recursionReply, err := r.getOrAddCache(q)
+	if err != nil {
+		log.Printf("Error handling DNS request: %v", err)
+		return
 	}
 
 	reply.Rcode = recursionReply.Rcode

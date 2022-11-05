@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -24,9 +25,43 @@ func cacheKey(q *dns.Question) string {
 	return fmt.Sprintf("%s:%d:%d", q.Name, q.Qclass, q.Qtype)
 }
 
-func (r *Generator) getFromCache(q *dns.Question) *dns.Msg {
+func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	key := cacheKey(q)
 
+	entry := r.getFromCache(key)
+	if entry != nil {
+		return entry, nil
+	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	cacheLock, loaded := r.cacheLock.LoadOrStore(key, wg)
+	cscheLockWG := cacheLock.(*sync.WaitGroup)
+
+	if loaded {
+		cscheLockWG.Wait()
+
+		entry := r.getFromCache(key)
+		if entry != nil {
+			return entry, nil
+		}
+	} else {
+		defer func() {
+			r.cacheLock.Delete(key)
+			wg.Done()
+		}()
+	}
+
+	reply, err := r.exchangeWithRetry(q)
+	if err != nil {
+		return nil, err
+	}
+
+	r.writeToCache(key, reply)
+	return reply, nil
+}
+
+func (r *Generator) getFromCache(key string) *dns.Msg {
 	res, ok := r.cache.Get(key)
 	if !ok {
 		return nil
@@ -35,6 +70,7 @@ func (r *Generator) getFromCache(q *dns.Question) *dns.Msg {
 	entry := res.(*cacheEntry)
 	now := time.Now()
 	if entry.expiry.Before(now) {
+		r.cache.Remove(key)
 		return nil
 	}
 
@@ -52,12 +88,10 @@ func (r *Generator) getFromCache(q *dns.Question) *dns.Msg {
 	return msg
 }
 
-func (r *Generator) writeToCache(q *dns.Question, m *dns.Msg) {
+func (r *Generator) writeToCache(key string, m *dns.Msg) {
 	if m.Rcode != dns.RcodeSuccess {
 		return
 	}
-
-	key := cacheKey(q)
 
 	cacheTTL := -1
 
