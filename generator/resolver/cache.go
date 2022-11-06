@@ -80,11 +80,14 @@ func (r *Generator) getFromCache(key string, allowChange bool) *dns.Msg {
 
 	msg := entry.msg.Copy()
 
-	for _, rr := range msg.Answer {
-		rr.Header().Ttl -= ttlAdjust
-	}
-	for _, rr := range msg.Ns {
-		rr.Header().Ttl -= ttlAdjust
+	if ttlAdjust > 1 {
+		ttlAdjust--
+		for _, rr := range msg.Answer {
+			rr.Header().Ttl -= ttlAdjust
+		}
+		for _, rr := range msg.Ns {
+			rr.Header().Ttl -= ttlAdjust
+		}
 	}
 
 	return msg
