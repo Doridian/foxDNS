@@ -59,7 +59,7 @@ func (s *Server) Serve() {
 const QRBit = 1 << 15
 
 func msgAcceptFunc(dh dns.Header) dns.MsgAcceptAction {
-	if isResponse := dh.Bits&QRBit != 0; isResponse {
+	if dh.Bits&QRBit != 0 { // is response
 		return dns.MsgIgnore
 	}
 
