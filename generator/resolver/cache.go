@@ -62,12 +62,11 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 }
 
 func (r *Generator) getFromCache(key string, allowChange bool) *dns.Msg {
-	res, ok := r.cache.Get(key)
+	entry, ok := r.cache.Get(key)
 	if !ok {
 		return nil
 	}
 
-	entry := res.(*cacheEntry)
 	now := time.Now()
 	if entry.expiry.Before(now) {
 		if allowChange {

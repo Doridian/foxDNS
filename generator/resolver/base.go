@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/FoxDenHome/foxdns/util"
-	lru "github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/miekg/dns"
 )
 
@@ -26,14 +26,14 @@ type Generator struct {
 	lastServerIdx   int
 	freeConnections *list.List
 
-	cache     *lru.Cache
+	cache     *lru.Cache[string, *cacheEntry]
 	cacheLock *sync.Map
 }
 
 var _ dns.Handler = &Generator{}
 
 func New(servers []string) *Generator {
-	cache, _ := lru.New(4096)
+	cache, _ := lru.New[string, *cacheEntry](4096)
 
 	return &Generator{
 		Servers: servers,
