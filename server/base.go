@@ -116,3 +116,12 @@ func (s *Server) serve(net string, addr string) {
 		log.Printf("Error listening on %s net %s: %v", addr, net, err)
 	}
 }
+
+func (s *Server) Shutdown() {
+	s.serverLock.Lock()
+	for dnsServer := range s.servers {
+		dnsServer.Shutdown()
+	}
+	s.servers = make(map[*dns.Server]bool)
+	s.serverLock.Unlock()
+}

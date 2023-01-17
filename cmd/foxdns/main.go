@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"log"
+	"os"
 
 	"github.com/FoxDenHome/foxdns/generator/authority"
 	"github.com/FoxDenHome/foxdns/generator/localizer"
@@ -15,9 +16,15 @@ import (
 )
 
 func main() {
-	config := LoadConfig("config.yml")
+	configFile := "config.yml"
+	if len(os.Args) > 1 {
+		configFile = os.Args[1]
+	}
+	config := LoadConfig(configFile)
 
 	srv := server.NewServer(config.Global.Listen)
+
+	go handleSignals(srv)
 
 	// Load dynamic config begin
 	mux := dns.NewServeMux()
