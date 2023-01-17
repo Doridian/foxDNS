@@ -1,0 +1,6 @@
+/foxdns
+/config.yml
+*.exe
+.vscode
+.DS_Store
+*.db
