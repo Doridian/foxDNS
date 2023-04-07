@@ -8,7 +8,7 @@ COPY go.mod go.sum /src/
 RUN go mod download
 
 COPY . /src
-RUN go build  -o /foxdns ./cmd/foxdns
+RUN go build -o /foxdns ./cmd/foxdns
 
 FROM scratch
 
