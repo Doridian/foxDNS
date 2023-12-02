@@ -77,9 +77,12 @@ func msgAcceptFunc(dh dns.Header) dns.MsgAcceptAction {
 
 func (s *Server) serve(net string, addr string) {
 	defer s.serveWait.Done()
+	initWaitSync := sync.Mutex{}
 	initWaitSet := false
 
 	initWaitDone := func() {
+		initWaitSync.Lock()
+		defer initWaitSync.Unlock()
 		if initWaitSet {
 			return
 		}
