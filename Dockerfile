@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . /src
 RUN go build -o /foxdns ./cmd/foxdns
-RUN upx /foxdns -o /foxdns-compressed
+RUN upx -9 /foxdns -o /foxdns-compressed
 
 FROM scratch AS base
 
