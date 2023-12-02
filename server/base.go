@@ -13,8 +13,9 @@ type Server struct {
 
 	handler dns.Handler
 
-	serveWait sync.WaitGroup
-	initWait  sync.WaitGroup
+	serveWait    sync.WaitGroup
+	initWait     sync.WaitGroup
+	privDropWait sync.WaitGroup
 
 	serverLock sync.Mutex
 	servers    map[*dns.Server]bool
@@ -38,6 +39,8 @@ func (s *Server) SetHandler(handler dns.Handler) {
 }
 
 func (s *Server) Serve() {
+	s.privDropWait.Add(1)
+
 	for _, listen := range s.listen {
 		s.initWait.Add(1)
 		s.serveWait.Add(1)
@@ -50,6 +53,7 @@ func (s *Server) Serve() {
 
 	s.initWait.Wait()
 	dropPrivs()
+	s.privDropWait.Done()
 
 	log.Printf("Server fully initialized!")
 
@@ -103,6 +107,8 @@ func (s *Server) serve(net string, addr string) {
 		NotifyStartedFunc: func() {
 			log.Printf("Listening on %s net %s", addr, net)
 			initWaitDone()
+			s.privDropWait.Wait()
+			log.Printf("Handling requests on %s net %s", addr, net)
 		},
 	}
 	s.servers[dnsServer] = true
