@@ -7,8 +7,8 @@ After=network.target
 Type=simple
 Restart=always
 RestartSec=1
-Environment=FOXDNS_UID=1337
-Environment=FOXDNS_GID=1337
+Environment=PUID=1337
+Environment=PGID=1337
 WorkingDirectory=/opt/foxdns
 ExecStart=/opt/foxdns/foxdns
 

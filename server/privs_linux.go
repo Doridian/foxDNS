@@ -10,8 +10,8 @@ import (
 )
 
 func dropPrivs() {
-	uid, _ := strconv.Atoi(os.Getenv("FOXDNS_UID"))
-	gid, _ := strconv.Atoi(os.Getenv("FOXDNS_GID"))
+	uid, _ := strconv.Atoi(os.Getenv("PUID"))
+	gid, _ := strconv.Atoi(os.Getenv("PGID"))
 
 	log.Printf("Startup IDs: UID = %d, GID = %d", syscall.Getuid(), syscall.Getgid())
 

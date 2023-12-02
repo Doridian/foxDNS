@@ -13,8 +13,8 @@ RUN upx -9 /foxdns -o /foxdns-compressed
 
 FROM scratch AS base
 
-ENV FOXDNS_UID=1000
-ENV FOXDNS_GID=1000
+ENV PUID=1000
+ENV PGID=1000
 
 WORKDIR /config
 VOLUME /config
