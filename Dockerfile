@@ -8,7 +8,7 @@ COPY go.mod go.sum /src/
 RUN go mod download
 
 COPY . /src
-RUN go build -o /foxdns ./cmd/foxdns
+RUN go build -ldflags='-s -w' -trimpath -o /foxdns ./cmd/foxdns
 RUN upx -9 /foxdns -o /foxdns-compressed
 
 FROM scratch AS base
