@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/FoxDenHome/foxdns/generator"
@@ -14,6 +15,7 @@ import (
 	"github.com/FoxDenHome/foxdns/generator/static"
 	"github.com/FoxDenHome/foxdns/server"
 	"github.com/miekg/dns"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var generators = make([]generator.Generator, 0)
@@ -139,7 +141,12 @@ func reloadConfig() {
 		log.Printf("Static zones enabled for %d zones", len(statZones))
 	}
 
-	srv.SetHandler(mux)
+	if config.Global.PrometheusListen != "" {
+		promMux := server.NewPrometheusDNSHandler(mux)
+		srv.SetHandler(promMux)
+	} else {
+		srv.SetHandler(mux)
+	}
 
 	for _, gen := range generators {
 		err := gen.Start()
@@ -156,6 +163,11 @@ func main() {
 	}
 
 	config := LoadConfig(configFile)
+
+	if config.Global.PrometheusListen != "" {
+		http.Handle("/metrics", promhttp.Handler())
+		go http.ListenAndServe(config.Global.PrometheusListen, nil)
+	}
 
 	srv = server.NewServer(config.Global.Listen)
 	reloadConfig()

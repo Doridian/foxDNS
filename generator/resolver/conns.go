@@ -4,12 +4,22 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type connInfo struct {
 	conn    *dns.Conn
+	server  string
 	lastUse time.Time
 }
+
+var (
+	openConnections = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "resolver_open_connections_total",
+		Help: "The number of open connections to upstream resolvers",
+	})
+)
 
 func (r *Generator) acquireConn() (info *connInfo, err error) {
 	r.connCond.L.Lock()
@@ -24,6 +34,7 @@ func (r *Generator) acquireConn() (info *connInfo, err error) {
 
 		if r.connections < r.MaxConnections {
 			r.connections++
+			openConnections.Set(float64(r.connections))
 
 			srv := r.Servers[r.lastServerIdx]
 			r.lastServerIdx++
@@ -32,7 +43,9 @@ func (r *Generator) acquireConn() (info *connInfo, err error) {
 			}
 
 			r.connCond.L.Unlock()
-			info = &connInfo{}
+			info = &connInfo{
+				server: srv,
+			}
 			info.conn, err = r.Client.Dial(srv)
 			return
 		}
@@ -50,6 +63,7 @@ func (r *Generator) returnConn(info *connInfo, err error) {
 		r.freeConnections.PushBack(info)
 	} else {
 		r.connections--
+		openConnections.Set(float64(r.connections))
 		go info.conn.Close()
 	}
 
@@ -72,6 +86,7 @@ func (r *Generator) cleanupConns() {
 		if time.Since(info.lastUse) > r.MaxIdleTime {
 			r.freeConnections.Remove(firstElem)
 			r.connections--
+			openConnections.Set(float64(r.connections))
 			go info.conn.Close()
 			madeChanges = true
 		} else {

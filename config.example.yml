@@ -4,6 +4,7 @@ global:
   mailbox: email.example.com
   listen:
     - :8053
+  prometheus-listen: :9001
 
 rdns:
   - ip_version: 6

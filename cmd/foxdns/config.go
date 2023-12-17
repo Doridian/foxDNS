@@ -9,9 +9,10 @@ import (
 
 type Config struct {
 	Global struct {
-		NameServers []string `yaml:"nameservers"`
-		Mailbox     string   `yaml:"mailbox"`
-		Listen      []string `yaml:"listen"`
+		NameServers      []string `yaml:"nameservers"`
+		Mailbox          string   `yaml:"mailbox"`
+		Listen           []string `yaml:"listen"`
+		PrometheusListen string   `yaml:"prometheus-listen"`
 	} `yaml:"global"`
 
 	RDNS []struct {
