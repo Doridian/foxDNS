@@ -92,6 +92,24 @@ func (r *Generator) addRecord(rr dns.RR) {
 }
 
 func (r *Generator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) []dns.RR {
+	if q.Qtype != dns.TypeCNAME {
+		// Handle CNAMEs
+		cnameRecs := r.records[dns.TypeCNAME]
+		if cnameRecs != nil {
+			cnameRecs := cnameRecs[q.Name]
+			if cnameRecs != nil {
+				cname := cnameRecs[0].(*dns.CNAME)
+				resultRecs := []dns.RR{cname}
+				resultRecs = append(resultRecs, r.HandleQuestion(dns.Question{
+					Name:   cname.Target,
+					Qtype:  q.Qtype,
+					Qclass: q.Qclass,
+				}, wr)...)
+				return resultRecs
+			}
+		}
+	}
+
 	typedRecs := r.records[q.Qtype]
 	if typedRecs == nil {
 		return []dns.RR{}
