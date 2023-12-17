@@ -11,6 +11,7 @@ import (
 
 func handleSignals(srv *server.Server) {
 	go handleTerm(srv)
+	go handleRefresh(srv)
 	go handleReload(srv)
 }
 
@@ -22,17 +23,27 @@ func handleTerm(srv *server.Server) {
 	srv.Shutdown()
 }
 
+func handleRefresh(srv *server.Server) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGUSR1)
+	for {
+		<-sigs
+		log.Printf("Got refreshing signal, refreshing...")
+		for _, g := range generators {
+			err := g.Refresh()
+			if err != nil {
+				log.Printf("Error refreshing generator: %v", err)
+			}
+		}
+	}
+}
+
 func handleReload(srv *server.Server) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGHUP)
 	for {
 		<-sigs
 		log.Printf("Got reload signal, reloading...")
-		for _, g := range generators {
-			err := g.Refresh()
-			if err != nil {
-				log.Printf("Error reloading generator: %v", err)
-			}
-		}
+		reloadConfig()
 	}
 }

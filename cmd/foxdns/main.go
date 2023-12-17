@@ -17,21 +17,13 @@ import (
 )
 
 var generators []generator.Generator
+var configFile string
+var srv *server.Server
 
-func main() {
-	configFile := "config.yml"
-	if len(os.Args) > 1 {
-		configFile = os.Args[1]
-	}
+func reloadConfig() {
 	config := LoadConfig(configFile)
 
-	srv := server.NewServer(config.Global.Listen)
-
-	handleSignals(srv)
-
 	generators = make([]generator.Generator, 0)
-
-	// Load dynamic config begin
 	mux := dns.NewServeMux()
 
 	for _, rdnsConf := range config.RDNS {
@@ -133,7 +125,18 @@ func main() {
 	}
 
 	srv.SetHandler(mux)
-	// Load dynamic config end
+}
 
+func main() {
+	configFile = "config.yml"
+	if len(os.Args) > 1 {
+		configFile = os.Args[1]
+	}
+
+	config := LoadConfig(configFile)
+
+	srv = server.NewServer(config.Global.Listen)
+	reloadConfig()
+	handleSignals(srv)
 	srv.Serve()
 }
