@@ -60,7 +60,7 @@ func (r *Generator) returnConn(info *connInfo, err error) {
 
 	if err == nil {
 		info.lastUse = time.Now()
-		r.freeConnections.PushBack(info)
+		r.freeConnections.PushFront(info)
 	} else {
 		r.connections--
 		openConnections.Set(float64(r.connections))
@@ -77,14 +77,14 @@ func (r *Generator) cleanupConns() {
 	madeChanges := false
 
 	for {
-		firstElem := r.freeConnections.Front()
-		if firstElem == nil {
+		lastElem := r.freeConnections.Back()
+		if lastElem == nil {
 			break
 		}
-		info := firstElem.Value.(*connInfo)
+		info := lastElem.Value.(*connInfo)
 
 		if time.Since(info.lastUse) > r.MaxIdleTime {
-			r.freeConnections.Remove(firstElem)
+			r.freeConnections.Remove(lastElem)
 			r.connections--
 			openConnections.Set(float64(r.connections))
 			go info.conn.Close()
