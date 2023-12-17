@@ -97,3 +97,11 @@ func (r *AuthorityHandler) Register(mux *dns.ServeMux) {
 func (r *AuthorityHandler) Refresh() error {
 	return nil
 }
+
+func (r *AuthorityHandler) Start() error {
+	return nil
+}
+
+func (r *AuthorityHandler) Stop() error {
+	return nil
+}

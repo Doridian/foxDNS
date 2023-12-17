@@ -16,11 +16,18 @@ import (
 	"github.com/miekg/dns"
 )
 
-var generators []generator.Generator
+var generators = make([]generator.Generator, 0)
 var configFile string
 var srv *server.Server
 
 func reloadConfig() {
+	for _, gen := range generators {
+		err := gen.Stop()
+		if err != nil {
+			log.Panicf("Error stopping generator: %v", err)
+		}
+	}
+
 	config := LoadConfig(configFile)
 
 	generators = make([]generator.Generator, 0)
@@ -129,6 +136,13 @@ func reloadConfig() {
 	}
 
 	srv.SetHandler(mux)
+
+	for _, gen := range generators {
+		err := gen.Start()
+		if err != nil {
+			log.Panicf("Error starting generator: %v", err)
+		}
+	}
 }
 
 func main() {

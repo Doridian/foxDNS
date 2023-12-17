@@ -53,3 +53,11 @@ func (r *Generator) Register(mux *dns.ServeMux) {
 func (r *Generator) Refresh() error {
 	return nil
 }
+
+func (r *Generator) Start() error {
+	return nil
+}
+
+func (r *Generator) Stop() error {
+	return nil
+}

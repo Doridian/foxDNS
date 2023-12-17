@@ -73,3 +73,11 @@ func (r *Generator) HandleQuestion(q dns.Question, _ dns.ResponseWriter) []dns.R
 func (r *Generator) Refresh() error {
 	return nil
 }
+
+func (r *Generator) Start() error {
+	return nil
+}
+
+func (r *Generator) Stop() error {
+	return nil
+}

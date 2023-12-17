@@ -64,3 +64,11 @@ func (r *Generator) SetTimeout(timeout time.Duration) {
 func (r *Generator) Refresh() error {
 	return nil
 }
+
+func (r *Generator) Start() error {
+	return nil
+}
+
+func (r *Generator) Stop() error {
+	return nil
+}
