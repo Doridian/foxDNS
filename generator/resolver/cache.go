@@ -61,7 +61,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	return reply, nil
 }
 
-func (r *Generator) cleanCache() {
+func (r *Generator) cleanupCache() {
 	now := time.Now()
 	for _, key := range r.cache.Keys() {
 		entry, ok := r.cache.Get(key)

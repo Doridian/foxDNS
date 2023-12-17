@@ -15,16 +15,18 @@ type Generator struct {
 	Client  *dns.Client
 
 	MaxConnections int
+	MaxIdleTime    time.Duration
 	Retries        int
 	RetryWait      time.Duration
 	Timeout        time.Duration
 
 	AllowOnlyFromPrivate bool
 
-	connCond        *sync.Cond
-	connections     int
-	lastServerIdx   int
-	freeConnections *list.List
+	connCond          *sync.Cond
+	connections       int
+	lastServerIdx     int
+	freeConnections   *list.List
+	connCleanupTicker *time.Ticker
 
 	cache              *lru.Cache[string, *cacheEntry]
 	cacheLock          *sync.Map
@@ -44,6 +46,7 @@ func New(servers []string) *Generator {
 			WriteTimeout: util.DefaultTimeout,
 		},
 		MaxConnections:       10,
+		MaxIdleTime:          time.Second * 15,
 		Retries:              3,
 		AllowOnlyFromPrivate: true,
 		RetryWait:            time.Second,
@@ -72,16 +75,27 @@ func (r *Generator) Start() error {
 		return err
 	}
 
-	cacheCleanTicker := time.NewTicker(time.Minute)
-	r.cacheCleanupTicker = cacheCleanTicker
-
+	cacheCleanupTicker := time.NewTicker(time.Minute)
+	r.cacheCleanupTicker = cacheCleanupTicker
 	go func() {
 		for {
-			_, ok := <-cacheCleanTicker.C
+			_, ok := <-cacheCleanupTicker.C
 			if !ok {
 				return
 			}
-			r.cleanCache()
+			r.cleanupCache()
+		}
+	}()
+
+	connCleanupTicker := time.NewTicker(r.MaxIdleTime / 2)
+	r.connCleanupTicker = connCleanupTicker
+	go func() {
+		for {
+			_, ok := <-connCleanupTicker.C
+			if !ok {
+				return
+			}
+			r.cleanupConns()
 		}
 	}()
 
@@ -92,6 +106,10 @@ func (r *Generator) Stop() error {
 	if r.cacheCleanupTicker != nil {
 		r.cacheCleanupTicker.Stop()
 		r.cacheCleanupTicker = nil
+	}
+	if r.connCleanupTicker != nil {
+		r.connCleanupTicker.Stop()
+		r.connCleanupTicker = nil
 	}
 	return nil
 }

@@ -1,14 +1,23 @@
 package resolver
 
-import "github.com/miekg/dns"
+import (
+	"time"
 
-func (r *Generator) acquireConn() (conn *dns.Conn, err error) {
+	"github.com/miekg/dns"
+)
+
+type connInfo struct {
+	conn    *dns.Conn
+	lastUse time.Time
+}
+
+func (r *Generator) acquireConn() (info *connInfo, err error) {
 	r.connCond.L.Lock()
 
 	for {
 		firstElem := r.freeConnections.Front()
 		if firstElem != nil {
-			conn = r.freeConnections.Remove(firstElem).(*dns.Conn)
+			info = r.freeConnections.Remove(firstElem).(*connInfo)
 			r.connCond.L.Unlock()
 			return
 		}
@@ -23,7 +32,8 @@ func (r *Generator) acquireConn() (conn *dns.Conn, err error) {
 			}
 
 			r.connCond.L.Unlock()
-			conn, err = r.Client.Dial(srv)
+			info = &connInfo{}
+			info.conn, err = r.Client.Dial(srv)
 			return
 		}
 
@@ -31,16 +41,45 @@ func (r *Generator) acquireConn() (conn *dns.Conn, err error) {
 	}
 }
 
-func (r *Generator) returnConn(conn *dns.Conn, err error) {
+func (r *Generator) returnConn(info *connInfo, err error) {
 	r.connCond.L.Lock()
 	defer r.connCond.L.Unlock()
 
 	if err == nil {
-		r.freeConnections.PushBack(conn)
+		info.lastUse = time.Now()
+		r.freeConnections.PushBack(info)
 	} else {
 		r.connections--
-		go conn.Close()
+		go info.conn.Close()
 	}
 
 	r.connCond.Signal()
+}
+
+func (r *Generator) cleanupConns() {
+	r.connCond.L.Lock()
+	defer r.connCond.L.Unlock()
+
+	madeChanges := false
+
+	for {
+		firstElem := r.freeConnections.Front()
+		if firstElem == nil {
+			break
+		}
+		info := firstElem.Value.(*connInfo)
+
+		if time.Since(info.lastUse) > r.MaxIdleTime {
+			r.freeConnections.Remove(firstElem)
+			r.connections--
+			go info.conn.Close()
+			madeChanges = true
+		} else {
+			break
+		}
+	}
+
+	if madeChanges {
+		r.connCond.Signal()
+	}
 }

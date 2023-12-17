@@ -72,6 +72,10 @@ func reloadConfig() {
 			resolv.MaxConnections = resolvConf.MaxConnections
 		}
 
+		if resolvConf.MaxIdleTime > 0 {
+			resolv.MaxIdleTime = resolvConf.MaxIdleTime
+		}
+
 		if resolvConf.Retries > 0 {
 			resolv.Retries = resolvConf.Retries
 		}

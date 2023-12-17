@@ -28,6 +28,7 @@ type Config struct {
 		ServerName string `yaml:"server-name"`
 
 		MaxConnections int           `yaml:"max-connections"`
+		MaxIdleTime    time.Duration `yaml:"max-idle-time"`
 		Retries        int           `yaml:"retries"`
 		RetryWait      time.Duration `yaml:"retry-wait"`
 		Timeout        time.Duration `yaml:"timeout"`

@@ -8,15 +8,15 @@ import (
 )
 
 func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, err error) {
-	var conn *dns.Conn
-	conn, err = r.acquireConn()
+	var info *connInfo
+	info, err = r.acquireConn()
 	if err != nil {
-		r.returnConn(conn, err)
+		r.returnConn(info, err)
 		return
 	}
 
-	resp, _, err = r.Client.ExchangeWithConn(m, conn)
-	r.returnConn(conn, err)
+	resp, _, err = r.Client.ExchangeWithConn(m, info.conn)
+	r.returnConn(info, err)
 	return
 }
 
