@@ -39,6 +39,7 @@ func (r *Generator) returnConn(conn *dns.Conn, err error) {
 		r.freeConnections.PushBack(conn)
 	} else {
 		r.connections--
+		go conn.Close()
 	}
 
 	r.connCond.Signal()
