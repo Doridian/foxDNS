@@ -77,6 +77,10 @@ func reloadConfig() {
 			resolv.SetTimeout(resolvConf.Timeout)
 		}
 
+		if resolvConf.CacheSize > 0 {
+			resolv.SetCacheSize(resolvConf.CacheSize)
+		}
+
 		mux.Handle(resolvConf.Zone, resolv)
 
 		log.Printf("Resolver enabled for zone %s (only private clients: %v)", resolvConf.Zone, resolv.AllowOnlyFromPrivate)

@@ -31,6 +31,7 @@ type Config struct {
 		Retries        int           `yaml:"retries"`
 		RetryWait      time.Duration `yaml:"retry-wait"`
 		Timeout        time.Duration `yaml:"timeout"`
+		CacheSize      int           `yaml:"cache-size"`
 
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
 	} `yaml:"resolvers"`
