@@ -5,4 +5,4 @@ import (
 )
 
 const DefaultTimeout = time.Duration(5) * time.Second
-const DNSMaxSize = 65535
+const DNSMaxSize = 512
