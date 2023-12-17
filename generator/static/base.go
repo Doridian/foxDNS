@@ -2,14 +2,10 @@ package static
 
 import (
 	"io"
-	"log"
 	"os"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/miekg/dns"
 )
-
-var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
 type zoneConfig struct {
 	file           string
@@ -21,14 +17,12 @@ type zoneConfig struct {
 type Generator struct {
 	configs []zoneConfig
 	records map[uint16]map[string][]dns.RR
-	watcher *fsnotify.Watcher
 }
 
 func New() *Generator {
 	return &Generator{
 		configs: make([]zoneConfig, 0),
 		records: make(map[uint16]map[string][]dns.RR),
-		watcher: nil,
 	}
 }
 
@@ -47,13 +41,6 @@ func (r *Generator) LoadZoneFile(file string, origin string, defaultTTL uint32, 
 		defaultTTL:     defaultTTL,
 		includeAllowed: includeAllowed,
 	})
-
-	if r.watcher != nil {
-		err = r.watcher.Add(file)
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
@@ -137,55 +124,9 @@ func (r *Generator) Refresh() error {
 }
 
 func (r *Generator) Start() error {
-	if !enableFSNotify {
-		return nil
-	}
-
-	var err error
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	r.watcher = watcher
-
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				if event.Has(fsnotify.Write) {
-					log.Printf("Reloading static generator because of file %s", event.Name)
-					err := r.Refresh()
-					if err != nil {
-						log.Printf("Error reloading zone: %v", err)
-					}
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				log.Printf("fsnotify error: %v", err)
-			}
-		}
-	}()
-
-	for _, cf := range r.configs {
-		err = r.watcher.Add(cf.file)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
 func (r *Generator) Stop() error {
-	err := r.watcher.Close()
-	if err != nil {
-		return err
-	}
-	r.watcher = nil
 	return nil
 }
