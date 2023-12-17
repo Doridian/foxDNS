@@ -9,6 +9,8 @@ import (
 	"github.com/miekg/dns"
 )
 
+var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
+
 type zoneConfig struct {
 	file           string
 	origin         string
@@ -117,6 +119,10 @@ func (r *Generator) Refresh() error {
 }
 
 func (r *Generator) Start() error {
+	if !enableFSNotify {
+		return nil
+	}
+
 	var err error
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
