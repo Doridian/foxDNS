@@ -116,3 +116,7 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q dns.Question, wr dns.Respons
 	}
 	return resp
 }
+
+func (r *LocalizedRecordGenerator) Refresh() error {
+	return nil
+}

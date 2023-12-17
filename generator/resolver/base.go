@@ -60,3 +60,7 @@ func (r *Generator) SetTimeout(timeout time.Duration) {
 	r.Client.ReadTimeout = timeout
 	r.Client.WriteTimeout = timeout
 }
+
+func (r *Generator) Refresh() error {
+	return nil
+}

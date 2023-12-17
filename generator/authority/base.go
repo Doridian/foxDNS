@@ -93,3 +93,7 @@ func (r *AuthorityHandler) Register(mux *dns.ServeMux) {
 		mux.Handle(zone, r)
 	}
 }
+
+func (r *AuthorityHandler) Refresh() error {
+	return nil
+}

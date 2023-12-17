@@ -49,3 +49,7 @@ func (r *Generator) Register(mux *dns.ServeMux) {
 		mux.Handle(zone, r)
 	}
 }
+
+func (r *Generator) Refresh() error {
+	return nil
+}

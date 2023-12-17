@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/FoxDenHome/foxdns/generator"
 	"github.com/FoxDenHome/foxdns/generator/authority"
 	"github.com/FoxDenHome/foxdns/generator/localizer"
 	"github.com/FoxDenHome/foxdns/generator/rdns"
@@ -15,6 +16,8 @@ import (
 	"github.com/miekg/dns"
 )
 
+var generators []generator.Generator
+
 func main() {
 	configFile := "config.yml"
 	if len(os.Args) > 1 {
@@ -24,7 +27,9 @@ func main() {
 
 	srv := server.NewServer(config.Global.Listen)
 
-	go handleSignals(srv)
+	handleSignals(srv)
+
+	generators = make([]generator.Generator, 0)
 
 	// Load dynamic config begin
 	mux := dns.NewServeMux()
@@ -33,8 +38,11 @@ func main() {
 		rdnsAuth := authority.NewAuthorityHandler(append([]string{
 			rdnsConf.Suffix,
 		}, rdnsConf.Subnets...), config.Global.NameServers, config.Global.Mailbox)
+		generators = append(generators, rdnsAuth)
 
 		rdnsGen := rdns.NewRDNSGenerator(rdnsConf.IPVersion)
+		generators = append(generators, rdnsGen)
+
 		if rdnsGen == nil {
 			log.Panicf("Unknown IP version: %d", rdnsConf.IPVersion)
 		}
@@ -47,6 +55,8 @@ func main() {
 
 	for _, resolvConf := range config.Resolvers {
 		resolv := resolver.New(resolvConf.NameServers)
+		generators = append(generators, resolv)
+
 		if resolvConf.ServerName != "" {
 			resolv.Client.TLSConfig = &tls.Config{
 				ServerName: resolvConf.ServerName,
@@ -82,6 +92,8 @@ func main() {
 
 	if len(config.Localizers) > 0 {
 		loc := localizer.New()
+		generators = append(generators, loc)
+
 		locZones := make([]string, 0, len(config.Localizers))
 
 		for locName, locIPs := range config.Localizers {
@@ -92,6 +104,7 @@ func main() {
 		}
 
 		locAuth := simple.New(locZones)
+		generators = append(generators, locAuth)
 		locAuth.Child = loc
 		locAuth.Register(mux)
 
@@ -100,6 +113,7 @@ func main() {
 
 	if len(config.StaticZones) > 0 {
 		stat := static.New()
+		generators = append(generators, stat)
 		statZones := make([]string, 0, len(config.StaticZones))
 
 		for statName, statFile := range config.StaticZones {
@@ -110,9 +124,10 @@ func main() {
 			}
 		}
 
-		locAuth := simple.New(statZones)
-		locAuth.Child = stat
-		locAuth.Register(mux)
+		statAuth := simple.New(statZones)
+		generators = append(generators, statAuth)
+		statAuth.Child = stat
+		statAuth.Register(mux)
 
 		log.Printf("Static zones enabled for %d zones", len(statZones))
 	}
