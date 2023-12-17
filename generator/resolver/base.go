@@ -26,8 +26,9 @@ type Generator struct {
 	lastServerIdx   int
 	freeConnections *list.List
 
-	cache     *lru.Cache[string, *cacheEntry]
-	cacheLock *sync.Map
+	cache             *lru.Cache[string, *cacheEntry]
+	cacheLock         *sync.Map
+	cacheCleanupTimer *time.Ticker
 }
 
 var _ dns.Handler = &Generator{}
@@ -66,9 +67,31 @@ func (r *Generator) Refresh() error {
 }
 
 func (r *Generator) Start() error {
+	err := r.Stop()
+	if err != nil {
+		return err
+	}
+
+	cacheCleanTicker := time.NewTicker(time.Minute)
+	r.cacheCleanupTimer = cacheCleanTicker
+
+	go func() {
+		for {
+			_, ok := <-cacheCleanTicker.C
+			if !ok {
+				return
+			}
+			r.cleanCache()
+		}
+	}()
+
 	return nil
 }
 
 func (r *Generator) Stop() error {
+	if r.cacheCleanupTimer != nil {
+		r.cacheCleanupTimer.Stop()
+		r.cacheCleanupTimer = nil
+	}
 	return nil
 }
