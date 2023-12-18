@@ -119,7 +119,7 @@ func (r *Generator) getFromCache(key string) *dns.Msg {
 }
 
 func (r *Generator) writeToCache(key string, m *dns.Msg) {
-	if m.Rcode != dns.RcodeSuccess {
+	if m.Rcode != dns.RcodeSuccess && m.Rcode != dns.RcodeNameError {
 		return
 	}
 
