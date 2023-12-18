@@ -102,6 +102,10 @@ func reloadConfig() {
 			resolv.CacheMaxTTL = int(resolvConf.CacheMaxTime.Seconds())
 		}
 
+		if resolvConf.CacheMinTime > 0 {
+			resolv.CacheMinTTL = int(resolvConf.CacheMinTime.Seconds())
+		}
+
 		if resolvConf.CacheNoReplyTime > 0 {
 			resolv.CacheNoReplyTTL = int(resolvConf.CacheNoReplyTime.Seconds())
 		}
