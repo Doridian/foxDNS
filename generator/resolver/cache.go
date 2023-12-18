@@ -90,11 +90,11 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	matchType := "exact"
 	if !ok {
 		entry, ok = r.cache.Get(keyDomain)
-		if entry.qtype != q.Qtype || entry.qclass != q.Qclass {
-			matchType = "domain"
-		}
 		if !ok {
 			return nil, ""
+		}
+		if entry != nil && entry.qtype != q.Qtype || entry.qclass != q.Qclass {
+			matchType = "domain"
 		}
 	}
 
