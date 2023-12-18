@@ -40,7 +40,6 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		q.Qtype = dns.TypeSOA
 		q.Name = r.zone
 		reply.Ns = r.Child.HandleQuestion(q, wr)
-		reply.Rcode = dns.RcodeNameError
 	}
 
 	wr.WriteMsg(reply)

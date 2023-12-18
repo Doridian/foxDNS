@@ -75,7 +75,6 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 		if len(reply.Answer) < 1 {
 			reply.Ns = r.soa
-			reply.Rcode = dns.RcodeNameError
 		}
 	}
 
