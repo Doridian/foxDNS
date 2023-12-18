@@ -20,7 +20,7 @@ var (
 	cacheResults = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "foxdns_resolver_cache_results",
 		Help: "The number of cache hits/misses for DNS queries",
-	}, []string{"result"})
+	}, []string{"result", "match_type"})
 )
 
 func (r *Generator) SetCacheSize(size int) {
@@ -39,9 +39,9 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
-	entry := r.getFromCache(key, keyDomain)
+	entry, matchType := r.getFromCache(key, keyDomain)
 	if entry != nil {
-		cacheResults.WithLabelValues("hit").Inc()
+		cacheResults.WithLabelValues("hit", matchType).Inc()
 		return entry, nil
 	}
 
@@ -54,9 +54,9 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	if loaded {
 		cacheLockWG.Wait()
 
-		entry := r.getFromCache(key, keyDomain)
+		entry, matchType := r.getFromCache(key, keyDomain)
 		if entry != nil {
-			cacheResults.WithLabelValues("wait").Inc()
+			cacheResults.WithLabelValues("wait", matchType).Inc()
 			return entry, nil
 		}
 	} else {
@@ -68,8 +68,8 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 		return nil, err
 	}
 
-	r.writeToCache(key, keyDomain, reply)
-	cacheResults.WithLabelValues("miss").Inc()
+	matchType = r.writeToCache(key, keyDomain, reply)
+	cacheResults.WithLabelValues("miss", matchType).Inc()
 	return reply, nil
 }
 
@@ -83,18 +83,20 @@ func (r *Generator) cleanupCache() {
 	}
 }
 
-func (r *Generator) getFromCache(key string, keyDomain string) *dns.Msg {
+func (r *Generator) getFromCache(key string, keyDomain string) (*dns.Msg, string) {
 	entry, ok := r.cache.Get(key)
+	matchType := "exact"
 	if !ok {
 		entry, ok = r.cache.Get(keyDomain)
+		matchType = "domain"
 		if !ok {
-			return nil
+			return nil, ""
 		}
 	}
 
 	now := time.Now()
 	if entry.expiry.Before(now) {
-		return nil
+		return nil, ""
 	}
 
 	ttlAdjust := uint32(now.Sub(entry.time).Seconds())
@@ -121,12 +123,12 @@ func (r *Generator) getFromCache(key string, keyDomain string) *dns.Msg {
 		}
 	}
 
-	return msg
+	return msg, matchType
 }
 
-func (r *Generator) writeToCache(key string, keyDomain string, m *dns.Msg) {
+func (r *Generator) writeToCache(key string, keyDomain string, m *dns.Msg) string {
 	if m.Rcode != dns.RcodeSuccess && m.Rcode != dns.RcodeNameError {
-		return
+		return ""
 	}
 
 	minTTL := -1
@@ -172,7 +174,7 @@ func (r *Generator) writeToCache(key string, keyDomain string, m *dns.Msg) {
 	}
 
 	if cacheTTL == 0 {
-		return
+		return ""
 	}
 
 	now := time.Now()
@@ -182,8 +184,11 @@ func (r *Generator) writeToCache(key string, keyDomain string, m *dns.Msg) {
 		msg:    m,
 	}
 
+	matchType := "exact"
 	if m.Rcode == dns.RcodeNameError {
 		key = keyDomain
+		matchType = "domain"
 	}
 	r.cache.Add(key, entry)
+	return matchType
 }
