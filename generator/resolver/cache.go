@@ -31,10 +31,15 @@ func cacheKey(q *dns.Question) string {
 	return fmt.Sprintf("%s:%d:%d", q.Name, q.Qclass, q.Qtype)
 }
 
+func cacheKeyDomain(q *dns.Question) string {
+	return fmt.Sprintf("%s:ANY", q.Name)
+}
+
 func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	key := cacheKey(q)
+	keyDomain := cacheKeyDomain(q)
 
-	entry := r.getFromCache(key)
+	entry := r.getFromCache(key, keyDomain)
 	if entry != nil {
 		cacheResults.WithLabelValues("hit").Inc()
 		return entry, nil
@@ -48,7 +53,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	if loaded {
 		cacheLockWG.Wait()
 
-		entry := r.getFromCache(key)
+		entry := r.getFromCache(key, keyDomain)
 		if entry != nil {
 			cacheResults.WithLabelValues("wait").Inc()
 			return entry, nil
@@ -65,7 +70,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 		return nil, err
 	}
 
-	r.writeToCache(key, reply)
+	r.writeToCache(key, keyDomain, reply)
 	cacheResults.WithLabelValues("miss").Inc()
 	return reply, nil
 }
@@ -80,10 +85,13 @@ func (r *Generator) cleanupCache() {
 	}
 }
 
-func (r *Generator) getFromCache(key string) *dns.Msg {
+func (r *Generator) getFromCache(key string, keyDomain string) *dns.Msg {
 	entry, ok := r.cache.Get(key)
 	if !ok {
-		return nil
+		entry, ok = r.cache.Get(keyDomain)
+		if !ok {
+			return nil
+		}
 	}
 
 	now := time.Now()
@@ -118,7 +126,7 @@ func (r *Generator) getFromCache(key string) *dns.Msg {
 	return msg
 }
 
-func (r *Generator) writeToCache(key string, m *dns.Msg) {
+func (r *Generator) writeToCache(key string, keyDomain string, m *dns.Msg) {
 	if m.Rcode != dns.RcodeSuccess && m.Rcode != dns.RcodeNameError {
 		return
 	}
@@ -165,6 +173,10 @@ func (r *Generator) writeToCache(key string, m *dns.Msg) {
 		cacheTTL = r.CacheMaxTTL
 	}
 
+	if cacheTTL == 0 {
+		return
+	}
+
 	now := time.Now()
 	entry := &cacheEntry{
 		time:   now,
@@ -172,5 +184,8 @@ func (r *Generator) writeToCache(key string, m *dns.Msg) {
 		msg:    m,
 	}
 
+	if m.Rcode == dns.RcodeNameError {
+		key = keyDomain
+	}
 	r.cache.Add(key, entry)
 }
