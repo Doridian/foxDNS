@@ -93,7 +93,7 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 		if !ok {
 			return nil, ""
 		}
-		if entry != nil && entry.qtype != q.Qtype || entry.qclass != q.Qclass {
+		if entry.qtype != q.Qtype || entry.qclass != q.Qclass {
 			matchType = "domain"
 		}
 	}
