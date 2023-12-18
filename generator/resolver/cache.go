@@ -98,10 +98,20 @@ func (r *Generator) getFromCache(key string) *dns.Msg {
 	if ttlAdjust > 1 {
 		ttlAdjust--
 		for _, rr := range msg.Answer {
-			rr.Header().Ttl -= ttlAdjust
+			rrHdr := rr.Header()
+			if rrHdr.Ttl < ttlAdjust {
+				rrHdr.Ttl = 0
+			} else {
+				rrHdr.Ttl -= ttlAdjust
+			}
 		}
 		for _, rr := range msg.Ns {
-			rr.Header().Ttl -= ttlAdjust
+			rrHdr := rr.Header()
+			if rrHdr.Ttl < ttlAdjust {
+				rrHdr.Ttl = 0
+			} else {
+				rrHdr.Ttl -= ttlAdjust
+			}
 		}
 	}
 
@@ -113,6 +123,7 @@ func (r *Generator) writeToCache(key string, m *dns.Msg) {
 		return
 	}
 
+	minTTL := -1
 	cacheTTL := -1
 
 	for _, rr := range m.Answer {
@@ -123,14 +134,24 @@ func (r *Generator) writeToCache(key string, m *dns.Msg) {
 	}
 
 	for _, rr := range m.Ns {
-		ttl := int(rr.Header().Ttl)
+		rrHdr := rr.Header()
+
+		if rrHdr.Rrtype == dns.TypeSOA {
+			minTTL = int(rr.(*dns.SOA).Minttl)
+		}
+
+		ttl := int(rrHdr.Ttl)
 		if cacheTTL < 0 || ttl < cacheTTL {
 			cacheTTL = ttl
 		}
 	}
 
 	if cacheTTL < 0 {
-		cacheTTL = r.CacheNoReplyTTL
+		if minTTL >= 0 {
+			cacheTTL = minTTL
+		} else {
+			cacheTTL = r.CacheNoReplyTTL
+		}
 	} else if cacheTTL > r.CacheMaxTTL {
 		cacheTTL = r.CacheMaxTTL
 	}
