@@ -47,6 +47,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
+	defer wg.Done()
 	cacheLock, loaded := r.cacheLock.LoadOrStore(key, wg)
 	cacheLockWG := cacheLock.(*sync.WaitGroup)
 
@@ -59,10 +60,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 			return entry, nil
 		}
 	} else {
-		defer func() {
-			r.cacheLock.Delete(key)
-			wg.Done()
-		}()
+		defer r.cacheLock.Delete(key)
 	}
 
 	reply, err := r.exchangeWithRetry(q)
