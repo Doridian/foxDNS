@@ -33,7 +33,10 @@ type Config struct {
 		Retries        int           `yaml:"retries"`
 		RetryWait      time.Duration `yaml:"retry-wait"`
 		Timeout        time.Duration `yaml:"timeout"`
-		CacheSize      int           `yaml:"cache-size"`
+
+		CacheSize        int           `yaml:"cache-size"`
+		CacheMaxTime     time.Duration `yaml:"cache-max-time"`
+		CacheNoReplyTime time.Duration `yaml:"cache-no-reply-time"`
 
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
 	} `yaml:"resolvers"`

@@ -10,9 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-const cacheMaxTTL = 3600
-const cacheNoReplyTTL = 30
-
 type cacheEntry struct {
 	msg    *dns.Msg
 	time   time.Time
@@ -133,9 +130,9 @@ func (r *Generator) writeToCache(key string, m *dns.Msg) {
 	}
 
 	if cacheTTL < 0 {
-		cacheTTL = cacheNoReplyTTL
-	} else if cacheTTL > cacheMaxTTL {
-		cacheTTL = cacheMaxTTL
+		cacheTTL = r.CacheNoReplyTTL
+	} else if cacheTTL > r.CacheMaxTTL {
+		cacheTTL = r.CacheMaxTTL
 	}
 
 	now := time.Now()

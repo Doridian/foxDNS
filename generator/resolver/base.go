@@ -28,6 +28,9 @@ type Generator struct {
 	freeConnections   *list.List
 	connCleanupTicker *time.Ticker
 
+	CacheMaxTTL     int
+	CacheNoReplyTTL int
+
 	cache              *lru.Cache[string, *cacheEntry]
 	cacheLock          *sync.Map
 	cacheCleanupTicker *time.Ticker
@@ -50,6 +53,9 @@ func New(servers []string) *Generator {
 		Retries:              3,
 		AllowOnlyFromPrivate: true,
 		RetryWait:            time.Second,
+
+		CacheMaxTTL:     3600,
+		CacheNoReplyTTL: 30,
 
 		connCond:        sync.NewCond(&sync.Mutex{}),
 		connections:     0,
