@@ -31,7 +31,7 @@ var (
 
 	cacheTTLHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "foxdns_resolver_cache_ttl",
-		Help:    "TTLs for DNS cache entries",
+		Help:    "Upstream TTLs for DNS cache entries",
 		Buckets: []float64{1, 10, 30, 60, 300, 600, 1800, 3600},
 	})
 )
@@ -189,15 +189,13 @@ func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, 
 		cacheTTL = authTTL
 	}
 
+	cacheTTLHistogram.Observe(float64(cacheTTL))
+
 	if cacheTTL > r.CacheMaxTTL {
 		cacheTTL = r.CacheMaxTTL
-	}
-
-	if cacheTTL < r.CacheMinTTL {
+	} else if cacheTTL < r.CacheMinTTL {
 		cacheTTL = r.CacheMinTTL
 	}
-
-	cacheTTLHistogram.Observe(float64(cacheTTL))
 
 	if cacheTTL == 0 {
 		return ""
