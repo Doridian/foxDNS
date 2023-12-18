@@ -14,6 +14,7 @@ type cacheEntry struct {
 	msg    *dns.Msg
 	time   time.Time
 	expiry time.Time
+	key    string
 }
 
 var (
@@ -88,7 +89,9 @@ func (r *Generator) getFromCache(key string, keyDomain string) (*dns.Msg, string
 	matchType := "exact"
 	if !ok {
 		entry, ok = r.cache.Get(keyDomain)
-		matchType = "domain"
+		if entry.key != key {
+			matchType = "domain"
+		}
 		if !ok {
 			return nil, ""
 		}
@@ -182,6 +185,7 @@ func (r *Generator) writeToCache(key string, keyDomain string, m *dns.Msg) strin
 		time:   now,
 		expiry: now.Add(time.Duration(cacheTTL) * time.Second),
 		msg:    m,
+		key:    key,
 	}
 
 	matchType := "exact"
