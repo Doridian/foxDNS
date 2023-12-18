@@ -23,7 +23,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build alpine container image
+      - name: Build container image
         uses: docker/build-push-action@v5
         with:
           platforms: linux/amd64,linux/arm64
@@ -32,14 +32,14 @@ jobs:
             GIT_REVISION=${{ github.sha }}
           tags: |
             ghcr.io/foxdenhome/foxdns/foxdns:latest
-            ghcr.io/foxdenhome/foxdns/foxdns:alpine
-      - name: Build bare container image
+            ghcr.io/foxdenhome/foxdns/foxdns:ssl
+      - name: Build nossl container image
         uses: docker/build-push-action@v5
         with:
           platforms: linux/amd64,linux/arm64
           push: true
-          file: Dockerfile.bare
+          target: nossl
           build-args: |
             GIT_REVISION=${{ github.sha }}
           tags: |
-            ghcr.io/foxdenhome/foxdns/foxdns:bare
+            ghcr.io/foxdenhome/foxdns/foxdns:nossl

@@ -64,7 +64,9 @@ func (r *Generator) returnConn(info *connInfo, err error) {
 	} else {
 		r.connections--
 		openConnections.Set(float64(r.connections))
-		go info.conn.Close()
+		if info.conn != nil {
+			go info.conn.Close()
+		}
 	}
 
 	r.connCond.Signal()
