@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 const cacheMaxTTL = 3600
@@ -16,6 +18,13 @@ type cacheEntry struct {
 	time   time.Time
 	expiry time.Time
 }
+
+var (
+	cacheResults = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "foxdns_resolver_cache_results",
+		Help: "The number of cache hits/misses for DNS queries",
+	}, []string{"result"})
+)
 
 func (r *Generator) SetCacheSize(size int) {
 	r.cache.Resize(size)
@@ -30,6 +39,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 
 	entry := r.getFromCache(key)
 	if entry != nil {
+		cacheResults.WithLabelValues("hit").Inc()
 		return entry, nil
 	}
 
@@ -43,6 +53,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 
 		entry := r.getFromCache(key)
 		if entry != nil {
+			cacheResults.WithLabelValues("hit").Inc()
 			return entry, nil
 		}
 	} else {
@@ -52,6 +63,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 		}()
 	}
 
+	cacheResults.WithLabelValues("miss").Inc()
 	reply, err := r.exchangeWithRetry(q)
 	if err != nil {
 		return nil, err
