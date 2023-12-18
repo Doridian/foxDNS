@@ -63,13 +63,13 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 		}()
 	}
 
-	cacheResults.WithLabelValues("miss").Inc()
 	reply, err := r.exchangeWithRetry(q)
 	if err != nil {
 		return nil, err
 	}
 
 	r.writeToCache(key, reply)
+	cacheResults.WithLabelValues("miss").Inc()
 	return reply, nil
 }
 
