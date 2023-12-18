@@ -97,8 +97,7 @@ func (r *Generator) cleanupCache() {
 	cacheSize.Set(float64(r.cache.Len()))
 }
 
-func (r *Generator) adjustRecordTTL(rr *dns.RR_Header, ttlAdjust uint32) {
-	rrHdr := rr.Header()
+func (r *Generator) adjustRecordTTL(rrHdr *dns.RR_Header, ttlAdjust uint32) {
 	if rrHdr.Ttl < ttlAdjust {
 		rrHdr.Ttl = 0
 	} else {
