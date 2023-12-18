@@ -32,7 +32,7 @@ var (
 	cacheTTLHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "foxdns_resolver_cache_ttl",
 		Help:    "TTLs for DNS cache entries",
-		Buckets: []float64{1, 10, 60, 300, 600, 1800, 3600},
+		Buckets: []float64{1, 10, 30, 60, 300, 600, 1800, 3600},
 	})
 )
 
