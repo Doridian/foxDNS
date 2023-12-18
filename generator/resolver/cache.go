@@ -53,7 +53,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 
 		entry := r.getFromCache(key)
 		if entry != nil {
-			cacheResults.WithLabelValues("hit").Inc()
+			cacheResults.WithLabelValues("wait").Inc()
 			return entry, nil
 		}
 	} else {
