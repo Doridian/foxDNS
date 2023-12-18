@@ -155,7 +155,13 @@ func (r *Generator) writeToCache(key string, m *dns.Msg) {
 		} else {
 			cacheTTL = r.CacheNoReplyTTL
 		}
-	} else if cacheTTL > r.CacheMaxTTL {
+	}
+
+	if authTTL >= 0 && authTTL < cacheTTL {
+		cacheTTL = authTTL
+	}
+
+	if cacheTTL > r.CacheMaxTTL {
 		cacheTTL = r.CacheMaxTTL
 	}
 
