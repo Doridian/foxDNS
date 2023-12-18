@@ -6,18 +6,13 @@ import (
 )
 
 type Generator struct {
-	zones map[string]bool
+	zone  string
 	Child Handler
 }
 
-func New(zones []string) *Generator {
+func New(zone string) *Generator {
 	hdl := &Generator{
-		zones: make(map[string]bool),
-	}
-
-	for _, zone := range zones {
-		zone = dns.CanonicalName(zone)
-		hdl.zones[zone] = true
+		zone: dns.CanonicalName(zone),
 	}
 
 	return hdl
@@ -41,13 +36,18 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	reply.Answer = r.Child.HandleQuestion(q, wr)
 
+	if len(reply.Answer) == 0 {
+		q.Qtype = dns.TypeSOA
+		q.Name = r.zone
+		reply.Ns = r.Child.HandleQuestion(q, wr)
+		reply.Rcode = dns.RcodeNameError
+	}
+
 	wr.WriteMsg(reply)
 }
 
 func (r *Generator) Register(mux *dns.ServeMux) {
-	for zone := range r.zones {
-		mux.Handle(zone, r)
-	}
+	mux.Handle(r.zone, r)
 }
 
 func (r *Generator) Refresh() error {

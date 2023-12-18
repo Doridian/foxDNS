@@ -37,11 +37,6 @@ func reloadConfig() {
 	mux := dns.NewServeMux()
 
 	for _, rdnsConf := range config.RDNS {
-		rdnsAuth := authority.NewAuthorityHandler(append([]string{
-			rdnsConf.Suffix,
-		}, rdnsConf.Subnets...), config.Global.NameServers, config.Global.Mailbox)
-		generators = append(generators, rdnsAuth)
-
 		rdnsGen := rdns.NewRDNSGenerator(rdnsConf.IPVersion)
 		generators = append(generators, rdnsGen)
 
@@ -50,9 +45,17 @@ func reloadConfig() {
 		}
 		rdnsGen.PTRSuffix = rdnsConf.Suffix
 
-		rdnsAuth.Child = rdnsGen
+		rdnsAuthMain := authority.NewAuthorityHandler(rdnsConf.Suffix, config.Global.NameServers, config.Global.Mailbox)
+		rdnsAuthMain.Child = rdnsGen
+		generators = append(generators, rdnsAuthMain)
+		rdnsAuthMain.Register(mux)
 
-		rdnsAuth.Register(mux)
+		for _, subnet := range rdnsConf.Subnets {
+			rdnsAuthSub := authority.NewAuthorityHandler(subnet, config.Global.NameServers, config.Global.Mailbox)
+			rdnsAuthSub.Child = rdnsGen
+			generators = append(generators, rdnsAuthSub)
+			rdnsAuthSub.Register(mux)
+		}
 	}
 
 	for _, resolvConf := range config.Resolvers {
@@ -109,45 +112,38 @@ func reloadConfig() {
 	}
 
 	if len(config.Localizers) > 0 {
-		loc := localizer.New()
-		generators = append(generators, loc)
-
-		locZones := make([]string, 0, len(config.Localizers))
-
 		for locName, locIPs := range config.Localizers {
-			locZones = append(locZones, locName)
+			loc := localizer.New()
+			generators = append(generators, loc)
+
 			for _, ip := range locIPs {
 				loc.AddRecord(locName, ip)
 			}
+
+			locAuth := authority.NewAuthorityHandler(locName, config.Global.NameServers, config.Global.Mailbox)
+			locAuth.Child = loc
+			locAuth.Register(mux)
 		}
 
-		locAuth := simple.New(locZones)
-		generators = append(generators, locAuth)
-		locAuth.Child = loc
-		locAuth.Register(mux)
-
-		log.Printf("Localizer enabled for %d zones", len(locZones))
+		log.Printf("Localizer enabled for %d zones", len(config.Localizers))
 	}
 
 	if len(config.StaticZones) > 0 {
-		stat := static.New()
-		generators = append(generators, stat)
-		statZones := make([]string, 0, len(config.StaticZones))
-
 		for statName, statFile := range config.StaticZones {
-			statZones = append(statZones, statName)
+			stat := static.New()
+			generators = append(generators, stat)
 			err := stat.LoadZoneFile(statFile, statName, 3600, false)
 			if err != nil {
 				log.Printf("Error loading static zone %s: %v", statName, err)
 			}
+
+			statAuth := simple.New(statName)
+			generators = append(generators, statAuth)
+			statAuth.Child = stat
+			statAuth.Register(mux)
 		}
 
-		statAuth := simple.New(statZones)
-		generators = append(generators, statAuth)
-		statAuth.Child = stat
-		statAuth.Register(mux)
-
-		log.Printf("Static zones enabled for %d zones", len(statZones))
+		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))
 	}
 
 	if config.Global.PrometheusListen != "" {

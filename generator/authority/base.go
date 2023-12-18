@@ -6,50 +6,40 @@ import (
 	"github.com/miekg/dns"
 )
 
-type authData struct {
-	soa []dns.RR
-	ns  []dns.RR
-}
-
 type AuthorityHandler struct {
-	zones map[string]*authData
+	soa   []dns.RR
+	ns    []dns.RR
+	zone  string
 	Child simple.Handler
 }
 
 func fillAuthHeader(rr dns.RR, rtype uint16, zone string) dns.RR {
-	return util.FillHeader(rr, zone, rtype, 86400)
+	return util.FillHeader(rr, zone, rtype, 300)
 }
 
-func NewAuthorityHandler(zones []string, nsList []string, mbox string) *AuthorityHandler {
-	hdl := &AuthorityHandler{
-		zones: make(map[string]*authData),
+func NewAuthorityHandler(zone string, nsList []string, mbox string) *AuthorityHandler {
+	hdl := &AuthorityHandler{}
+
+	zone = dns.CanonicalName(zone)
+
+	hdl.zone = zone
+	hdl.ns = make([]dns.RR, 0, len(nsList))
+	hdl.soa = []dns.RR{
+		fillAuthHeader(&dns.SOA{
+			Ns:      dns.CanonicalName(nsList[0]),
+			Mbox:    dns.CanonicalName(mbox),
+			Serial:  2022010169,
+			Refresh: 43200,
+			Retry:   3600,
+			Expire:  86400,
+			Minttl:  300,
+		}, dns.TypeSOA, zone),
 	}
 
-	for _, zone := range zones {
-		zone = dns.CanonicalName(zone)
-
-		ad := &authData{
-			ns: make([]dns.RR, 0, len(nsList)),
-			soa: []dns.RR{
-				fillAuthHeader(&dns.SOA{
-					Ns:      dns.CanonicalName(nsList[0]),
-					Mbox:    dns.CanonicalName(mbox),
-					Serial:  2022010169,
-					Refresh: 43200,
-					Retry:   3600,
-					Expire:  86400,
-					Minttl:  60,
-				}, dns.TypeSOA, zone),
-			},
-		}
-
-		for _, ns := range nsList {
-			ad.ns = append(ad.ns, fillAuthHeader(&dns.NS{
-				Ns: dns.CanonicalName(ns),
-			}, dns.TypeNS, zone))
-		}
-
-		hdl.zones[zone] = ad
+	for _, ns := range nsList {
+		hdl.ns = append(hdl.ns, fillAuthHeader(&dns.NS{
+			Ns: dns.CanonicalName(ns),
+		}, dns.TypeNS, zone))
 	}
 
 	return hdl
@@ -71,27 +61,29 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	q.Name = dns.CanonicalName(q.Name)
 
-	ad := r.zones[q.Name]
-	if ad != nil {
+	if q.Name == r.zone {
 		switch q.Qtype {
 		case dns.TypeSOA:
-			reply.Answer = ad.soa
+			reply.Answer = r.soa
 		case dns.TypeNS:
-			reply.Answer = ad.ns
+			reply.Answer = r.ns
 		}
 	}
 
 	if r.Child != nil && len(reply.Answer) < 1 {
 		reply.Answer = r.Child.HandleQuestion(q, wr)
+
+		if len(reply.Answer) < 1 {
+			reply.Ns = r.soa
+			reply.Rcode = dns.RcodeNameError
+		}
 	}
 
 	wr.WriteMsg(reply)
 }
 
 func (r *AuthorityHandler) Register(mux *dns.ServeMux) {
-	for zone := range r.zones {
-		mux.Handle(zone, r)
-	}
+	mux.Handle(r.zone, r)
 }
 
 func (r *AuthorityHandler) Refresh() error {
