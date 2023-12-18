@@ -108,7 +108,7 @@ func (r *Generator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) ([]dns
 			cname := cnameRecs[0].(*dns.CNAME)
 			resultRecs := []dns.RR{cname}
 			subRes, _ := r.HandleQuestion(dns.Question{
-				Name:   dns.CanonicalName(cname.Target),
+				Name:   cname.Target,
 				Qtype:  q.Qtype,
 				Qclass: q.Qclass,
 			}, wr)
