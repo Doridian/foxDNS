@@ -51,7 +51,7 @@ func (r *Generator) serveRec(name string) dns.RR {
 	return r.makeRec(rdnsIp)
 }
 
-func (r *Generator) HandleQuestion(q dns.Question, _ dns.ResponseWriter) []dns.RR {
+func (r *Generator) HandleQuestion(q dns.Question, _ dns.ResponseWriter) ([]dns.RR, bool) {
 	var resp dns.RR
 
 	switch q.Qtype {
@@ -62,12 +62,12 @@ func (r *Generator) HandleQuestion(q dns.Question, _ dns.ResponseWriter) []dns.R
 	}
 
 	if resp == nil {
-		return []dns.RR{}
+		return []dns.RR{}, false
 	}
 
 	util.FillHeader(resp, q.Name, q.Qtype, 3600)
 
-	return []dns.RR{resp}
+	return []dns.RR{resp}, false
 }
 
 func (r *Generator) Refresh() error {

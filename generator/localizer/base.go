@@ -17,12 +17,14 @@ type LocalizerRecord struct {
 type LocalizedRecordGenerator struct {
 	aRecords    LocalizerRecordMap
 	aaaaRecords LocalizerRecordMap
+	knownHosts  map[string]bool
 }
 
 func New() *LocalizedRecordGenerator {
 	return &LocalizedRecordGenerator{
 		aRecords:    make(LocalizerRecordMap),
 		aaaaRecords: make(LocalizerRecordMap),
+		knownHosts:  make(map[string]bool),
 	}
 }
 
@@ -59,6 +61,8 @@ func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string) e
 	recArr = append(recArr, rec)
 	recMap[hostStr] = recArr
 
+	r.knownHosts[hostStr] = true
+
 	return nil
 }
 
@@ -74,7 +78,11 @@ func makeRecV6(ip net.IP) dns.RR {
 	}
 }
 
-func (r *LocalizedRecordGenerator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) []dns.RR {
+func (r *LocalizedRecordGenerator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) ([]dns.RR, bool) {
+	if !r.knownHosts[q.Name] {
+		return []dns.RR{}, true
+	}
+
 	var makeRecFunc func(net.IP) dns.RR
 	var recsMap LocalizerRecordMap
 
@@ -88,18 +96,18 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q dns.Question, wr dns.Respons
 	}
 
 	if recsMap == nil {
-		return []dns.RR{}
+		return []dns.RR{}, false
 	}
 
 	recs := recsMap[q.Name]
 	if recs == nil {
-		return []dns.RR{}
+		return []dns.RR{}, false
 	}
 
 	remoteIP := util.ExtractIP(wr.RemoteAddr())
 
 	if remoteIP == nil {
-		return []dns.RR{}
+		return []dns.RR{}, false
 	}
 
 	remoteIPv4 := remoteIP.To4()
@@ -114,7 +122,7 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q dns.Question, wr dns.Respons
 		util.FillHeader(ipResRec, q.Name, q.Qtype, 60)
 		resp = append(resp, ipResRec)
 	}
-	return resp
+	return resp, false
 }
 
 func (r *LocalizedRecordGenerator) Refresh() error {

@@ -19,16 +19,18 @@ type zoneConfig struct {
 }
 
 type Generator struct {
-	configs []zoneConfig
-	records map[uint16]map[string][]dns.RR
-	watcher *fsnotify.Watcher
+	configs    []zoneConfig
+	records    map[uint16]map[string][]dns.RR
+	knownHosts map[string]bool
+	watcher    *fsnotify.Watcher
 }
 
 func New() *Generator {
 	return &Generator{
-		configs: make([]zoneConfig, 0),
-		records: make(map[uint16]map[string][]dns.RR),
-		watcher: nil,
+		configs:    make([]zoneConfig, 0),
+		records:    make(map[uint16]map[string][]dns.RR),
+		knownHosts: make(map[string]bool),
+		watcher:    nil,
 	}
 }
 
@@ -89,9 +91,15 @@ func (r *Generator) addRecord(rr dns.RR) {
 		zoneRecs = []dns.RR{}
 	}
 	typedRecs[hdr.Name] = append(zoneRecs, rr)
+
+	r.knownHosts[hdr.Name] = true
 }
 
-func (r *Generator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) []dns.RR {
+func (r *Generator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) ([]dns.RR, bool) {
+	return r.handleQuestionInt(q, wr), !r.knownHosts[q.Name]
+}
+
+func (r *Generator) handleQuestionInt(q dns.Question, wr dns.ResponseWriter) []dns.RR {
 	if q.Qtype != dns.TypeCNAME {
 		// Handle CNAMEs
 		cnameRecs := r.records[dns.TypeCNAME]
@@ -100,7 +108,7 @@ func (r *Generator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) []dns.
 			if cnameRecs != nil {
 				cname := cnameRecs[0].(*dns.CNAME)
 				resultRecs := []dns.RR{cname}
-				resultRecs = append(resultRecs, r.HandleQuestion(dns.Question{
+				resultRecs = append(resultRecs, r.handleQuestionInt(dns.Question{
 					Name:   cname.Target,
 					Qtype:  q.Qtype,
 					Qclass: q.Qclass,
@@ -126,6 +134,7 @@ func (r *Generator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) []dns.
 func (r *Generator) Refresh() error {
 	oldRecords := r.records
 	r.records = make(map[uint16]map[string][]dns.RR)
+	r.knownHosts = make(map[string]bool)
 	for _, cf := range r.configs {
 		err := r.LoadZoneFile(cf.file, cf.origin, cf.defaultTTL, cf.includeAllowed)
 		if err != nil {

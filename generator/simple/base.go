@@ -34,12 +34,16 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	q.Name = dns.CanonicalName(q.Name)
 
-	reply.Answer = r.Child.HandleQuestion(q, wr)
+	var nxdomain bool
+	reply.Answer, nxdomain = r.Child.HandleQuestion(q, wr)
+	if nxdomain {
+		reply.Rcode = dns.RcodeNameError
+	}
 
 	if len(reply.Answer) == 0 {
 		q.Qtype = dns.TypeSOA
 		q.Name = r.zone
-		reply.Ns = r.Child.HandleQuestion(q, wr)
+		reply.Ns, _ = r.Child.HandleQuestion(q, wr)
 	}
 
 	wr.WriteMsg(reply)
