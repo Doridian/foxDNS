@@ -2,13 +2,15 @@ FROM golang:1.21-alpine AS builder
 
 RUN apk add --no-cache ca-certificates
 
+ARG GIT_REVISION=dev
+
 ENV CGO_ENABLED=0
 WORKDIR /src
 COPY go.mod go.sum /src/
 RUN go mod download
 
 COPY . /src
-RUN go build -ldflags='-s -w' -trimpath -o /foxdns ./cmd/foxdns
+RUN go build -ldflags="-s -w -X=github.com/FoxDenHome/foxdns/util.Version=${GIT_REVISION}" -trimpath -o /foxdns ./cmd/foxdns
 
 FROM scratch AS nossl
 

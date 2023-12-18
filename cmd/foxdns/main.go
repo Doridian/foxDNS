@@ -14,6 +14,7 @@ import (
 	"github.com/FoxDenHome/foxdns/generator/simple"
 	"github.com/FoxDenHome/foxdns/generator/static"
 	"github.com/FoxDenHome/foxdns/server"
+	"github.com/FoxDenHome/foxdns/util"
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -169,6 +170,8 @@ func main() {
 	if len(os.Args) > 1 {
 		configFile = os.Args[1]
 	}
+
+	log.Printf("foxDNS version %s", util.Version)
 
 	config := LoadConfig(configFile)
 
