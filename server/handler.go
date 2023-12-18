@@ -20,12 +20,12 @@ type PrometheusResponseWriter struct {
 
 var (
 	queriesProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "queries_processed_total",
+		Name: "foxdns_queries_processed_total",
 		Help: "The total number of processed DNS queries",
 	}, []string{"qtype", "rcode"})
 
 	queryProcessingTime = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "query_processing_time_seconds",
+		Name:    "foxdns_query_processing_time_seconds",
 		Help:    "The time it took to process a DNS query",
 		Buckets: []float64{0.001, 0.005, 0.01, 0.05, 0.1, 0.5},
 	})

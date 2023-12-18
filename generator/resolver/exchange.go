@@ -11,13 +11,13 @@ import (
 
 var (
 	upstreamQueryTime = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "resolver_upstream_query_time_seconds",
+		Name:    "foxdns_resolver_upstream_query_time_seconds",
 		Help:    "The time it took to query an upstream resolver",
 		Buckets: []float64{0.001, 0.005, 0.01, 0.05, 0.1, 0.5},
 	}, []string{"server"})
 
 	upstreamQueryErrors = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "resolver_upstream_query_errors_total",
+		Name: "foxdns_resolver_upstream_query_errors_total",
 		Help: "The total number of errors while querying upstream resolvers",
 	}, []string{"server"})
 )

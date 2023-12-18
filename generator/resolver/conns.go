@@ -16,7 +16,7 @@ type connInfo struct {
 
 var (
 	openConnections = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "resolver_open_connections_total",
+		Name: "foxdns_resolver_open_connections_total",
 		Help: "The number of open connections to upstream resolvers",
 	})
 )
