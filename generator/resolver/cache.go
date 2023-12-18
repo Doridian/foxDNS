@@ -14,7 +14,8 @@ type cacheEntry struct {
 	msg    *dns.Msg
 	time   time.Time
 	expiry time.Time
-	key    string
+	qtype  uint16
+	qclass uint16
 }
 
 var (
@@ -40,7 +41,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
-	entry, matchType := r.getFromCache(key, keyDomain)
+	entry, matchType := r.getFromCache(key, keyDomain, q)
 	if entry != nil {
 		cacheResults.WithLabelValues("hit", matchType).Inc()
 		return entry, nil
@@ -55,7 +56,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	if loaded {
 		cacheLockWG.Wait()
 
-		entry, matchType := r.getFromCache(key, keyDomain)
+		entry, matchType := r.getFromCache(key, keyDomain, q)
 		if entry != nil {
 			cacheResults.WithLabelValues("wait", matchType).Inc()
 			return entry, nil
@@ -69,7 +70,7 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 		return nil, err
 	}
 
-	matchType = r.writeToCache(key, keyDomain, reply)
+	matchType = r.writeToCache(key, keyDomain, q, reply)
 	cacheResults.WithLabelValues("miss", matchType).Inc()
 	return reply, nil
 }
@@ -84,12 +85,12 @@ func (r *Generator) cleanupCache() {
 	}
 }
 
-func (r *Generator) getFromCache(key string, keyDomain string) (*dns.Msg, string) {
+func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) (*dns.Msg, string) {
 	entry, ok := r.cache.Get(key)
 	matchType := "exact"
 	if !ok {
 		entry, ok = r.cache.Get(keyDomain)
-		if entry.key != key {
+		if entry.qtype != q.Qtype || entry.qclass != q.Qclass {
 			matchType = "domain"
 		}
 		if !ok {
@@ -129,7 +130,7 @@ func (r *Generator) getFromCache(key string, keyDomain string) (*dns.Msg, string
 	return msg, matchType
 }
 
-func (r *Generator) writeToCache(key string, keyDomain string, m *dns.Msg) string {
+func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg) string {
 	if m.Rcode != dns.RcodeSuccess && m.Rcode != dns.RcodeNameError {
 		return ""
 	}
@@ -185,7 +186,8 @@ func (r *Generator) writeToCache(key string, keyDomain string, m *dns.Msg) strin
 		time:   now,
 		expiry: now.Add(time.Duration(cacheTTL) * time.Second),
 		msg:    m,
-		key:    key,
+		qtype:  q.Qtype,
+		qclass: q.Qclass,
 	}
 
 	matchType := "exact"
