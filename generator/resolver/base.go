@@ -29,6 +29,7 @@ type Generator struct {
 	connCleanupTicker *time.Ticker
 
 	CacheMaxTTL     int
+	CacheMinTTL     int
 	CacheNoReplyTTL int
 
 	cache              *lru.Cache[string, *cacheEntry]
@@ -55,6 +56,7 @@ func New(servers []string) *Generator {
 		RetryWait:            time.Second,
 
 		CacheMaxTTL:     3600,
+		CacheMinTTL:     0,
 		CacheNoReplyTTL: 30,
 
 		connCond:        sync.NewCond(&sync.Mutex{}),

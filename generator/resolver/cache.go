@@ -23,6 +23,17 @@ var (
 		Name: "foxdns_resolver_cache_results",
 		Help: "The number of cache hits/misses for DNS queries",
 	}, []string{"result", "match_type"})
+
+	cacheSize = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "foxdns_resolver_cache_size",
+		Help: "The number of entries in the DNS cache",
+	})
+
+	cacheTTLHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "foxdns_resolver_cache_ttl",
+		Help:    "TTLs for DNS cache entries",
+		Buckets: []float64{1, 10, 60, 300, 600, 1800, 3600, 7200, 14400, 28800},
+	})
 )
 
 func (r *Generator) SetCacheSize(size int) {
@@ -83,6 +94,7 @@ func (r *Generator) cleanupCache() {
 			r.cache.Remove(key)
 		}
 	}
+	cacheSize.Set(float64(r.cache.Len()))
 }
 
 func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) (*dns.Msg, string) {
@@ -177,6 +189,12 @@ func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, 
 		cacheTTL = r.CacheMaxTTL
 	}
 
+	if cacheTTL < r.CacheMinTTL {
+		cacheTTL = r.CacheMinTTL
+	}
+
+	cacheTTLHistogram.Observe(float64(cacheTTL))
+
 	if cacheTTL == 0 {
 		return ""
 	}
@@ -196,5 +214,6 @@ func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, 
 		matchType = "domain"
 	}
 	r.cache.Add(key, entry)
+	cacheSize.Set(float64(r.cache.Len()))
 	return matchType
 }

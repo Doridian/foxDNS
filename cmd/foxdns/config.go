@@ -36,6 +36,7 @@ type Config struct {
 
 		CacheSize        int           `yaml:"cache-size"`
 		CacheMaxTime     time.Duration `yaml:"cache-max-time"`
+		CacheMinTime     time.Duration `yaml:"cache-min-time"`
 		CacheNoReplyTime time.Duration `yaml:"cache-no-reply-time"`
 
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
