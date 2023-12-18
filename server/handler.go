@@ -38,9 +38,12 @@ func NewPrometheusDNSHandler(parent dns.Handler) *PrometheusDNSHandler {
 }
 
 func (h *PrometheusDNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
-	wproxy := &PrometheusResponseWriter{parent: w}
+	wproxy := &PrometheusResponseWriter{
+		parent: w,
+		rcode:  dns.RcodeServerFailure,
+	}
 	startTime := time.Now()
-	h.parent.ServeDNS(w, r)
+	h.parent.ServeDNS(wproxy, r)
 	duration := time.Since(startTime)
 	queriesProcessed.WithLabelValues(dns.TypeToString[r.Question[0].Qtype], dns.RcodeToString[wproxy.rcode]).Inc()
 	queryProcessingTime.Observe(duration.Seconds())

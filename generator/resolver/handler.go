@@ -52,7 +52,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.Answer = filteredAnswer
 	reply.Ns = recursionReply.Ns
 
-	if reply.Rcode == dns.RcodeSuccess {
+	if reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError {
 		util.SetEDNS0(reply)
 	}
 }
