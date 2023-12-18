@@ -124,12 +124,13 @@ func (r *Generator) writeToCache(key string, m *dns.Msg) {
 	}
 
 	minTTL := -1
-	answerTTL := -1
+	cacheTTL := -1
+	authTTL := -1
 
 	for _, rr := range m.Answer {
 		ttl := int(rr.Header().Ttl)
-		if answerTTL < 0 || ttl < answerTTL {
-			answerTTL = ttl
+		if cacheTTL < 0 || ttl < cacheTTL {
+			cacheTTL = ttl
 		}
 	}
 
@@ -139,22 +140,29 @@ func (r *Generator) writeToCache(key string, m *dns.Msg) {
 		if rrHdr.Rrtype == dns.TypeSOA {
 			minTTL = int(rr.(*dns.SOA).Minttl)
 		}
+
+		ttl := int(rrHdr.Ttl)
+		if authTTL < 0 || ttl < authTTL {
+			authTTL = ttl
+		}
 	}
 
-	if answerTTL < 0 {
-		if minTTL >= 0 {
-			answerTTL = minTTL
+	if cacheTTL < 0 {
+		if authTTL >= 0 && authTTL < minTTL {
+			cacheTTL = authTTL
+		} else if minTTL >= 0 {
+			cacheTTL = minTTL
 		} else {
-			answerTTL = r.CacheNoReplyTTL
+			cacheTTL = r.CacheNoReplyTTL
 		}
-	} else if answerTTL > r.CacheMaxTTL {
-		answerTTL = r.CacheMaxTTL
+	} else if cacheTTL > r.CacheMaxTTL {
+		cacheTTL = r.CacheMaxTTL
 	}
 
 	now := time.Now()
 	entry := &cacheEntry{
 		time:   now,
-		expiry: now.Add(time.Duration(answerTTL) * time.Second),
+		expiry: now.Add(time.Duration(cacheTTL) * time.Second),
 		msg:    m,
 	}
 
