@@ -39,6 +39,9 @@ type Config struct {
 		CacheMinTime     time.Duration `yaml:"cache-min-time"`
 		CacheNoReplyTime time.Duration `yaml:"cache-no-reply-time"`
 
+		RecordMinTTL time.Duration `yaml:"record-min-ttl"`
+		RecordMaxTTL time.Duration `yaml:"record-max-ttl"`
+
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
 	} `yaml:"resolvers"`
 

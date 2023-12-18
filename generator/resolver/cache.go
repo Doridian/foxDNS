@@ -97,6 +97,21 @@ func (r *Generator) cleanupCache() {
 	cacheSize.Set(float64(r.cache.Len()))
 }
 
+func (r *Generator) adjustRecordTTL(rr *dns.RR_Header, ttlAdjust uint32) {
+	rrHdr := rr.Header()
+	if rrHdr.Ttl < ttlAdjust {
+		rrHdr.Ttl = 0
+	} else {
+		rrHdr.Ttl -= ttlAdjust
+	}
+
+	if rrHdr.Ttl < r.RecordMinTTL {
+		rrHdr.Ttl = r.RecordMinTTL
+	} else if rrHdr.Ttl > r.RecordMaxTTL {
+		rrHdr.Ttl = r.RecordMaxTTL
+	}
+}
+
 func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) (*dns.Msg, string) {
 	entry, ok := r.cache.Get(key)
 	matchType := "exact"
@@ -122,20 +137,10 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	if ttlAdjust > 1 {
 		ttlAdjust--
 		for _, rr := range msg.Answer {
-			rrHdr := rr.Header()
-			if rrHdr.Ttl < ttlAdjust {
-				rrHdr.Ttl = 0
-			} else {
-				rrHdr.Ttl -= ttlAdjust
-			}
+			r.adjustRecordTTL(rr.Header(), ttlAdjust)
 		}
 		for _, rr := range msg.Ns {
-			rrHdr := rr.Header()
-			if rrHdr.Ttl < ttlAdjust {
-				rrHdr.Ttl = 0
-			} else {
-				rrHdr.Ttl -= ttlAdjust
-			}
+			r.adjustRecordTTL(rr.Header(), ttlAdjust)
 		}
 	}
 

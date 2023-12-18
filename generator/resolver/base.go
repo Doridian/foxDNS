@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"container/list"
+	"math"
 	"sync"
 	"time"
 
@@ -32,6 +33,9 @@ type Generator struct {
 	CacheMinTTL     int
 	CacheNoReplyTTL int
 
+	RecordMinTTL uint32
+	RecordMaxTTL uint32
+
 	cache              *lru.Cache[string, *cacheEntry]
 	cacheLock          *sync.Map
 	cacheCleanupTicker *time.Ticker
@@ -58,6 +62,9 @@ func New(servers []string) *Generator {
 		CacheMaxTTL:     3600,
 		CacheMinTTL:     0,
 		CacheNoReplyTTL: 30,
+
+		RecordMinTTL: 0,
+		RecordMaxTTL: math.MaxUint32,
 
 		connCond:        sync.NewCond(&sync.Mutex{}),
 		connections:     0,
