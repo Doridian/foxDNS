@@ -2,7 +2,6 @@ package rdns
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strings"
 
@@ -25,7 +24,6 @@ func (r *Generator) servePTR(name string) dns.RR {
 	nameSplit := strings.Split(name, ".")
 
 	if len(nameSplit) != r.ipSegments+3 {
-		log.Printf("PTR wrong length %v vs %v (on %s)", len(nameSplit), r.ipSegments+3, name)
 		return nil
 	}
 
