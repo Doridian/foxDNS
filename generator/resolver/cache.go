@@ -48,14 +48,16 @@ func cacheKeyDomain(q *dns.Question) string {
 	return fmt.Sprintf("%s:ANY", q.Name)
 }
 
-func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
+func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
-	entry, matchType := r.getFromCache(key, keyDomain, q)
-	if entry != nil {
-		cacheResults.WithLabelValues("hit", matchType).Inc()
-		return entry, nil
+	if !forceRequery {
+		entry, matchType := r.getFromCache(key, keyDomain, q)
+		if entry != nil {
+			cacheResults.WithLabelValues("hit", matchType).Inc()
+			return entry, nil
+		}
 	}
 
 	wg := &sync.WaitGroup{}
@@ -65,10 +67,15 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	cacheLockWG := cacheLock.(*sync.WaitGroup)
 
 	if loaded {
+		if forceRequery {
+			return nil, nil
+		}
+
 		cacheLockWG.Wait()
 
 		entry, matchType := r.getFromCache(key, keyDomain, q)
 		if entry != nil {
+			// Can't be  hit when forceRequery is true
 			cacheResults.WithLabelValues("wait", matchType).Inc()
 			return entry, nil
 		}
@@ -81,8 +88,10 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 		return nil, err
 	}
 
-	matchType = r.writeToCache(key, keyDomain, q, reply)
-	cacheResults.WithLabelValues("miss", matchType).Inc()
+	matchType := r.writeToCache(key, keyDomain, q, reply)
+	if !forceRequery {
+		cacheResults.WithLabelValues("miss", matchType).Inc()
+	}
 	return reply, nil
 }
 
