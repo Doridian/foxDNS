@@ -186,3 +186,7 @@ func (r *Generator) Stop() error {
 	r.watcher = nil
 	return nil
 }
+
+func (r *Generator) GetName() string {
+	return "static"
+}

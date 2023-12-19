@@ -73,6 +73,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	if r.Child != nil && len(reply.Answer) < 1 {
 		var nxdomain bool
 		reply.Answer, nxdomain = r.Child.HandleQuestion(q, wr)
+		util.SetHandlerName(wr, r.Child)
 		if nxdomain {
 			reply.Rcode = dns.RcodeNameError
 		}
@@ -80,6 +81,8 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		if len(reply.Answer) < 1 {
 			reply.Ns = r.soa
 		}
+	} else {
+		util.SetHandlerName(wr, r)
 	}
 
 	wr.WriteMsg(reply)
@@ -99,4 +102,8 @@ func (r *AuthorityHandler) Start() error {
 
 func (r *AuthorityHandler) Stop() error {
 	return nil
+}
+
+func (r *AuthorityHandler) GetName() string {
+	return "authority"
 }

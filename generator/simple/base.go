@@ -27,6 +27,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	q := msg.Question[0]
 	if q.Qclass != dns.ClassINET {
+		util.SetHandlerName(wr, r)
 		reply.Rcode = dns.RcodeRefused
 		wr.WriteMsg(reply)
 		return
@@ -36,6 +37,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	var nxdomain bool
 	reply.Answer, nxdomain = r.Child.HandleQuestion(q, wr)
+	util.SetHandlerName(wr, r.Child)
 	if nxdomain {
 		reply.Rcode = dns.RcodeNameError
 	}
@@ -63,4 +65,8 @@ func (r *Generator) Start() error {
 
 func (r *Generator) Stop() error {
 	return nil
+}
+
+func (r *Generator) GetName() string {
+	return "simple"
 }

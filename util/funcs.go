@@ -36,3 +36,18 @@ func FillHeader(rr dns.RR, name string, rtype uint16, ttl uint32) dns.RR {
 func SetEDNS0(msg *dns.Msg) {
 	msg.SetEdns0(DNSMaxSize, false)
 }
+
+type DNSHandler interface {
+	GetName() string
+}
+
+type DNSHandlerWrapper interface {
+	SetHandlerName(name string)
+}
+
+func SetHandlerName(wr dns.ResponseWriter, hdl DNSHandler) {
+	wrappedHandler, ok := wr.(DNSHandlerWrapper)
+	if ok {
+		wrappedHandler.SetHandlerName(hdl.GetName())
+	}
+}

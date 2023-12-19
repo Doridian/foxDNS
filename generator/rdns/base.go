@@ -79,3 +79,7 @@ func (r *Generator) Start() error {
 func (r *Generator) Stop() error {
 	return nil
 }
+
+func (r *Generator) GetName() string {
+	return "rdns"
+}

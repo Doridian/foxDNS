@@ -10,30 +10,31 @@ import (
 )
 
 type PrometheusDNSHandler struct {
-	parent dns.Handler
+	child dns.Handler
 }
 
 type PrometheusResponseWriter struct {
-	parent dns.ResponseWriter
-	rcode  int
+	parent      dns.ResponseWriter
+	rcode       int
+	handlerName string
 }
 
 var (
 	queriesProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "foxdns_queries_processed_total",
 		Help: "The total number of processed DNS queries",
-	}, []string{"qtype", "rcode"})
+	}, []string{"qtype", "rcode", "handler"})
 
-	queryProcessingTime = promauto.NewHistogram(prometheus.HistogramOpts{
+	queryProcessingTime = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "foxdns_query_processing_time_seconds",
 		Help:    "The time it took to process a DNS query",
 		Buckets: []float64{0.001, 0.005, 0.01, 0.05, 0.1, 0.5},
-	})
+	}, []string{"handler"})
 )
 
-func NewPrometheusDNSHandler(parent dns.Handler) *PrometheusDNSHandler {
+func NewPrometheusDNSHandler(child dns.Handler) *PrometheusDNSHandler {
 	return &PrometheusDNSHandler{
-		parent: parent,
+		child: child,
 	}
 }
 
@@ -43,15 +44,19 @@ func (h *PrometheusDNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		rcode:  dns.RcodeServerFailure,
 	}
 	startTime := time.Now()
-	h.parent.ServeDNS(wproxy, r)
+	h.child.ServeDNS(wproxy, r)
 	duration := time.Since(startTime)
-	queriesProcessed.WithLabelValues(dns.TypeToString[r.Question[0].Qtype], dns.RcodeToString[wproxy.rcode]).Inc()
-	queryProcessingTime.Observe(duration.Seconds())
+	queriesProcessed.WithLabelValues(dns.TypeToString[r.Question[0].Qtype], dns.RcodeToString[wproxy.rcode], wproxy.handlerName).Inc()
+	queryProcessingTime.WithLabelValues(wproxy.handlerName).Observe(duration.Seconds())
 }
 
 func (w *PrometheusResponseWriter) WriteMsg(msg *dns.Msg) error {
 	w.rcode = msg.Rcode
 	return w.parent.WriteMsg(msg)
+}
+
+func (w *PrometheusResponseWriter) SetHandlerName(name string) {
+	w.handlerName = name
 }
 
 func (w *PrometheusResponseWriter) Close() error {

@@ -136,3 +136,7 @@ func (r *LocalizedRecordGenerator) Start() error {
 func (r *LocalizedRecordGenerator) Stop() error {
 	return nil
 }
+
+func (r *LocalizedRecordGenerator) GetName() string {
+	return "localizer"
+}
