@@ -25,7 +25,7 @@ func (r *Generator) servePTR(name string) dns.RR {
 	nameSplit := strings.Split(name, ".")
 
 	if len(nameSplit) != r.ipSegments+3 {
-		log.Printf("%v vs %v", len(nameSplit), r.ipSegments)
+		log.Printf("PTR wrong length %v vs %v (on %s)", len(nameSplit), r.ipSegments+3, name)
 		return nil
 	}
 
