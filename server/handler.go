@@ -15,7 +15,7 @@ type PrometheusDNSHandler struct {
 
 type PrometheusResponseWriter struct {
 	parent      dns.ResponseWriter
-	rcode       int
+	rcode       string
 	handlerName string
 }
 
@@ -41,17 +41,21 @@ func NewPrometheusDNSHandler(child dns.Handler) *PrometheusDNSHandler {
 func (h *PrometheusDNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	wproxy := &PrometheusResponseWriter{
 		parent: w,
-		rcode:  dns.RcodeServerFailure,
+		rcode:  "UNSET",
 	}
 	startTime := time.Now()
 	h.child.ServeDNS(wproxy, r)
 	duration := time.Since(startTime)
-	queriesProcessed.WithLabelValues(dns.TypeToString[r.Question[0].Qtype], dns.RcodeToString[wproxy.rcode], wproxy.handlerName).Inc()
+	queriesProcessed.WithLabelValues(dns.TypeToString[r.Question[0].Qtype], wproxy.rcode, wproxy.handlerName).Inc()
 	queryProcessingTime.WithLabelValues(wproxy.handlerName).Observe(duration.Seconds())
 }
 
 func (w *PrometheusResponseWriter) WriteMsg(msg *dns.Msg) error {
-	w.rcode = msg.Rcode
+	if msg.Rcode == dns.RcodeSuccess && len(msg.Answer) == 0 {
+		w.rcode = "NXRECORD"
+	} else {
+		w.rcode = dns.RcodeToString[msg.Rcode]
+	}
 	return w.parent.WriteMsg(msg)
 }
 
