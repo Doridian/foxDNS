@@ -40,9 +40,7 @@ func NewPrometheusDNSHandler(child dns.Handler) *PrometheusDNSHandler {
 
 func (h *PrometheusDNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	wproxy := &PrometheusResponseWriter{
-		parent:      w,
-		rcode:       "",
-		handlerName: "",
+		parent: w,
 	}
 	startTime := time.Now()
 	h.child.ServeDNS(wproxy, r)
