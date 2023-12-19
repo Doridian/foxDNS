@@ -25,7 +25,6 @@ type Generator struct {
 	MaxIdleTime    time.Duration
 	Retries        int
 	RetryWait      time.Duration
-	Timeout        time.Duration
 
 	AllowOnlyFromPrivate bool
 
@@ -77,9 +76,7 @@ func New(servers []*ServerConfig) *Generator {
 
 	for _, srv := range gen.Servers {
 		srv.client = &dns.Client{
-			Net:          srv.Proto,
-			ReadTimeout:  gen.Timeout,
-			WriteTimeout: gen.Timeout,
+			Net: srv.Proto,
 		}
 
 		if srv.ServerName != "" {
@@ -94,6 +91,8 @@ func New(servers []*ServerConfig) *Generator {
 
 func (r *Generator) SetTimeout(timeout time.Duration) {
 	for _, srv := range r.Servers {
+		srv.client.Timeout = timeout
+		srv.client.DialTimeout = timeout
 		srv.client.ReadTimeout = timeout
 		srv.client.WriteTimeout = timeout
 	}
