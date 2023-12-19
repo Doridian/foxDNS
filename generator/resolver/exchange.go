@@ -25,18 +25,18 @@ var (
 func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err error) {
 	var info *connInfo
 	info, err = r.acquireConn()
-	server = info.server
+	server = info.server.Addr
 	if err != nil {
 		r.returnConn(info, err)
 		return
 	}
 
 	startTime := time.Now()
-	resp, _, err = r.Client.ExchangeWithConn(m, info.conn)
+	resp, _, err = info.server.client.ExchangeWithConn(m, info.conn)
 	r.returnConn(info, err)
 	if err == nil {
 		duration := time.Since(startTime)
-		upstreamQueryTime.WithLabelValues(info.server).Observe(duration.Seconds())
+		upstreamQueryTime.WithLabelValues(info.server.Addr).Observe(duration.Seconds())
 	}
 	return
 }

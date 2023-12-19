@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"log"
 	"net/http"
 	"os"
@@ -59,18 +58,17 @@ func reloadConfig() {
 	}
 
 	for _, resolvConf := range config.Resolvers {
-		resolv := resolver.New(resolvConf.NameServers)
-		generators = append(generators, resolv)
-
-		if resolvConf.ServerName != "" {
-			resolv.Client.TLSConfig = &tls.Config{
-				ServerName: resolvConf.ServerName,
+		nameServers := make([]*resolver.ServerConfig, len(resolvConf.NameServers))
+		for i, ns := range resolvConf.NameServers {
+			nameServers[i] = &resolver.ServerConfig{
+				Addr:       ns.Addr,
+				Proto:      ns.Proto,
+				ServerName: ns.ServerName,
 			}
 		}
 
-		if len(resolvConf.Proto) > 0 {
-			resolv.Client.Net = resolvConf.Proto
-		}
+		resolv := resolver.New(nameServers)
+		generators = append(generators, resolv)
 
 		resolv.AllowOnlyFromPrivate = resolvConf.AllowOnlyFromPrivate
 

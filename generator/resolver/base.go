@@ -2,18 +2,24 @@ package resolver
 
 import (
 	"container/list"
+	"crypto/tls"
 	"math"
 	"sync"
 	"time"
 
-	"github.com/Doridian/foxDNS/util"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/miekg/dns"
 )
 
+type ServerConfig struct {
+	Addr       string
+	Proto      string
+	ServerName string
+	client     *dns.Client
+}
+
 type Generator struct {
-	Servers []string
-	Client  *dns.Client
+	Servers []*ServerConfig
 
 	MaxConnections int
 	MaxIdleTime    time.Duration
@@ -43,16 +49,11 @@ type Generator struct {
 
 var _ dns.Handler = &Generator{}
 
-func New(servers []string) *Generator {
+func New(servers []*ServerConfig) *Generator {
 	cache, _ := lru.New[string, *cacheEntry](4096)
 
-	return &Generator{
-		Servers: servers,
-		Client: &dns.Client{
-			Net:          "udp",
-			ReadTimeout:  util.DefaultTimeout,
-			WriteTimeout: util.DefaultTimeout,
-		},
+	gen := &Generator{
+		Servers:              servers,
 		MaxConnections:       10,
 		MaxIdleTime:          time.Second * 15,
 		Retries:              3,
@@ -73,11 +74,29 @@ func New(servers []string) *Generator {
 		cache:     cache,
 		cacheLock: &sync.Map{},
 	}
+
+	for _, srv := range gen.Servers {
+		srv.client = &dns.Client{
+			Net:          srv.Proto,
+			ReadTimeout:  gen.Timeout,
+			WriteTimeout: gen.Timeout,
+		}
+
+		if srv.ServerName != "" {
+			srv.client.TLSConfig = &tls.Config{
+				ServerName: srv.ServerName,
+			}
+		}
+	}
+
+	return gen
 }
 
 func (r *Generator) SetTimeout(timeout time.Duration) {
-	r.Client.ReadTimeout = timeout
-	r.Client.WriteTimeout = timeout
+	for _, srv := range r.Servers {
+		srv.client.ReadTimeout = timeout
+		srv.client.WriteTimeout = timeout
+	}
 }
 
 func (r *Generator) Refresh() error {

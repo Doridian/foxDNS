@@ -10,7 +10,7 @@ import (
 
 type connInfo struct {
 	conn    *dns.Conn
-	server  string
+	server  *ServerConfig
 	lastUse time.Time
 }
 
@@ -46,7 +46,7 @@ func (r *Generator) acquireConn() (info *connInfo, err error) {
 			info = &connInfo{
 				server: srv,
 			}
-			info.conn, err = r.Client.Dial(srv)
+			info.conn, err = srv.client.Dial(srv.Addr)
 			return
 		}
 

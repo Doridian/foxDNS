@@ -22,9 +22,12 @@ type Config struct {
 	} `yaml:"rdns"`
 
 	Resolvers []struct {
-		Zone        string   `yaml:"zone"`
-		NameServers []string `yaml:"nameservers"`
-		Proto       string   `yaml:"proto"`
+		Zone        string `yaml:"zone"`
+		NameServers []struct {
+			Addr       string `yaml:"addr"`
+			Proto      string `yaml:"proto"`
+			ServerName string `yaml:"server-name"`
+		} `yaml:"nameservers"`
 
 		ServerName string `yaml:"server-name"`
 
