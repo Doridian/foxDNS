@@ -1,6 +1,6 @@
 package main
 
-import "github.com/FoxDenHome/foxdns/server"
+import "github.com/Doridian/foxDNS/server"
 
 func handleRefresh(srv *server.Server) {
 }

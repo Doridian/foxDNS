@@ -1,4 +1,4 @@
-module github.com/FoxDenHome/foxdns
+module github.com/Doridian/foxDNS
 
 go 1.19
 

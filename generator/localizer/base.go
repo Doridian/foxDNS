@@ -3,7 +3,7 @@ package localizer
 import (
 	"net"
 
-	"github.com/FoxDenHome/foxdns/util"
+	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
 

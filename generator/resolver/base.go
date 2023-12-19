@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/FoxDenHome/foxdns/util"
+	"github.com/Doridian/foxDNS/util"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/miekg/dns"
 )

@@ -1,8 +1,8 @@
 package authority
 
 import (
-	"github.com/FoxDenHome/foxdns/generator/simple"
-	"github.com/FoxDenHome/foxdns/util"
+	"github.com/Doridian/foxDNS/generator/simple"
+	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
 

@@ -3,7 +3,7 @@ package resolver
 import (
 	"time"
 
-	"github.com/FoxDenHome/foxdns/util"
+	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"

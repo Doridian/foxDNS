@@ -31,8 +31,8 @@ jobs:
           build-args: |
             GIT_REVISION=${{ github.sha }}
           tags: |
-            ghcr.io/foxdenhome/foxdns/foxdns:latest
-            ghcr.io/foxdenhome/foxdns/foxdns:ssl
+            ghcr.io/doridian/foxdns/foxdns:latest
+            ghcr.io/doridian/foxdns/foxdns:ssl
       - name: Build nossl container image
         uses: docker/build-push-action@v5
         with:
@@ -42,4 +42,4 @@ jobs:
           build-args: |
             GIT_REVISION=${{ github.sha }}
           tags: |
-            ghcr.io/foxdenhome/foxdns/foxdns:nossl
+            ghcr.io/doridian/foxdns/foxdns:nossl

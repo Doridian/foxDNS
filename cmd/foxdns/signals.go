@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/FoxDenHome/foxdns/server"
+	"github.com/Doridian/foxDNS/server"
 )
 
 func handleSignals(srv *server.Server) {

@@ -1,7 +1,7 @@
 package simple
 
 import (
-	"github.com/FoxDenHome/foxdns/util"
+	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
 
