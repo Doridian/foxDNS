@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Doridian/foxDNS/generator/simple"
 	"github.com/fsnotify/fsnotify"
 	"github.com/miekg/dns"
 )
@@ -90,7 +91,7 @@ func (r *Generator) AddRecord(rr dns.RR) {
 	nameRecs[hdr.Rrtype] = append(typeRecs, rr)
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, wr dns.ResponseWriter) ([]dns.RR, bool) {
+func (r *Generator) HandleQuestion(q *dns.Question, wr simple.DNSResponseWriter) ([]dns.RR, bool) {
 	nameRecs := r.records[q.Name]
 	if nameRecs == nil {
 		return []dns.RR{}, true

@@ -21,7 +21,7 @@ func (*TestHandler) GetName() string {
 	return "test"
 }
 
-func (t *TestHandler) HandleQuestion(q *dns.Question, wr dns.ResponseWriter) (recs []dns.RR, nxdomain bool) {
+func (t *TestHandler) HandleQuestion(q *dns.Question, wr simple.DNSResponseWriter) (recs []dns.RR, nxdomain bool) {
 	if q.Qtype == dns.TypeSOA {
 		return t.soaRecs, false
 	}
