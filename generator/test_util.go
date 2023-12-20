@@ -21,6 +21,7 @@ func (w *TestResponseWriter) WriteMsg(msg *dns.Msg) error {
 }
 
 func (w *TestResponseWriter) SetHandlerName(name string) {
+	w.HadWrites = true
 	w.LastHandlerName = name
 }
 
