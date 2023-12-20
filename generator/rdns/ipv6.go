@@ -1,6 +1,7 @@
 package rdns
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/miekg/dns"
@@ -30,6 +31,11 @@ func ipv6MakeRec(ip net.IP) dns.RR {
 	}
 }
 
+func ipv6Encode(ip net.IP) string {
+	return fmt.Sprintf("%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x",
+		ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7], ip[8], ip[9], ip[10], ip[11], ip[12], ip[13], ip[14], ip[15])
+}
+
 func NewIPv6() *Generator {
 	return &Generator{
 		recordType:  dns.TypeAAAA,
@@ -37,6 +43,7 @@ func NewIPv6() *Generator {
 		ipSeparator: ":",
 
 		decodeIpSegments: ipv6Decode,
+		encodeIp:         ipv6Encode,
 		makeRec:          ipv6MakeRec,
 	}
 }

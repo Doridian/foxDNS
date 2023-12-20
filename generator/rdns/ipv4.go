@@ -1,6 +1,7 @@
 package rdns
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 
@@ -30,6 +31,10 @@ func ipv4MakeRec(ip net.IP) dns.RR {
 	}
 }
 
+func ipv4Encode(ip net.IP) string {
+	return fmt.Sprintf("%d-%d-%d-%d", ip[0], ip[1], ip[2], ip[3])
+}
+
 func NewIPv4() *Generator {
 	return &Generator{
 		recordType:  dns.TypeA,
@@ -37,6 +42,7 @@ func NewIPv4() *Generator {
 		ipSeparator: ".",
 
 		decodeIpSegments: ipv4Decode,
+		encodeIp:         ipv4Encode,
 		makeRec:          ipv4MakeRec,
 	}
 }

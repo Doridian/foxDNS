@@ -22,7 +22,7 @@ func TestIPv6Addr(t *testing.T) {
 	runRDNSTest(t, handler, "fe80--1.ip6.example.com.", dns.TypeAAAA, &dns.AAAA{
 		AAAA: net.ParseIP("fe80::1"),
 	})
-	runRDNSTest(t, handler, "0--1.ip6.example.com.", dns.TypeAAAA, &dns.AAAA{
+	runRDNSTest(t, handler, "0000-0000-0000-0000-0000-0000-0000-0001.ip6.example.com.", dns.TypeAAAA, &dns.AAAA{
 		AAAA: net.ParseIP("::1"),
 	})
 }
@@ -33,10 +33,10 @@ func TestIPv6PTR(t *testing.T) {
 
 	runRDNSTest(t, handler, "4.3.2.1.in-addr.arpa.", dns.TypePTR, nil)
 	runRDNSTest(t, handler, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.e.f.ip6.arpa.", dns.TypePTR, &dns.PTR{
-		Ptr: "fe80--1.ip6.example.com.",
+		Ptr: "fe80-0000-0000-0000-0000-0000-0000-0001.ip6.example.com.",
 	})
 	runRDNSTest(t, handler, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.", dns.TypePTR, &dns.PTR{
-		Ptr: "0--1.ip6.example.com.",
+		Ptr: "0000-0000-0000-0000-0000-0000-0000-0001.ip6.example.com.",
 	})
 	runRDNSTest(t, handler, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.g.f.ip6.arpa.", dns.TypePTR, nil)
 	runRDNSTest(t, handler, "1.1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.e.f.ip6.arpa.", dns.TypePTR, nil)

@@ -18,6 +18,7 @@ type Generator struct {
 	ipSeparator string
 
 	decodeIpSegments func(nameSplit []string) net.IP
+	encodeIp         func(ip net.IP) string
 	makeRec          func(net.IP) dns.RR
 }
 
@@ -33,13 +34,8 @@ func (r *Generator) servePTR(name string) dns.RR {
 		return nil
 	}
 
-	ipStr := strings.ReplaceAll(ip.String(), r.ipSeparator, "-")
-	if ipStr[0] == '-' {
-		ipStr = "0" + ipStr
-	}
-
 	return &dns.PTR{
-		Ptr: fmt.Sprintf("%s.%s.", ipStr, r.PTRSuffix),
+		Ptr: fmt.Sprintf("%s.%s.", r.encodeIp(ip), r.PTRSuffix),
 	}
 }
 
