@@ -31,5 +31,6 @@ func TestIPv4PTR(t *testing.T) {
 	runRDNSTest(t, handler, "999.3.2.1.in-addr.arpa.", dns.TypePTR, nil)
 	runRDNSTest(t, handler, "5.4.3.2.1.in-addr.arpa.", dns.TypePTR, nil)
 	runRDNSTest(t, handler, "3.2.1.in-addr.arpa.", dns.TypePTR, nil)
+	runRDNSTest(t, handler, "4..2.1.in-addr.arpa.", dns.TypePTR, nil)
 	runRDNSTest(t, handler, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.e.f.ip6.arpa.", dns.TypePTR, nil)
 }
