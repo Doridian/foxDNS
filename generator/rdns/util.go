@@ -10,24 +10,30 @@ func NewRDNSGenerator(ipVersion int) *Generator {
 	return nil
 }
 
-func stringByteToByte(bs string) byte {
+func stringByteToByte(bs string) (byte, bool) {
 	b := []byte(bs)[0]
 
 	if b >= 'A' && b <= 'F' {
-		return (b - 'A') + 10
+		return (b - 'A') + 10, true
 	}
 	if b >= 'a' && b <= 'f' {
-		return (b - 'a') + 10
+		return (b - 'a') + 10, true
 	}
 	if b >= '0' && b <= '9' {
-		return (b - '0')
+		return (b - '0'), true
 	}
-	return 0
+	return 0, false
 }
 
-func twoStringByteToByte(lsbs string, msbs string) byte {
-	lsb := stringByteToByte(lsbs)
-	msb := stringByteToByte(msbs)
+func twoStringByteToByte(lsbs string, msbs string) (byte, bool) {
+	lsb, ok := stringByteToByte(lsbs)
+	if !ok {
+		return 0, false
+	}
+	msb, ok := stringByteToByte(msbs)
+	if !ok {
+		return 0, false
+	}
 
-	return lsb | (msb << 4)
+	return lsb | (msb << 4), true
 }

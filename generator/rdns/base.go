@@ -29,6 +29,9 @@ func (r *Generator) servePTR(name string) dns.RR {
 	}
 
 	ip := r.decodeIpSegments(nameSplit[:r.ipSegments])
+	if ip == nil {
+		return nil
+	}
 
 	return &dns.PTR{
 		Ptr: fmt.Sprintf("%s.%s.", strings.ReplaceAll(ip.String(), r.ipSeparator, "-"), r.PTRSuffix),
