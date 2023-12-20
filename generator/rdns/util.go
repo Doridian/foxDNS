@@ -11,6 +11,9 @@ func NewRDNSGenerator(ipVersion int) *Generator {
 }
 
 func stringByteToByte(bs string) (byte, bool) {
+	if len(bs) != 1 {
+		return 0, false
+	}
 	b := []byte(bs)[0]
 
 	if b >= 'A' && b <= 'F' {
