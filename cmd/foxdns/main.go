@@ -21,6 +21,7 @@ import (
 var generators = make([]generator.Generator, 0)
 var configFile string
 var srv *server.Server
+var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
 func reloadConfig() {
 	for _, gen := range generators {
@@ -140,7 +141,7 @@ func reloadConfig() {
 
 	if len(config.StaticZones) > 0 {
 		for statName, statFile := range config.StaticZones {
-			stat := static.New()
+			stat := static.New(enableFSNotify)
 			generators = append(generators, stat)
 			err := stat.LoadZoneFile(statFile, statName, 3600, false)
 			if err != nil {

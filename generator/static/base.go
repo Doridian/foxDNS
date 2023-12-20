@@ -9,8 +9,6 @@ import (
 	"github.com/miekg/dns"
 )
 
-var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
-
 type zoneConfig struct {
 	file           string
 	origin         string
@@ -19,16 +17,18 @@ type zoneConfig struct {
 }
 
 type Generator struct {
-	configs []zoneConfig
-	records map[string]map[uint16][]dns.RR
-	watcher *fsnotify.Watcher
+	configs        []zoneConfig
+	records        map[string]map[uint16][]dns.RR
+	watcher        *fsnotify.Watcher
+	enableFSNotify bool
 }
 
-func New() *Generator {
+func New(enableFSNotify bool) *Generator {
 	return &Generator{
-		configs: make([]zoneConfig, 0),
-		records: make(map[string]map[uint16][]dns.RR),
-		watcher: nil,
+		configs:        make([]zoneConfig, 0),
+		records:        make(map[string]map[uint16][]dns.RR),
+		watcher:        nil,
+		enableFSNotify: enableFSNotify,
 	}
 }
 
@@ -37,7 +37,7 @@ func (r *Generator) LoadZoneFile(file string, origin string, defaultTTL uint32, 
 	if err != nil {
 		return err
 	}
-	err = r.loadZone(fh, file, origin, defaultTTL, includeAllowed)
+	err = r.LoadZone(fh, file, origin, defaultTTL, includeAllowed)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (r *Generator) LoadZoneFile(file string, origin string, defaultTTL uint32, 
 	return nil
 }
 
-func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) error {
+func (r *Generator) LoadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) error {
 	parser := dns.NewZoneParser(rd, origin, file)
 	parser.SetDefaultTTL(defaultTTL)
 	parser.SetIncludeAllowed(includeAllowed)
@@ -68,11 +68,11 @@ func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTT
 		if !ok || rr == nil {
 			return parser.Err()
 		}
-		r.addRecord(rr)
+		r.AddRecord(rr)
 	}
 }
 
-func (r *Generator) addRecord(rr dns.RR) {
+func (r *Generator) AddRecord(rr dns.RR) {
 	hdr := rr.Header()
 
 	hdr.Name = dns.CanonicalName(hdr.Name)
@@ -134,7 +134,7 @@ func (r *Generator) Refresh() error {
 }
 
 func (r *Generator) Start() error {
-	if !enableFSNotify {
+	if !r.enableFSNotify {
 		return nil
 	}
 
