@@ -10,6 +10,9 @@ type TestResponseWriter struct {
 	HadWrites       bool
 	LastMsg         *dns.Msg
 	LastHandlerName string
+
+	LocalAddrVal  net.Addr
+	RemoteAddrVal net.Addr
 }
 
 var _ = dns.ResponseWriter(&TestResponseWriter{})
@@ -35,17 +38,23 @@ func (w *TestResponseWriter) Hijack() {
 }
 
 func (w *TestResponseWriter) LocalAddr() net.Addr {
-	return &net.TCPAddr{
-		IP:   net.IPv4(127, 0, 0, 1),
-		Port: 53,
+	if w.LocalAddrVal == nil {
+		return &net.TCPAddr{
+			IP:   net.IPv4(127, 0, 0, 1),
+			Port: 53,
+		}
 	}
+	return w.LocalAddrVal
 }
 
 func (w *TestResponseWriter) RemoteAddr() net.Addr {
-	return &net.TCPAddr{
-		IP:   net.IPv4(127, 0, 0, 1),
-		Port: 5053,
+	if w.RemoteAddrVal == nil {
+		return &net.TCPAddr{
+			IP:   net.IPv4(127, 0, 0, 2),
+			Port: 5053,
+		}
 	}
+	return w.RemoteAddrVal
 }
 
 func (w *TestResponseWriter) TsigStatus() error {

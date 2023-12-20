@@ -119,6 +119,9 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr simple.DNS
 	resp := make([]dns.RR, 0, len(recs))
 	for _, rec := range recs {
 		ipRec := IPNetAdd(rec.Subnet, rec.IP, remoteIP)
+		if ipRec == nil {
+			continue
+		}
 		ipResRec := makeRecFunc(ipRec)
 		util.FillHeader(ipResRec, q.Name, q.Qtype, 60)
 		resp = append(resp, ipResRec)
