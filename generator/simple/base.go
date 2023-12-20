@@ -29,7 +29,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	if q.Qclass != dns.ClassINET {
 		util.SetHandlerName(wr, r)
 		reply.Rcode = dns.RcodeRefused
-		wr.WriteMsg(reply)
+		_ = wr.WriteMsg(reply)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		reply.Ns, _ = r.Child.HandleQuestion(q, wr)
 	}
 
-	wr.WriteMsg(reply)
+	_ = wr.WriteMsg(reply)
 }
 
 func (r *Generator) Register(mux *dns.ServeMux) {

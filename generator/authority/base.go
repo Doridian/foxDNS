@@ -55,7 +55,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	q := msg.Question[0]
 	if q.Qclass != dns.ClassINET {
 		reply.Rcode = dns.RcodeRefused
-		wr.WriteMsg(reply)
+		_ = wr.WriteMsg(reply)
 		return
 	}
 

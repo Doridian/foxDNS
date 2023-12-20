@@ -129,7 +129,7 @@ func (s *Server) serve(net string, addr string) {
 func (s *Server) Shutdown() {
 	s.serverLock.Lock()
 	for dnsServer := range s.servers {
-		dnsServer.Shutdown()
+		_ = dnsServer.Shutdown()
 	}
 	s.servers = make(map[*dns.Server]bool)
 	s.serverLock.Unlock()

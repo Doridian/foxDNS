@@ -128,7 +128,10 @@ func reloadConfig() {
 			generators = append(generators, loc)
 
 			for _, ip := range locIPs {
-				loc.AddRecord(locName, ip)
+				err := loc.AddRecord(locName, ip)
+				if err != nil {
+					log.Printf("Error adding localizer record %s -> %s: %v", locName, ip, err)
+				}
 			}
 
 			locAuth := authority.NewAuthorityHandler(locName, config.Global.NameServers, config.Global.Mailbox)
@@ -184,7 +187,12 @@ func main() {
 
 	if config.Global.PrometheusListen != "" {
 		http.Handle("/metrics", promhttp.Handler())
-		go http.ListenAndServe(config.Global.PrometheusListen, nil)
+		go func() {
+			err := http.ListenAndServe(config.Global.PrometheusListen, nil)
+			if err != nil {
+				log.Panicf("Error starting Prometheus listener: %v", err)
+			}
+		}()
 	}
 
 	srv = server.NewServer(config.Global.Listen)
