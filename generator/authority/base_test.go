@@ -57,7 +57,18 @@ func testQuestion(t *testing.T, handler *authority.AuthorityHandler, q dns.Quest
 }
 
 func TestBasics(t *testing.T) {
-	handler := authority.NewAuthorityHandler("example.com", []string{"ns1.example.com", "ns2.example.com"}, "hostmaster.example.com")
+	soaConfig := authority.AuthConfig{
+		SOATtl:      300,
+		NSTtl:       300,
+		Mbox:        "hostmaster.example.com",
+		Serial:      2022010169,
+		Refresh:     43200,
+		Retry:       3600,
+		Expire:      86400,
+		Minttl:      300,
+		Nameservers: []string{"ns1.example.com", "ns2.example.com"},
+	}
+	handler := authority.NewAuthorityHandler("example.com", soaConfig)
 
 	soaRecs := []dns.RR{
 		authority.FillAuthHeader(&dns.SOA{
@@ -68,16 +79,16 @@ func TestBasics(t *testing.T) {
 			Retry:   3600,
 			Expire:  86400,
 			Minttl:  300,
-		}, dns.TypeSOA, "example.com."),
+		}, dns.TypeSOA, "example.com.", 300),
 	}
 
 	nsRecs := []dns.RR{
 		authority.FillAuthHeader(&dns.NS{
 			Ns: "ns1.example.com.",
-		}, dns.TypeNS, "example.com."),
+		}, dns.TypeNS, "example.com.", 300),
 		authority.FillAuthHeader(&dns.NS{
 			Ns: "ns2.example.com.",
-		}, dns.TypeNS, "example.com."),
+		}, dns.TypeNS, "example.com.", 300),
 	}
 
 	// We expect the SOA record to be returned

@@ -7,18 +7,32 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type YAMLAuthorityConfig struct {
+	NameServers []string `yaml:"nameservers"`
+	Mailbox     string   `yaml:"mailbox"`
+	SOATtl      uint32   `yaml:"ttl"`
+	NSTtl       uint32   `yaml:"nsttl"`
+	Serial      uint32   `yaml:"serial"`
+	Refresh     uint32   `yaml:"refresh"`
+	Retry       uint32   `yaml:"retry"`
+	Expire      uint32   `yaml:"expire"`
+	Minttl      uint32   `yaml:"minttl"`
+}
+
 type Config struct {
 	Global struct {
-		NameServers      []string `yaml:"nameservers"`
-		Mailbox          string   `yaml:"mailbox"`
-		Listen           []string `yaml:"listen"`
-		PrometheusListen string   `yaml:"prometheus-listen"`
+		Listen           []string             `yaml:"listen"`
+		PrometheusListen string               `yaml:"prometheus-listen"`
+		AuthorityConfig  *YAMLAuthorityConfig `yaml:"authority-config"`
 	} `yaml:"global"`
 
 	RDNS []struct {
-		IPVersion int      `yaml:"ip_version"`
-		Suffix    string   `yaml:"suffix"`
-		Subnets   []string `yaml:"subnets"`
+		IPVersion       int                  `yaml:"ip_version"`
+		Suffix          string               `yaml:"suffix"`
+		Subnets         []string             `yaml:"subnets"`
+		AuthorityConfig *YAMLAuthorityConfig `yaml:"authority-config"`
+		AddressTtl      uint32               `yaml:"address-ttl"`
+		PtrTtl          uint32               `yaml:"ptr-ttl"`
 	} `yaml:"rdns"`
 
 	Resolvers []struct {

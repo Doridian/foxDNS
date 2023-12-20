@@ -37,6 +37,9 @@ func ipv4Encode(ip net.IP) string {
 
 func NewIPv4() *Generator {
 	return &Generator{
+		AddressTtl: 3600,
+		PtrTtl:     3600,
+
 		recordType:  dns.TypeA,
 		ipSegments:  4,
 		ipSeparator: ".",

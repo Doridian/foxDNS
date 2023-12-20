@@ -11,7 +11,9 @@ import (
 )
 
 type Generator struct {
-	PTRSuffix string
+	PTRSuffix  string
+	AddressTtl uint32
+	PtrTtl     uint32
 
 	recordType  uint16
 	ipSegments  int
@@ -57,18 +59,21 @@ func (r *Generator) serveRec(name string) dns.RR {
 func (r *Generator) HandleQuestion(q *dns.Question, _ simple.DNSResponseWriter) ([]dns.RR, bool) {
 	var resp dns.RR
 
+	var ttl uint32
 	switch q.Qtype {
 	case dns.TypePTR:
 		resp = r.servePTR(q.Name)
+		ttl = r.PtrTtl
 	case r.recordType:
 		resp = r.serveRec(q.Name)
+		ttl = r.AddressTtl
 	}
 
 	if resp == nil {
 		return []dns.RR{}, false
 	}
 
-	util.FillHeader(resp, q.Name, q.Qtype, 3600)
+	util.FillHeader(resp, q.Name, q.Qtype, ttl)
 
 	return []dns.RR{resp}, false
 }

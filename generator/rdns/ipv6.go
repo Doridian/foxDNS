@@ -38,6 +38,9 @@ func ipv6Encode(ip net.IP) string {
 
 func NewIPv6() *Generator {
 	return &Generator{
+		AddressTtl: 3600,
+		PtrTtl:     3600,
+
 		recordType:  dns.TypeAAAA,
 		ipSegments:  32,
 		ipSeparator: ":",

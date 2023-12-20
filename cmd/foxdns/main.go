@@ -23,6 +23,50 @@ var configFile string
 var srv *server.Server
 var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
+func mergeAuthorityConfig(config *YAMLAuthorityConfig, base authority.AuthConfig) authority.AuthConfig {
+	if config == nil {
+		return base
+	}
+
+	if config.NameServers != nil {
+		base.Nameservers = config.NameServers
+	}
+
+	if config.Mailbox != "" {
+		base.Mbox = config.Mailbox
+	}
+
+	if config.SOATtl > 0 {
+		base.SOATtl = config.SOATtl
+	}
+
+	if config.NSTtl > 0 {
+		base.NSTtl = config.NSTtl
+	}
+
+	if config.Serial > 0 {
+		base.Serial = config.Serial
+	}
+
+	if config.Refresh > 0 {
+		base.Refresh = config.Refresh
+	}
+
+	if config.Retry > 0 {
+		base.Retry = config.Retry
+	}
+
+	if config.Expire > 0 {
+		base.Expire = config.Expire
+	}
+
+	if config.Minttl > 0 {
+		base.Minttl = config.Minttl
+	}
+
+	return base
+}
+
 func reloadConfig() {
 	for _, gen := range generators {
 		err := gen.Stop()
@@ -32,6 +76,8 @@ func reloadConfig() {
 	}
 
 	config := LoadConfig(configFile)
+
+	authorityConfig := mergeAuthorityConfig(config.Global.AuthorityConfig, authority.GetDefaultAuthorityConfig())
 
 	generators = make([]generator.Generator, 0)
 	mux := dns.NewServeMux()
@@ -45,13 +91,23 @@ func reloadConfig() {
 		}
 		rdnsGen.PTRSuffix = rdnsConf.Suffix
 
-		rdnsAuthMain := authority.NewAuthorityHandler(rdnsConf.Suffix, config.Global.NameServers, config.Global.Mailbox)
+		if rdnsConf.AddressTtl > 0 {
+			rdnsGen.AddressTtl = rdnsConf.AddressTtl
+		}
+
+		if rdnsConf.PtrTtl > 0 {
+			rdnsGen.PtrTtl = rdnsConf.PtrTtl
+		}
+
+		rdnsAuthorityConfig := mergeAuthorityConfig(rdnsConf.AuthorityConfig, authorityConfig)
+
+		rdnsAuthMain := authority.NewAuthorityHandler(rdnsConf.Suffix, rdnsAuthorityConfig)
 		rdnsAuthMain.Child = rdnsGen
 		generators = append(generators, rdnsAuthMain)
 		rdnsAuthMain.Register(mux)
 
 		for _, subnet := range rdnsConf.Subnets {
-			rdnsAuthSub := authority.NewAuthorityHandler(subnet, config.Global.NameServers, config.Global.Mailbox)
+			rdnsAuthSub := authority.NewAuthorityHandler(subnet, rdnsAuthorityConfig)
 			rdnsAuthSub.Child = rdnsGen
 			generators = append(generators, rdnsAuthSub)
 			rdnsAuthSub.Register(mux)
@@ -134,7 +190,7 @@ func reloadConfig() {
 				}
 			}
 
-			locAuth := authority.NewAuthorityHandler(locName, config.Global.NameServers, config.Global.Mailbox)
+			locAuth := authority.NewAuthorityHandler(locName, authorityConfig)
 			locAuth.Child = loc
 			locAuth.Register(mux)
 		}

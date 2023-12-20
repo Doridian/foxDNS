@@ -1,7 +1,8 @@
 global:
-  nameservers:
-    - nameserver.example.com
-  mailbox: email.example.com
+  authority-config:
+    nameservers:
+      - nameserver.example.com
+    mailbox: email.example.com
   listen:
     - :8053
   prometheus-listen: :9001

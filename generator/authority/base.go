@@ -6,6 +6,18 @@ import (
 	"github.com/miekg/dns"
 )
 
+type AuthConfig struct {
+	Nameservers []string
+	Mbox        string
+	SOATtl      uint32
+	NSTtl       uint32
+	Serial      uint32
+	Refresh     uint32
+	Retry       uint32
+	Expire      uint32
+	Minttl      uint32
+}
+
 type AuthorityHandler struct {
 	soa   []dns.RR
 	ns    []dns.RR
@@ -13,33 +25,45 @@ type AuthorityHandler struct {
 	Child simple.Handler
 }
 
-func FillAuthHeader(rr dns.RR, rtype uint16, zone string) dns.RR {
-	return util.FillHeader(rr, zone, rtype, 300)
+func GetDefaultAuthorityConfig() AuthConfig {
+	return AuthConfig{
+		SOATtl:  300,
+		NSTtl:   300,
+		Serial:  2022010169,
+		Refresh: 43200,
+		Retry:   3600,
+		Expire:  86400,
+		Minttl:  300,
+	}
 }
 
-func NewAuthorityHandler(zone string, nsList []string, mbox string) *AuthorityHandler {
+func FillAuthHeader(rr dns.RR, rtype uint16, zone string, ttl uint32) dns.RR {
+	return util.FillHeader(rr, zone, rtype, ttl)
+}
+
+func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 	hdl := &AuthorityHandler{}
 
 	zone = dns.CanonicalName(zone)
 
 	hdl.zone = zone
-	hdl.ns = make([]dns.RR, 0, len(nsList))
+	hdl.ns = make([]dns.RR, 0, len(config.Nameservers))
 	hdl.soa = []dns.RR{
 		FillAuthHeader(&dns.SOA{
-			Ns:      dns.CanonicalName(nsList[0]),
-			Mbox:    dns.CanonicalName(mbox),
-			Serial:  2022010169,
-			Refresh: 43200,
-			Retry:   3600,
-			Expire:  86400,
-			Minttl:  300,
-		}, dns.TypeSOA, zone),
+			Ns:      dns.CanonicalName(config.Nameservers[0]),
+			Mbox:    dns.CanonicalName(config.Mbox),
+			Serial:  config.Serial,
+			Refresh: config.Refresh,
+			Retry:   config.Retry,
+			Expire:  config.Expire,
+			Minttl:  config.Minttl,
+		}, dns.TypeSOA, zone, config.SOATtl),
 	}
 
-	for _, ns := range nsList {
+	for _, ns := range config.Nameservers {
 		hdl.ns = append(hdl.ns, FillAuthHeader(&dns.NS{
 			Ns: dns.CanonicalName(ns),
-		}, dns.TypeNS, zone))
+		}, dns.TypeNS, zone, config.NSTtl))
 	}
 
 	return hdl
