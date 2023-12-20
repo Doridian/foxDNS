@@ -12,12 +12,14 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	reply := new(dns.Msg)
 	if len(msg.Question) != 1 {
-		wr.WriteMsg(reply.SetRcode(msg, dns.RcodeRefused))
+		_ = wr.WriteMsg(reply.SetRcode(msg, dns.RcodeRefused))
 		return
 	}
 
 	reply.SetRcode(msg, dns.RcodeServerFailure)
-	defer wr.WriteMsg(reply)
+	defer func() {
+		_ = wr.WriteMsg(reply)
+	}()
 
 	if r.AllowOnlyFromPrivate {
 		ip := util.ExtractIP(wr.RemoteAddr())

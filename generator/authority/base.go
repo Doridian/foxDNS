@@ -85,7 +85,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		util.SetHandlerName(wr, r)
 	}
 
-	wr.WriteMsg(reply)
+	_ = wr.WriteMsg(reply)
 }
 
 func (r *AuthorityHandler) Register(mux *dns.ServeMux) {
