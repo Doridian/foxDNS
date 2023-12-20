@@ -11,7 +11,7 @@ import (
 )
 
 type TestHandler struct {
-	q        dns.Question
+	q        *dns.Question
 	recs     []dns.RR
 	soaRecs  []dns.RR
 	nxdomain bool
@@ -21,7 +21,7 @@ func (*TestHandler) GetName() string {
 	return "test"
 }
 
-func (t *TestHandler) HandleQuestion(q dns.Question, wr dns.ResponseWriter) (recs []dns.RR, nxdomain bool) {
+func (t *TestHandler) HandleQuestion(q *dns.Question, wr dns.ResponseWriter) (recs []dns.RR, nxdomain bool) {
 	if q.Qtype == dns.TypeSOA {
 		return t.soaRecs, false
 	}
@@ -85,4 +85,34 @@ func TestBasics(t *testing.T) {
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
 	}, []dns.RR{}, soaRecs, true)
+}
+
+func TestRejectsNonINET(t *testing.T) {
+	handler := simple.New("example.com")
+	testResponseWriter := &generator.TestResponseWriter{}
+	handler.ServeDNS(testResponseWriter, &dns.Msg{
+		Question: []dns.Question{
+			{
+				Name:   "example.com.",
+				Qtype:  dns.TypeA,
+				Qclass: dns.ClassCHAOS,
+			},
+		},
+	})
+	assert.Equal(t, dns.RcodeRefused, testResponseWriter.LastMsg.Rcode)
+}
+
+func TestRejectsANY(t *testing.T) {
+	handler := simple.New("example.com")
+	testResponseWriter := &generator.TestResponseWriter{}
+	handler.ServeDNS(testResponseWriter, &dns.Msg{
+		Question: []dns.Question{
+			{
+				Name:   "example.com.",
+				Qtype:  dns.TypeANY,
+				Qclass: dns.ClassINET,
+			},
+		},
+	})
+	assert.Equal(t, dns.RcodeRefused, testResponseWriter.LastMsg.Rcode)
 }

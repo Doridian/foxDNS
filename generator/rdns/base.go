@@ -49,7 +49,7 @@ func (r *Generator) serveRec(name string) dns.RR {
 	return r.makeRec(rdnsIp)
 }
 
-func (r *Generator) HandleQuestion(q dns.Question, _ dns.ResponseWriter) ([]dns.RR, bool) {
+func (r *Generator) HandleQuestion(q *dns.Question, _ dns.ResponseWriter) ([]dns.RR, bool) {
 	var resp dns.RR
 
 	switch q.Qtype {

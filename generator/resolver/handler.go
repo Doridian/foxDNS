@@ -33,7 +33,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.RecursionAvailable = true
 
 	q := &msg.Question[0]
-	if q.Qclass != dns.ClassINET || q.Qtype == dns.TypeAXFR || q.Qtype == dns.TypeIXFR || q.Qtype == dns.TypeMAILA || q.Qtype == dns.TypeMAILB || q.Qtype == dns.TypeANY {
+	if util.IsBadQuery(q) {
 		reply.Rcode = dns.RcodeRefused
 		return
 	}

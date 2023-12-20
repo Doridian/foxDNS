@@ -78,7 +78,7 @@ func makeRecV6(ip net.IP) dns.RR {
 	}
 }
 
-func (r *LocalizedRecordGenerator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) ([]dns.RR, bool) {
+func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr dns.ResponseWriter) ([]dns.RR, bool) {
 	if !r.knownHosts[q.Name] {
 		return []dns.RR{}, true
 	}

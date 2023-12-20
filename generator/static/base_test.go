@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func runStaticTest(t *testing.T, handler simple.Handler, q dns.Question) (rr []dns.RR, nxdomain bool) {
+func runStaticTest(t *testing.T, handler simple.Handler, q *dns.Question) (rr []dns.RR, nxdomain bool) {
 	wr := &generator.TestResponseWriter{}
 	rr, nxdomain = handler.HandleQuestion(q, wr)
 	assert.False(t, wr.HadWrites)
@@ -45,7 +45,7 @@ func TestBasicZone(t *testing.T) {
 	util.FillHeader(recA2_2, "a2.example.com.", dns.TypeA, 60)
 	handler.AddRecord(recA2_2)
 
-	rr, nxdomain := runStaticTest(t, handler, dns.Question{
+	rr, nxdomain := runStaticTest(t, handler, &dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
@@ -54,7 +54,7 @@ func TestBasicZone(t *testing.T) {
 	assert.ElementsMatch(t, []dns.RR{recA}, rr)
 
 	// Correctly gives NXDOMAIN
-	rr, nxdomain = runStaticTest(t, handler, dns.Question{
+	rr, nxdomain = runStaticTest(t, handler, &dns.Question{
 		Name:   "test.example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
@@ -63,7 +63,7 @@ func TestBasicZone(t *testing.T) {
 	assert.ElementsMatch(t, []dns.RR{}, rr)
 
 	// Does not return types not asked for and no NXDOMAIN
-	rr, nxdomain = runStaticTest(t, handler, dns.Question{
+	rr, nxdomain = runStaticTest(t, handler, &dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeAAAA,
 		Qclass: dns.ClassINET,
@@ -72,7 +72,7 @@ func TestBasicZone(t *testing.T) {
 	assert.ElementsMatch(t, []dns.RR{}, rr)
 
 	// Only gives type asked for
-	rr, nxdomain = runStaticTest(t, handler, dns.Question{
+	rr, nxdomain = runStaticTest(t, handler, &dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeTXT,
 		Qclass: dns.ClassINET,
@@ -81,7 +81,7 @@ func TestBasicZone(t *testing.T) {
 	assert.ElementsMatch(t, []dns.RR{recTXT}, rr)
 
 	// Multiple records
-	rr, nxdomain = runStaticTest(t, handler, dns.Question{
+	rr, nxdomain = runStaticTest(t, handler, &dns.Question{
 		Name:   "a2.example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,

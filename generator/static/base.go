@@ -90,7 +90,7 @@ func (r *Generator) AddRecord(rr dns.RR) {
 	nameRecs[hdr.Rrtype] = append(typeRecs, rr)
 }
 
-func (r *Generator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) ([]dns.RR, bool) {
+func (r *Generator) HandleQuestion(q *dns.Question, wr dns.ResponseWriter) ([]dns.RR, bool) {
 	nameRecs := r.records[q.Name]
 	if nameRecs == nil {
 		return []dns.RR{}, true
@@ -107,7 +107,7 @@ func (r *Generator) HandleQuestion(q dns.Question, wr dns.ResponseWriter) ([]dns
 		if cnameRecs != nil {
 			cname := cnameRecs[0].(*dns.CNAME)
 			resultRecs := []dns.RR{cname}
-			subRes, _ := r.HandleQuestion(dns.Question{
+			subRes, _ := r.HandleQuestion(&dns.Question{
 				Name:   cname.Target,
 				Qtype:  q.Qtype,
 				Qclass: q.Qclass,

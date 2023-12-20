@@ -25,8 +25,8 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	util.SetEDNS0(reply)
 
-	q := msg.Question[0]
-	if q.Qclass != dns.ClassINET {
+	q := &msg.Question[0]
+	if util.IsBadQuery(q) {
 		util.SetHandlerName(wr, r)
 		reply.Rcode = dns.RcodeRefused
 		_ = wr.WriteMsg(reply)
