@@ -3,6 +3,7 @@ package resolver
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/miekg/dns"
@@ -16,6 +17,7 @@ type cacheEntry struct {
 	expiry time.Time
 	qtype  uint16
 	qclass uint16
+	hits   atomic.Uint64
 }
 
 var (
@@ -138,6 +140,8 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 		return nil, ""
 	}
 
+	entry.hits.Add(1)
+
 	ttlAdjust := uint32(now.Sub(entry.time).Seconds())
 
 	msg := entry.msg.Copy()
@@ -218,6 +222,7 @@ func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, 
 		qtype:  q.Qtype,
 		qclass: q.Qclass,
 	}
+	entry.hits.Store(1)
 
 	matchType := "exact"
 	if m.Rcode == dns.RcodeNameError {
