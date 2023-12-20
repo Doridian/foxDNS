@@ -1,6 +1,7 @@
 package simple_test
 
 import (
+	"net"
 	"testing"
 
 	"github.com/Doridian/foxDNS/generator"
@@ -46,10 +47,10 @@ func testQuestion(t *testing.T, handler *simple.Generator, q dns.Question, rr []
 	assert.NotNil(t, wr.LastMsg.IsEdns0())
 	assert.True(t, wr.HadWrites)
 	assert.ElementsMatch(t, wr.LastMsg.Question, []dns.Question{q})
-	assert.ElementsMatch(t, wr.LastMsg.Answer, testHandler.recs)
+	assert.ElementsMatch(t, wr.LastMsg.Answer, rr)
 
 	if len(wr.LastMsg.Answer) == 0 {
-		assert.ElementsMatch(t, wr.LastMsg.Ns, testHandler.soaRecs)
+		assert.ElementsMatch(t, wr.LastMsg.Ns, soaRR)
 	} else {
 		assert.Empty(t, wr.LastMsg.Ns)
 	}
@@ -74,17 +75,30 @@ func TestBasics(t *testing.T) {
 		}, "example.com.", dns.TypeSOA, 60),
 	}
 
+	// We expect the SOA record to be returned
 	testQuestion(t, simple.New("example.com"), dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
 	}, []dns.RR{}, soaRecs, false)
 
+	// Same goes for this one
 	testQuestion(t, simple.New("example.com"), dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
 	}, []dns.RR{}, soaRecs, true)
+
+	// No SOA here
+	testQuestion(t, simple.New("example.com"), dns.Question{
+		Name:   "example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	}, []dns.RR{
+		util.FillHeader(&dns.A{
+			A: net.IPv4(127, 0, 0, 1),
+		}, "example.com.", dns.TypeA, 60),
+	}, soaRecs, false)
 }
 
 func TestRejectsNonINET(t *testing.T) {
