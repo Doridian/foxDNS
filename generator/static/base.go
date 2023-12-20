@@ -75,6 +75,9 @@ func (r *Generator) LoadZone(rd io.Reader, file string, origin string, defaultTT
 
 func (r *Generator) AddRecord(rr dns.RR) {
 	hdr := rr.Header()
+	if hdr.Class != dns.ClassINET {
+		return
+	}
 
 	hdr.Name = dns.CanonicalName(hdr.Name)
 
