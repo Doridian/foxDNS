@@ -19,6 +19,7 @@ type LocalizedRecordGenerator struct {
 	aRecords    LocalizerRecordMap
 	aaaaRecords LocalizerRecordMap
 	knownHosts  map[string]bool
+	Ttl         uint32
 }
 
 func New() *LocalizedRecordGenerator {
@@ -26,6 +27,7 @@ func New() *LocalizedRecordGenerator {
 		aRecords:    make(LocalizerRecordMap),
 		aaaaRecords: make(LocalizerRecordMap),
 		knownHosts:  make(map[string]bool),
+		Ttl:         60,
 	}
 }
 
@@ -123,7 +125,7 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr simple.DNS
 			continue
 		}
 		ipResRec := makeRecFunc(ipRec)
-		util.FillHeader(ipResRec, q.Name, q.Qtype, 60)
+		util.FillHeader(ipResRec, q.Name, q.Qtype, r.Ttl)
 		resp = append(resp, ipResRec)
 	}
 	return resp, false

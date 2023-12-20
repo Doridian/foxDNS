@@ -166,11 +166,11 @@ func reloadConfig() {
 		}
 
 		if resolvConf.RecordMinTTL > 0 {
-			resolv.RecordMinTTL = uint32(resolvConf.RecordMinTTL.Seconds())
+			resolv.RecordMinTTL = resolvConf.RecordMinTTL
 		}
 
 		if resolvConf.RecordMaxTTL > 0 {
-			resolv.RecordMaxTTL = uint32(resolvConf.RecordMaxTTL.Seconds())
+			resolv.RecordMaxTTL = resolvConf.RecordMaxTTL
 		}
 
 		mux.Handle(resolvConf.Zone, resolv)
@@ -179,18 +179,23 @@ func reloadConfig() {
 	}
 
 	if len(config.Localizers) > 0 {
-		for locName, locIPs := range config.Localizers {
+		for _, locConfig := range config.Localizers {
 			loc := localizer.New()
+
+			if locConfig.Ttl > 0 {
+				loc.Ttl = locConfig.Ttl
+			}
+
 			generators = append(generators, loc)
 
-			for _, ip := range locIPs {
-				err := loc.AddRecord(locName, ip)
+			for _, ip := range locConfig.Subnets {
+				err := loc.AddRecord(locConfig.Zone, ip)
 				if err != nil {
-					log.Printf("Error adding localizer record %s -> %s: %v", locName, ip, err)
+					log.Printf("Error adding localizer record %s -> %s: %v", locConfig.Zone, ip, err)
 				}
 			}
 
-			locAuth := authority.NewAuthorityHandler(locName, authorityConfig)
+			locAuth := authority.NewAuthorityHandler(locConfig.Zone, mergeAuthorityConfig(locConfig.AuthorityConfig, authorityConfig))
 			locAuth.Child = loc
 			locAuth.Register(mux)
 		}

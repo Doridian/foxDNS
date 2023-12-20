@@ -56,13 +56,18 @@ type Config struct {
 		CacheMinTime     time.Duration `yaml:"cache-min-time"`
 		CacheNoReplyTime time.Duration `yaml:"cache-no-reply-time"`
 
-		RecordMinTTL time.Duration `yaml:"record-min-ttl"`
-		RecordMaxTTL time.Duration `yaml:"record-max-ttl"`
+		RecordMinTTL uint32 `yaml:"record-min-ttl"`
+		RecordMaxTTL uint32 `yaml:"record-max-ttl"`
 
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
 	} `yaml:"resolvers"`
 
-	Localizers map[string][]string `yaml:"localizers"`
+	Localizers []struct {
+		Zone            string               `yaml:"zone"`
+		Subnets         []string             `yaml:"subnets"`
+		Ttl             uint32               `yaml:"ttl"`
+		AuthorityConfig *YAMLAuthorityConfig `yaml:"authority-config"`
+	} `yaml:"localizers"`
 
 	StaticZones map[string]string `yaml:"static-zones"`
 }

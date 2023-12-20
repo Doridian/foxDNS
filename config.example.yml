@@ -33,8 +33,9 @@ resolvers:
     allow-only-from-private: true
 
 localizers:
-  x.example.com:
-  - 0.0.0.123/16
+  - zone: x.example.com
+    subnets:
+      - 0.0.0.123/16
 
 static-zones:
   static.example.com: static.example.com.db
