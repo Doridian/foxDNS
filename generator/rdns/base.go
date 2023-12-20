@@ -33,8 +33,13 @@ func (r *Generator) servePTR(name string) dns.RR {
 		return nil
 	}
 
+	ipStr := strings.ReplaceAll(ip.String(), r.ipSeparator, "-")
+	if ipStr[0] == '-' {
+		ipStr = "0" + ipStr
+	}
+
 	return &dns.PTR{
-		Ptr: fmt.Sprintf("%s.%s.", strings.ReplaceAll(ip.String(), r.ipSeparator, "-"), r.PTRSuffix),
+		Ptr: fmt.Sprintf("%s.%s.", ipStr, r.PTRSuffix),
 	}
 }
 
