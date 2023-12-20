@@ -89,3 +89,21 @@ func TestBasicZone(t *testing.T) {
 	assert.False(t, nxdomain)
 	assert.ElementsMatch(t, []dns.RR{recA2_1, recA2_2}, rr)
 }
+
+func TestRejectsNonINET(t *testing.T) {
+	handler := static.New(false)
+
+	recA := &dns.A{
+		A: net.IPv4(127, 0, 0, 1),
+	}
+	util.FillHeader(recA, "example.com.", dns.TypeA, 60)
+	recA.Hdr.Class = dns.ClassCHAOS
+	handler.AddRecord(recA)
+
+	rr, _ := runStaticTest(t, handler, &dns.Question{
+		Name:   "example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	})
+	assert.ElementsMatch(t, []dns.RR{}, rr)
+}
