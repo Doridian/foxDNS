@@ -13,7 +13,7 @@ type AuthorityHandler struct {
 	Child simple.Handler
 }
 
-func fillAuthHeader(rr dns.RR, rtype uint16, zone string) dns.RR {
+func FillAuthHeader(rr dns.RR, rtype uint16, zone string) dns.RR {
 	return util.FillHeader(rr, zone, rtype, 300)
 }
 
@@ -25,7 +25,7 @@ func NewAuthorityHandler(zone string, nsList []string, mbox string) *AuthorityHa
 	hdl.zone = zone
 	hdl.ns = make([]dns.RR, 0, len(nsList))
 	hdl.soa = []dns.RR{
-		fillAuthHeader(&dns.SOA{
+		FillAuthHeader(&dns.SOA{
 			Ns:      dns.CanonicalName(nsList[0]),
 			Mbox:    dns.CanonicalName(mbox),
 			Serial:  2022010169,
@@ -37,7 +37,7 @@ func NewAuthorityHandler(zone string, nsList []string, mbox string) *AuthorityHa
 	}
 
 	for _, ns := range nsList {
-		hdl.ns = append(hdl.ns, fillAuthHeader(&dns.NS{
+		hdl.ns = append(hdl.ns, FillAuthHeader(&dns.NS{
 			Ns: dns.CanonicalName(ns),
 		}, dns.TypeNS, zone))
 	}

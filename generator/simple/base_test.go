@@ -49,7 +49,7 @@ func testQuestion(t *testing.T, handler *simple.Generator, q dns.Question, rr []
 	assert.ElementsMatch(t, wr.LastMsg.Question, []dns.Question{q})
 	assert.ElementsMatch(t, wr.LastMsg.Answer, rr)
 
-	if len(wr.LastMsg.Answer) == 0 {
+	if len(rr) == 0 {
 		assert.ElementsMatch(t, wr.LastMsg.Ns, soaRR)
 	} else {
 		assert.Empty(t, wr.LastMsg.Ns)
