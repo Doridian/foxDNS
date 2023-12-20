@@ -1,0 +1,26 @@
+name: Test and lint
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  workflow_call: {}
+jobs:
+  test:
+    name: Test and lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest  
+      - name: Run tests
+        run: go test -v ./...
