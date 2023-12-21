@@ -8,15 +8,15 @@ import (
 )
 
 type YAMLAuthorityConfig struct {
-	NameServers []string `yaml:"nameservers"`
-	Mailbox     string   `yaml:"mailbox"`
-	SOATtl      uint32   `yaml:"soa-ttl"`
-	NSTtl       uint32   `yaml:"ns-ttl"`
-	Serial      uint32   `yaml:"serial"`
-	Refresh     uint32   `yaml:"refresh"`
-	Retry       uint32   `yaml:"retry"`
-	Expire      uint32   `yaml:"expire"`
-	Minttl      uint32   `yaml:"minttl"`
+	NameServers []string      `yaml:"nameservers"`
+	Mailbox     string        `yaml:"mailbox"`
+	SOATtl      time.Duration `yaml:"soa-ttl"`
+	NSTtl       time.Duration `yaml:"ns-ttl"`
+	Serial      uint32        `yaml:"serial"`
+	Refresh     time.Duration `yaml:"refresh"`
+	Retry       time.Duration `yaml:"retry"`
+	Expire      time.Duration `yaml:"expire"`
+	Minttl      time.Duration `yaml:"minttl"`
 }
 
 type Config struct {
@@ -31,8 +31,8 @@ type Config struct {
 		Suffix          string               `yaml:"suffix"`
 		Subnets         []string             `yaml:"subnets"`
 		AuthorityConfig *YAMLAuthorityConfig `yaml:"authority-config"`
-		AddressTtl      uint32               `yaml:"address-ttl"`
-		PtrTtl          uint32               `yaml:"ptr-ttl"`
+		AddressTtl      time.Duration        `yaml:"address-ttl"`
+		PtrTtl          time.Duration        `yaml:"ptr-ttl"`
 	} `yaml:"rdns"`
 
 	Resolvers []struct {
@@ -56,8 +56,8 @@ type Config struct {
 		CacheMinTime     time.Duration `yaml:"cache-min-time"`
 		CacheNoReplyTime time.Duration `yaml:"cache-no-reply-time"`
 
-		RecordMinTTL uint32 `yaml:"record-min-ttl"`
-		RecordMaxTTL uint32 `yaml:"record-max-ttl"`
+		RecordMinTTL time.Duration `yaml:"record-min-ttl"`
+		RecordMaxTTL time.Duration `yaml:"record-max-ttl"`
 
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
 	} `yaml:"resolvers"`
@@ -65,7 +65,7 @@ type Config struct {
 	Localizers []struct {
 		Zone            string               `yaml:"zone"`
 		Subnets         []string             `yaml:"subnets"`
-		Ttl             uint32               `yaml:"ttl"`
+		Ttl             time.Duration        `yaml:"ttl"`
 		AuthorityConfig *YAMLAuthorityConfig `yaml:"authority-config"`
 	} `yaml:"localizers"`
 

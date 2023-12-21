@@ -37,11 +37,11 @@ func mergeAuthorityConfig(config *YAMLAuthorityConfig, base authority.AuthConfig
 	}
 
 	if config.SOATtl > 0 {
-		base.SOATtl = config.SOATtl
+		base.SOATtl = uint32(config.SOATtl.Seconds())
 	}
 
 	if config.NSTtl > 0 {
-		base.NSTtl = config.NSTtl
+		base.NSTtl = uint32(config.NSTtl.Seconds())
 	}
 
 	if config.Serial > 0 {
@@ -49,19 +49,19 @@ func mergeAuthorityConfig(config *YAMLAuthorityConfig, base authority.AuthConfig
 	}
 
 	if config.Refresh > 0 {
-		base.Refresh = config.Refresh
+		base.Refresh = uint32(config.Refresh.Seconds())
 	}
 
 	if config.Retry > 0 {
-		base.Retry = config.Retry
+		base.Retry = uint32(config.Retry.Seconds())
 	}
 
 	if config.Expire > 0 {
-		base.Expire = config.Expire
+		base.Expire = uint32(config.Expire.Seconds())
 	}
 
 	if config.Minttl > 0 {
-		base.Minttl = config.Minttl
+		base.Minttl = uint32(config.Minttl.Seconds())
 	}
 
 	return base
@@ -92,11 +92,11 @@ func reloadConfig() {
 		rdnsGen.PTRSuffix = rdnsConf.Suffix
 
 		if rdnsConf.AddressTtl > 0 {
-			rdnsGen.AddressTtl = rdnsConf.AddressTtl
+			rdnsGen.AddressTtl = uint32(rdnsConf.AddressTtl.Seconds())
 		}
 
 		if rdnsConf.PtrTtl > 0 {
-			rdnsGen.PtrTtl = rdnsConf.PtrTtl
+			rdnsGen.PtrTtl = uint32(rdnsConf.PtrTtl.Seconds())
 		}
 
 		rdnsAuthorityConfig := mergeAuthorityConfig(rdnsConf.AuthorityConfig, authorityConfig)
@@ -166,11 +166,11 @@ func reloadConfig() {
 		}
 
 		if resolvConf.RecordMinTTL > 0 {
-			resolv.RecordMinTTL = resolvConf.RecordMinTTL
+			resolv.RecordMinTTL = uint32(resolvConf.RecordMinTTL.Seconds())
 		}
 
 		if resolvConf.RecordMaxTTL > 0 {
-			resolv.RecordMaxTTL = resolvConf.RecordMaxTTL
+			resolv.RecordMaxTTL = uint32(resolvConf.RecordMaxTTL.Seconds())
 		}
 
 		mux.Handle(resolvConf.Zone, resolv)
@@ -183,7 +183,7 @@ func reloadConfig() {
 			loc := localizer.New()
 
 			if locConfig.Ttl > 0 {
-				loc.Ttl = locConfig.Ttl
+				loc.Ttl = uint32(locConfig.Ttl.Seconds())
 			}
 
 			generators = append(generators, loc)
