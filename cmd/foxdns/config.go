@@ -10,8 +10,8 @@ import (
 type YAMLAuthorityConfig struct {
 	NameServers []string `yaml:"nameservers"`
 	Mailbox     string   `yaml:"mailbox"`
-	SOATtl      uint32   `yaml:"ttl"`
-	NSTtl       uint32   `yaml:"nsttl"`
+	SOATtl      uint32   `yaml:"soa-ttl"`
+	NSTtl       uint32   `yaml:"ns-ttl"`
 	Serial      uint32   `yaml:"serial"`
 	Refresh     uint32   `yaml:"refresh"`
 	Retry       uint32   `yaml:"retry"`
