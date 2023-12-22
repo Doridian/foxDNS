@@ -91,31 +91,29 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 		return nil, err
 	}
 
-	if reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError {
-		edns0Index := -1
-		downstreamEdns0 := &dns.OPT{
-			Hdr: dns.RR_Header{
-				Name:   ".",
-				Rrtype: dns.TypeOPT,
-			},
-		}
-		downstreamEdns0.SetUDPSize(util.DNSMaxSize)
+	edns0Index := -1
+	downstreamEdns0 := &dns.OPT{
+		Hdr: dns.RR_Header{
+			Name:   ".",
+			Rrtype: dns.TypeOPT,
+		},
+	}
+	downstreamEdns0.SetUDPSize(util.DNSMaxSize)
 
-		for idx, rr := range reply.Extra {
-			if rr.Header().Rrtype != dns.TypeOPT {
-				continue
-			}
-
-			edns0Index = idx
-			downstreamEdns0.Hdr.Ttl = rr.Header().Ttl
-			break
+	for idx, rr := range reply.Extra {
+		if rr.Header().Rrtype != dns.TypeOPT {
+			continue
 		}
 
-		if edns0Index >= 0 {
-			reply.Extra[edns0Index] = downstreamEdns0
-		} else {
-			reply.Extra = append(reply.Extra, downstreamEdns0)
-		}
+		edns0Index = idx
+		downstreamEdns0.Hdr.Ttl = rr.Header().Ttl
+		break
+	}
+
+	if edns0Index >= 0 {
+		reply.Extra[edns0Index] = downstreamEdns0
+	} else {
+		reply.Extra = append(reply.Extra, downstreamEdns0)
 	}
 
 	matchType := r.writeToCache(key, keyDomain, q, reply)
