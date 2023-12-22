@@ -100,7 +100,7 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 			Rrtype: dns.TypeOPT,
 		},
 	}
-	downstreamEdns0.SetUDPSize(util.DNSMaxSize)
+	downstreamEdns0.SetUDPSize(util.UDPSize)
 
 	for idx, rr := range reply.Extra {
 		if rr.Header().Rrtype != dns.TypeOPT {

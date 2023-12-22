@@ -77,6 +77,10 @@ func reloadConfig() {
 
 	config := LoadConfig(configFile)
 
+	if config.Global.UDPSize > 0 {
+		util.UDPSize = uint16(config.Global.UDPSize)
+	}
+
 	authorityConfig := mergeAuthorityConfig(config.Global.AuthorityConfig, authority.GetDefaultAuthorityConfig())
 
 	generators = make([]generator.Generator, 0)

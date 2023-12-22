@@ -24,6 +24,7 @@ type Config struct {
 		Listen           []string             `yaml:"listen"`
 		PrometheusListen string               `yaml:"prometheus-listen"`
 		AuthorityConfig  *YAMLAuthorityConfig `yaml:"authority-config"`
+		UDPSize          int                  `yaml:"udp-size"`
 	} `yaml:"global"`
 
 	RDNS []struct {

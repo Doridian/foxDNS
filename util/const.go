@@ -5,4 +5,5 @@ import (
 )
 
 const DefaultTimeout = time.Duration(5) * time.Second
-const DNSMaxSize = 512
+
+var UDPSize uint16 = 1232

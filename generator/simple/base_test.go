@@ -43,7 +43,7 @@ func testQuestion(t *testing.T, handler *simple.Generator, q dns.Question, rr []
 		Question: []dns.Question{q},
 	}
 	if edns0 {
-		qmsg.SetEdns0(512, false)
+		qmsg.SetEdns0(util.UDPSize, false)
 	}
 
 	handler.Child = testHandler

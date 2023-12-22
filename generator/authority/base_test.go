@@ -6,6 +6,7 @@ import (
 	"github.com/Doridian/foxDNS/generator"
 	"github.com/Doridian/foxDNS/generator/authority"
 	"github.com/Doridian/foxDNS/generator/simple"
+	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 )
@@ -37,7 +38,7 @@ func testQuestion(t *testing.T, handler *authority.AuthorityHandler, q dns.Quest
 		Question: []dns.Question{q},
 	}
 	if edns0 {
-		qmsg.SetEdns0(512, false)
+		qmsg.SetEdns0(util.UDPSize, false)
 	}
 	handler.Child = testHandler
 	handler.ServeDNS(wr, qmsg)

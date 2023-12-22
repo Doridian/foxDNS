@@ -100,7 +100,7 @@ func (s *Server) serve(net string, addr string) {
 		Addr:          addr,
 		Net:           net,
 		Handler:       s.handler,
-		UDPSize:       util.DNSMaxSize,
+		UDPSize:       int(util.UDPSize),
 		ReadTimeout:   util.DefaultTimeout,
 		WriteTimeout:  util.DefaultTimeout,
 		MsgAcceptFunc: msgAcceptFunc,

@@ -34,7 +34,7 @@ func FillHeader(rr dns.RR, name string, rtype uint16, ttl uint32) dns.RR {
 }
 
 func SetEDNS0(msg *dns.Msg) {
-	msg.SetEdns0(DNSMaxSize, false)
+	msg.SetEdns0(UDPSize, false)
 }
 
 type DNSHandler interface {
