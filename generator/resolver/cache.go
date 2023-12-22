@@ -136,7 +136,8 @@ func (r *Generator) cleanupCache() {
 	cacheSize.Set(float64(r.cache.Len()))
 }
 
-func (r *Generator) adjustRecordTTL(rrHdr *dns.RR_Header, ttlAdjust uint32) {
+func (r *Generator) adjustRecordTTL(rr dns.RR, ttlAdjust uint32) {
+	rrHdr := rr.Header()
 	if rrHdr.Rrtype == dns.TypeOPT {
 		// TTL in OPT records is special and not actually a TTL
 		return
@@ -182,10 +183,10 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	if ttlAdjust > 1 {
 		ttlAdjust--
 		for _, rr := range msg.Answer {
-			r.adjustRecordTTL(rr.Header(), ttlAdjust)
+			r.adjustRecordTTL(rr, ttlAdjust)
 		}
 		for _, rr := range msg.Ns {
-			r.adjustRecordTTL(rr.Header(), ttlAdjust)
+			r.adjustRecordTTL(rr, ttlAdjust)
 		}
 	}
 
