@@ -45,18 +45,8 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		return
 	}
 
-	filteredAnswer := make([]dns.RR, 0, len(recursionReply.Answer))
-	for _, rr := range recursionReply.Answer {
-		rrType := rr.Header().Rrtype
-		if q.Qtype == dns.TypeANY || rrType == q.Qtype || rrType == dns.TypeCNAME {
-			filteredAnswer = append(filteredAnswer, rr)
-		}
-	}
 	reply.Rcode = recursionReply.Rcode
-	reply.Answer = filteredAnswer
+	reply.Answer = recursionReply.Answer
+	reply.Extra = recursionReply.Extra
 	reply.Ns = recursionReply.Ns
-
-	if reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError {
-		util.SetEDNS0(reply)
-	}
 }

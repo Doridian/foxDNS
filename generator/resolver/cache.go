@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -90,6 +91,33 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 		return nil, err
 	}
 
+	if reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError {
+		edns0Index := -1
+		downstreamEdns0 := &dns.OPT{
+			Hdr: dns.RR_Header{
+				Name:   ".",
+				Rrtype: dns.TypeOPT,
+			},
+		}
+		downstreamEdns0.SetUDPSize(util.DNSMaxSize)
+
+		for idx, rr := range reply.Extra {
+			if rr.Header().Rrtype != dns.TypeOPT {
+				continue
+			}
+
+			edns0Index = idx
+			downstreamEdns0.Hdr.Ttl = rr.Header().Ttl
+			break
+		}
+
+		if edns0Index >= 0 {
+			reply.Extra[edns0Index] = downstreamEdns0
+		} else {
+			reply.Extra = append(reply.Extra, downstreamEdns0)
+		}
+	}
+
 	matchType := r.writeToCache(key, keyDomain, q, reply)
 	if !forceRequery {
 		cacheResults.WithLabelValues("miss", matchType).Inc()
@@ -109,6 +137,11 @@ func (r *Generator) cleanupCache() {
 }
 
 func (r *Generator) adjustRecordTTL(rrHdr *dns.RR_Header, ttlAdjust uint32) {
+	if rrHdr.Rrtype == dns.TypeOPT {
+		// TTL in OPT records is special and not actually a TTL
+		return
+	}
+
 	if rrHdr.Ttl < ttlAdjust {
 		rrHdr.Ttl = 0
 	} else {
