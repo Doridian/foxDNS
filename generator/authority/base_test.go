@@ -25,7 +25,7 @@ func (t *TestHandler) HandleQuestion(q *dns.Question, wr simple.DNSResponseWrite
 	return t.recs, t.nxdomain
 }
 
-func testQuestion(t *testing.T, handler *authority.AuthorityHandler, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool) {
+func testQuestion(t *testing.T, handler *authority.AuthorityHandler, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool, edns0 bool) {
 	wr := &generator.TestResponseWriter{}
 
 	testHandler := &TestHandler{
@@ -33,12 +33,20 @@ func testQuestion(t *testing.T, handler *authority.AuthorityHandler, q dns.Quest
 		nxdomain: nxdomain,
 	}
 
-	handler.Child = testHandler
-	handler.ServeDNS(wr, &dns.Msg{
+	qmsg := &dns.Msg{
 		Question: []dns.Question{q},
-	})
+	}
+	if edns0 {
+		qmsg.SetEdns0(512, false)
+	}
+	handler.Child = testHandler
+	handler.ServeDNS(wr, qmsg)
 
-	assert.NotNil(t, wr.LastMsg.IsEdns0())
+	if edns0 {
+		assert.NotNil(t, wr.LastMsg.IsEdns0())
+	} else {
+		assert.Nil(t, wr.LastMsg.IsEdns0())
+	}
 	assert.True(t, wr.HadWrites)
 	assert.ElementsMatch(t, wr.LastMsg.Question, []dns.Question{q})
 	assert.ElementsMatch(t, wr.LastMsg.Answer, rr)
@@ -96,19 +104,26 @@ func TestBasics(t *testing.T) {
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
-	}, []dns.RR{}, soaRecs, false)
+	}, []dns.RR{}, soaRecs, false, false)
+
+	// We expect the SOA record to be returned and also EDNS0
+	testQuestion(t, handler, dns.Question{
+		Name:   "example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	}, []dns.RR{}, soaRecs, false, true)
 
 	// Ask explicitly for SOA, expect it to be returned
 	testQuestion(t, handler, dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeSOA,
 		Qclass: dns.ClassINET,
-	}, soaRecs, soaRecs, false)
+	}, soaRecs, soaRecs, false, false)
 
 	// We expect the NS record to be returned
 	testQuestion(t, handler, dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeNS,
 		Qclass: dns.ClassINET,
-	}, nsRecs, soaRecs, false)
+	}, nsRecs, soaRecs, false, false)
 }

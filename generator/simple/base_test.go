@@ -30,7 +30,7 @@ func (t *TestHandler) HandleQuestion(q *dns.Question, wr simple.DNSResponseWrite
 	return t.recs, t.nxdomain
 }
 
-func testQuestion(t *testing.T, handler *simple.Generator, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool) {
+func testQuestion(t *testing.T, handler *simple.Generator, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool, edns0 bool) {
 	wr := &generator.TestResponseWriter{}
 
 	testHandler := &TestHandler{
@@ -39,12 +39,21 @@ func testQuestion(t *testing.T, handler *simple.Generator, q dns.Question, rr []
 		nxdomain: nxdomain,
 	}
 
-	handler.Child = testHandler
-	handler.ServeDNS(wr, &dns.Msg{
+	qmsg := &dns.Msg{
 		Question: []dns.Question{q},
-	})
+	}
+	if edns0 {
+		qmsg.SetEdns0(512, false)
+	}
 
-	assert.NotNil(t, wr.LastMsg.IsEdns0())
+	handler.Child = testHandler
+	handler.ServeDNS(wr, qmsg)
+
+	if edns0 {
+		assert.NotNil(t, wr.LastMsg.IsEdns0())
+	} else {
+		assert.Nil(t, wr.LastMsg.IsEdns0())
+	}
 	assert.True(t, wr.HadWrites)
 	assert.ElementsMatch(t, wr.LastMsg.Question, []dns.Question{q})
 	assert.ElementsMatch(t, wr.LastMsg.Answer, rr)
@@ -80,14 +89,27 @@ func TestBasics(t *testing.T) {
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
-	}, []dns.RR{}, soaRecs, false)
+	}, []dns.RR{}, soaRecs, false, false)
 
-	// Same goes for this one
+	// We expect the SOA and EDNS0 record to be returned
 	testQuestion(t, simple.New("example.com"), dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
-	}, []dns.RR{}, soaRecs, true)
+	}, []dns.RR{}, soaRecs, false, true)
+
+	// Same goes for these two
+	testQuestion(t, simple.New("example.com"), dns.Question{
+		Name:   "example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	}, []dns.RR{}, soaRecs, true, false)
+
+	testQuestion(t, simple.New("example.com"), dns.Question{
+		Name:   "example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	}, []dns.RR{}, soaRecs, true, true)
 
 	// No SOA here
 	testQuestion(t, simple.New("example.com"), dns.Question{
@@ -98,7 +120,17 @@ func TestBasics(t *testing.T) {
 		util.FillHeader(&dns.A{
 			A: net.IPv4(127, 0, 0, 1),
 		}, "example.com.", dns.TypeA, 60),
-	}, soaRecs, false)
+	}, soaRecs, false, false)
+
+	testQuestion(t, simple.New("example.com"), dns.Question{
+		Name:   "example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	}, []dns.RR{
+		util.FillHeader(&dns.A{
+			A: net.IPv4(127, 0, 0, 1),
+		}, "example.com.", dns.TypeA, 60),
+	}, soaRecs, false, true)
 }
 
 func TestRejectsNonINET(t *testing.T) {
