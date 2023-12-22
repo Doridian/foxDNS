@@ -23,7 +23,9 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.SetRcode(msg, dns.RcodeSuccess)
 	reply.Authoritative = true
 
-	util.SetEDNS0(reply)
+	if msg.IsEdns0() != nil {
+		util.SetEDNS0(reply)
+	}
 
 	q := &msg.Question[0]
 	if util.IsBadQuery(q) {

@@ -74,7 +74,9 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.SetRcode(msg, dns.RcodeSuccess)
 	reply.Authoritative = true
 
-	util.SetEDNS0(reply)
+	if msg.IsEdns0() != nil {
+		util.SetEDNS0(reply)
+	}
 
 	q := &msg.Question[0]
 	if q.Qclass != dns.ClassINET {

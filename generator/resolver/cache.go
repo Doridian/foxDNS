@@ -13,7 +13,9 @@ import (
 )
 
 type cacheEntry struct {
-	msg    *dns.Msg
+	msg   *dns.Msg
+	edns0 *dns.OPT
+
 	time   time.Time
 	expiry time.Time
 	qtype  uint16
@@ -51,15 +53,15 @@ func cacheKeyDomain(q *dns.Question) string {
 	return fmt.Sprintf("%s:ANY", q.Name)
 }
 
-func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg, error) {
+func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg, *dns.OPT, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
 	if !forceRequery {
-		entry, matchType := r.getFromCache(key, keyDomain, q)
-		if entry != nil {
+		msg, edns0, matchType := r.getFromCache(key, keyDomain, q)
+		if msg != nil {
 			cacheResults.WithLabelValues("hit", matchType).Inc()
-			return entry, nil
+			return msg, edns0, nil
 		}
 	}
 
@@ -71,16 +73,16 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 
 	if loaded {
 		if forceRequery {
-			return nil, nil
+			return nil, nil, nil
 		}
 
 		cacheLockWG.Wait()
 
-		entry, matchType := r.getFromCache(key, keyDomain, q)
+		entry, edns0, matchType := r.getFromCache(key, keyDomain, q)
 		if entry != nil {
 			// Can't be  hit when forceRequery is true
 			cacheResults.WithLabelValues("wait", matchType).Inc()
-			return entry, nil
+			return entry, edns0, nil
 		}
 	} else {
 		defer r.cacheLock.Delete(key)
@@ -88,7 +90,7 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 
 	reply, err := r.exchangeWithRetry(q)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	edns0Index := -1
@@ -111,16 +113,14 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 	}
 
 	if edns0Index >= 0 {
-		reply.Extra[edns0Index] = downstreamEdns0
-	} else {
-		reply.Extra = append(reply.Extra, downstreamEdns0)
+		reply.Extra = append(reply.Extra[:edns0Index], reply.Extra[edns0Index+1:]...)
 	}
 
-	matchType := r.writeToCache(key, keyDomain, q, reply)
+	matchType := r.writeToCache(key, keyDomain, q, reply, downstreamEdns0)
 	if !forceRequery {
 		cacheResults.WithLabelValues("miss", matchType).Inc()
 	}
-	return reply, nil
+	return reply, downstreamEdns0, nil
 }
 
 func (r *Generator) cleanupCache() {
@@ -136,10 +136,6 @@ func (r *Generator) cleanupCache() {
 
 func (r *Generator) adjustRecordTTL(rr dns.RR, ttlAdjust uint32) {
 	rrHdr := rr.Header()
-	if rrHdr.Rrtype == dns.TypeOPT {
-		// TTL in OPT records is special and not actually a TTL
-		return
-	}
 
 	if rrHdr.Ttl < ttlAdjust {
 		rrHdr.Ttl = 0
@@ -154,13 +150,13 @@ func (r *Generator) adjustRecordTTL(rr dns.RR, ttlAdjust uint32) {
 	}
 }
 
-func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) (*dns.Msg, string) {
+func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) (*dns.Msg, *dns.OPT, string) {
 	entry, ok := r.cache.Get(key)
 	matchType := "exact"
 	if !ok {
 		entry, ok = r.cache.Get(keyDomain)
 		if !ok {
-			return nil, ""
+			return nil, nil, ""
 		}
 		if entry.qtype != q.Qtype || entry.qclass != q.Qclass {
 			matchType = "domain"
@@ -169,7 +165,7 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 
 	now := time.Now()
 	if entry.expiry.Before(now) {
-		return nil, ""
+		return nil, nil, ""
 	}
 
 	entry.hits.Add(1)
@@ -188,10 +184,10 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 		}
 	}
 
-	return msg, matchType
+	return msg, entry.edns0, matchType
 }
 
-func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg) string {
+func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg, edns0 *dns.OPT) string {
 	if m.Rcode != dns.RcodeSuccess && m.Rcode != dns.RcodeNameError {
 		return ""
 	}
@@ -250,9 +246,10 @@ func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, 
 	entry := &cacheEntry{
 		time:   now,
 		expiry: now.Add(time.Duration(cacheTTL) * time.Second),
-		msg:    m,
 		qtype:  q.Qtype,
 		qclass: q.Qclass,
+		msg:    m,
+		edns0:  edns0,
 	}
 	entry.hits.Store(1)
 

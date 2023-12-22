@@ -39,7 +39,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 	q.Name = dns.CanonicalName(q.Name)
 
-	recursionReply, err := r.getOrAddCache(q, false)
+	recursionReply, downstreamEdns0, err := r.getOrAddCache(q, false)
 	if err != nil {
 		log.Printf("Error handling DNS request: %v", err)
 		return
@@ -49,4 +49,8 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.Answer = recursionReply.Answer
 	reply.Extra = recursionReply.Extra
 	reply.Ns = recursionReply.Ns
+
+	if msg.IsEdns0() != nil {
+		reply.Extra = append(reply.Extra, downstreamEdns0)
+	}
 }
