@@ -93,34 +93,11 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 		return nil, nil, err
 	}
 
-	edns0Index := -1
-	downstreamEdns0 := &dns.OPT{
-		Hdr: dns.RR_Header{
-			Name:   ".",
-			Rrtype: dns.TypeOPT,
-		},
-	}
-	downstreamEdns0.SetUDPSize(util.UDPSize)
-
-	for idx, rr := range reply.Extra {
-		if rr.Header().Rrtype != dns.TypeOPT {
-			continue
-		}
-
-		edns0Index = idx
-		downstreamEdns0.Hdr.Ttl = rr.Header().Ttl
-		break
-	}
-
-	if edns0Index >= 0 {
-		reply.Extra = append(reply.Extra[:edns0Index], reply.Extra[edns0Index+1:]...)
-	}
-
-	matchType := r.writeToCache(key, keyDomain, q, reply, downstreamEdns0)
+	edns0, matchType := r.processAndWriteToCache(key, keyDomain, q, reply)
 	if !forceRequery {
 		cacheResults.WithLabelValues("miss", matchType).Inc()
 	}
-	return reply, downstreamEdns0, nil
+	return reply, edns0, nil
 }
 
 func (r *Generator) cleanupCache() {
@@ -193,10 +170,33 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	return msg, entry.edns0, matchType
 }
 
-func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg, edns0 *dns.OPT) string {
+func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg) (*dns.OPT, string) {
 	minTTL := -1
 	cacheTTL := -1
 	authTTL := -1
+
+	edns0Index := -1
+	edns0 := &dns.OPT{
+		Hdr: dns.RR_Header{
+			Name:   ".",
+			Rrtype: dns.TypeOPT,
+		},
+	}
+	edns0.SetUDPSize(util.UDPSize)
+
+	for idx, rr := range m.Extra {
+		if rr.Header().Rrtype != dns.TypeOPT {
+			continue
+		}
+
+		edns0Index = idx
+		edns0.Hdr.Ttl = rr.Header().Ttl
+		break
+	}
+
+	if edns0Index >= 0 {
+		m.Extra = append(m.Extra[:edns0Index], m.Extra[edns0Index+1:]...)
+	}
 
 	for _, rr := range m.Answer {
 		rrHdr := r.adjustRecordTTL(rr)
@@ -220,7 +220,7 @@ func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, 
 	}
 
 	if m.Rcode != dns.RcodeSuccess && m.Rcode != dns.RcodeNameError {
-		return ""
+		return edns0, ""
 	}
 
 	if cacheTTL < 0 {
@@ -246,7 +246,7 @@ func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, 
 	}
 
 	if cacheTTL == 0 {
-		return ""
+		return edns0, ""
 	}
 
 	now := time.Now()
@@ -267,5 +267,5 @@ func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, 
 	}
 	r.cache.Add(key, entry)
 	cacheSize.Set(float64(r.cache.Len()))
-	return matchType
+	return edns0, matchType
 }
