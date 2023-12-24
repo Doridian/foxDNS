@@ -28,7 +28,10 @@ func initTests() {
 	dummyServer = server.NewServer([]string{"127.0.0.1:12053"}, false)
 
 	staticHandler := static.New(false)
-	staticHandler.LoadZone(bytes.NewReader([]byte(dummyZone)), "example.com.db", "example.com.", 300, false)
+	err := staticHandler.LoadZone(bytes.NewReader([]byte(dummyZone)), "example.com.db", "example.com.", 300, false)
+	if err != nil {
+		panic(err)
+	}
 	simpleHandler = simple.New("example.com.")
 	simpleHandler.Child = staticHandler
 
@@ -41,7 +44,10 @@ func initTests() {
 		},
 	})
 	dummyServer.WaitReady()
-	resolverGenerator.Start()
+	err = resolverGenerator.Start()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func queryResolver(t *testing.T, q dns.Question) *dns.Msg {
