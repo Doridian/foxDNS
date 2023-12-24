@@ -194,10 +194,6 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 }
 
 func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg, edns0 *dns.OPT) string {
-	if m.Rcode != dns.RcodeSuccess && m.Rcode != dns.RcodeNameError {
-		return ""
-	}
-
 	minTTL := -1
 	cacheTTL := -1
 	authTTL := -1
@@ -221,6 +217,10 @@ func (r *Generator) writeToCache(key string, keyDomain string, q *dns.Question, 
 		if authTTL < 0 || ttl < authTTL {
 			authTTL = ttl
 		}
+	}
+
+	if m.Rcode != dns.RcodeSuccess && m.Rcode != dns.RcodeNameError {
+		return ""
 	}
 
 	if cacheTTL < 0 {
