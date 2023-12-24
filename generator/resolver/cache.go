@@ -45,6 +45,10 @@ func (r *Generator) SetCacheSize(size int) {
 	r.cache.Resize(size)
 }
 
+func (r *Generator) FlushCache() {
+	r.cache.Purge()
+}
+
 func cacheKey(q *dns.Question) string {
 	return fmt.Sprintf("%s:%d:%d", q.Name, q.Qclass, q.Qtype)
 }

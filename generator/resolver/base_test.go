@@ -22,6 +22,7 @@ var simpleHandler *simple.Generator
 
 func initTests() {
 	if dummyServer != nil {
+		resolverGenerator.FlushCache()
 		return
 	}
 
