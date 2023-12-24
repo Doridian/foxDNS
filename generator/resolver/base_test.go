@@ -104,3 +104,32 @@ func TestNonExistingRecord(t *testing.T) {
 		},
 	}, response.Ns)
 }
+
+func TestNXDOMAIN(t *testing.T) {
+	response := queryResolver(t, dns.Question{
+		Name:   "nx.example.com.",
+		Qtype:  dns.TypeMX,
+		Qclass: dns.ClassINET,
+	})
+
+	assert.Equal(t, dns.RcodeNameError, response.Rcode)
+	assert.ElementsMatch(t, []dns.RR{}, response.Answer)
+	assert.ElementsMatch(t, []dns.RR{
+		&dns.SOA{
+			Hdr: dns.RR_Header{
+				Name:     "example.com.",
+				Rrtype:   dns.TypeSOA,
+				Class:    dns.ClassINET,
+				Ttl:      300,
+				Rdlength: 61,
+			},
+			Ns:      "ns1.example.com.",
+			Mbox:    "hostmaster.example.com.",
+			Serial:  1,
+			Refresh: 3600,
+			Retry:   900,
+			Expire:  604800,
+			Minttl:  300,
+		},
+	}, response.Ns)
+}
