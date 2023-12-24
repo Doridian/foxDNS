@@ -162,8 +162,7 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 
 	msg := entry.msg.Copy()
 
-	if ttlAdjust > 1 {
-		ttlAdjust--
+	if ttlAdjust > 0 {
 		for _, rr := range msg.Answer {
 			r.countdownRecordTTL(rr, ttlAdjust)
 		}

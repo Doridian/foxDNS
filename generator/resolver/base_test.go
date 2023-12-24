@@ -175,8 +175,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 	resolverGenerator.ServeDNS(testWriter, qmsg)
 
 	assert.True(t, testWriter.HadWrites)
-	response := testWriter.LastMsg
-	assert.Equal(t, dns.RcodeSuccess, response.Rcode)
+	assert.Equal(t, dns.RcodeSuccess, testWriter.LastMsg.Rcode)
 	assert.ElementsMatch(t, []dns.RR{
 		&dns.A{
 			Hdr: dns.RR_Header{
@@ -188,18 +187,23 @@ func TestExistingRecordWithCache(t *testing.T) {
 			},
 			A: net.ParseIP("10.13.37.0").To4(),
 		},
-	}, response.Answer)
-	assert.ElementsMatch(t, []dns.RR{}, response.Ns)
+	}, testWriter.LastMsg.Answer)
+	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Ns)
 
 	// Empty out zone such that any returned A record must come from cache
 	dummyServer.SetHandler(emptyZoneHandler)
+
+	fakedTime.Undo()
+
+	// Fake time 0.1 seconds ahead to test TTL countdown not tripping just yet
+	fakedTime = faketime.NewFaketimeWithTime(timeBegin.Add(800 * time.Millisecond))
+	fakedTime.Do()
 
 	testWriter = &generator.TestResponseWriter{}
 	resolverGenerator.ServeDNS(testWriter, qmsg)
 
 	assert.True(t, testWriter.HadWrites)
-	response = testWriter.LastMsg
-	assert.Equal(t, dns.RcodeSuccess, response.Rcode)
+	assert.Equal(t, dns.RcodeSuccess, testWriter.LastMsg.Rcode)
 	assert.ElementsMatch(t, []dns.RR{
 		&dns.A{
 			Hdr: dns.RR_Header{
@@ -211,8 +215,33 @@ func TestExistingRecordWithCache(t *testing.T) {
 			},
 			A: net.ParseIP("10.13.37.0").To4(),
 		},
-	}, response.Answer)
-	assert.ElementsMatch(t, []dns.RR{}, response.Ns)
+	}, testWriter.LastMsg.Answer)
+	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Ns)
+
+	fakedTime.Undo()
+
+	// Fake time 3.1 seconds ahead to test TTL countdown
+	fakedTime = faketime.NewFaketimeWithTime(timeBegin.Add(3100 * time.Millisecond))
+	fakedTime.Do()
+
+	testWriter = &generator.TestResponseWriter{}
+	resolverGenerator.ServeDNS(testWriter, qmsg)
+
+	assert.True(t, testWriter.HadWrites)
+	assert.Equal(t, dns.RcodeSuccess, testWriter.LastMsg.Rcode)
+	assert.ElementsMatch(t, []dns.RR{
+		&dns.A{
+			Hdr: dns.RR_Header{
+				Name:     "example.com.",
+				Rrtype:   dns.TypeA,
+				Class:    dns.ClassINET,
+				Ttl:      2,
+				Rdlength: 4,
+			},
+			A: net.ParseIP("10.13.37.0").To4(),
+		},
+	}, testWriter.LastMsg.Answer)
+	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Ns)
 
 	fakedTime.Undo()
 
@@ -224,9 +253,8 @@ func TestExistingRecordWithCache(t *testing.T) {
 	resolverGenerator.ServeDNS(testWriter, qmsg)
 
 	assert.True(t, testWriter.HadWrites)
-	response = testWriter.LastMsg
-	assert.Equal(t, dns.RcodeSuccess, response.Rcode)
-	assert.ElementsMatch(t, []dns.RR{}, response.Answer)
+	assert.Equal(t, dns.RcodeSuccess, testWriter.LastMsg.Rcode)
+	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Answer)
 	assert.ElementsMatch(t, []dns.RR{
 		&dns.SOA{
 			Hdr: dns.RR_Header{
@@ -244,7 +272,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 			Expire:  604800,
 			Minttl:  300,
 		},
-	}, response.Ns)
+	}, testWriter.LastMsg.Ns)
 
 	fakedTime.Undo()
 }
