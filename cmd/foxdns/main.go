@@ -260,7 +260,7 @@ func main() {
 		}()
 	}
 
-	srv = server.NewServer(config.Global.Listen)
+	srv = server.NewServer(config.Global.Listen, true)
 	reloadConfig()
 	handleSignals(srv)
 	srv.Serve()

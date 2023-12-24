@@ -13,18 +13,20 @@ type Server struct {
 
 	handler dns.Handler
 
-	serveWait    sync.WaitGroup
-	initWait     sync.WaitGroup
-	privDropWait sync.WaitGroup
+	serveWait      sync.WaitGroup
+	initWait       sync.WaitGroup
+	privDropWait   sync.WaitGroup
+	enablePrivDrop bool
 
 	serverLock sync.Mutex
 	servers    map[*dns.Server]bool
 }
 
-func NewServer(listen []string) *Server {
+func NewServer(listen []string, enablePrivDrop bool) *Server {
 	return &Server{
-		listen:  listen,
-		servers: make(map[*dns.Server]bool),
+		listen:         listen,
+		servers:        make(map[*dns.Server]bool),
+		enablePrivDrop: enablePrivDrop,
 	}
 }
 
@@ -36,6 +38,11 @@ func (s *Server) SetHandler(handler dns.Handler) {
 	for server := range s.servers {
 		server.Handler = handler
 	}
+}
+
+func (s *Server) WaitReady() {
+	s.initWait.Wait()
+	s.privDropWait.Wait()
 }
 
 func (s *Server) Serve() {
@@ -52,7 +59,9 @@ func (s *Server) Serve() {
 	}
 
 	s.initWait.Wait()
-	dropPrivs()
+	if s.enablePrivDrop {
+		dropPrivs()
+	}
 	s.privDropWait.Done()
 
 	log.Printf("Server fully initialized!")
