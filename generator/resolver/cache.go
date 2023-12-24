@@ -121,8 +121,9 @@ func (r *Generator) countdownRecordTTL(rr dns.RR, ttlAdjust uint32) {
 	}
 }
 
-func (r *Generator) adjustRecordTTL(rr dns.RR) *dns.RR_Header {
+func (r *Generator) adjustRecordTTL(rr dns.RR) (*dns.RR_Header, int) {
 	rrHdr := rr.Header()
+	origTtl := rrHdr.Ttl
 
 	if rrHdr.Ttl < r.RecordMinTTL {
 		rrHdr.Ttl = r.RecordMinTTL
@@ -130,7 +131,7 @@ func (r *Generator) adjustRecordTTL(rr dns.RR) *dns.RR_Header {
 		rrHdr.Ttl = r.RecordMaxTTL
 	}
 
-	return rrHdr
+	return rrHdr, int(origTtl)
 }
 
 func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) (*dns.Msg, *dns.OPT, string) {
@@ -199,21 +200,19 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 	}
 
 	for _, rr := range m.Answer {
-		rrHdr := r.adjustRecordTTL(rr)
-		ttl := int(rrHdr.Ttl)
+		_, ttl := r.adjustRecordTTL(rr)
 		if cacheTTL < 0 || ttl < cacheTTL {
 			cacheTTL = ttl
 		}
 	}
 
 	for _, rr := range m.Ns {
-		rrHdr := r.adjustRecordTTL(rr)
+		rrHdr, ttl := r.adjustRecordTTL(rr)
 
 		if rrHdr.Rrtype == dns.TypeSOA {
 			minTTL = int(rr.(*dns.SOA).Minttl)
 		}
 
-		ttl := int(rrHdr.Ttl)
 		if authTTL < 0 || ttl < authTTL {
 			authTTL = ttl
 		}
