@@ -118,10 +118,10 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 }
 
 func (r *Generator) cleanupCache() {
-	now := time.Now()
+	minTime := time.Now().Add(-r.CacheStaleEntryKeepPeriod)
 	for _, key := range r.cache.Keys() {
 		entry, ok := r.cache.Get(key)
-		if ok && entry.expiry.Before(now) {
+		if ok && entry.expiry.Before(minTime) {
 			r.cache.Remove(key)
 			cacheHitsAtAgeOutHistogram.Observe(float64(entry.hits.Load()))
 		}

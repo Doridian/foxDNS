@@ -34,9 +34,10 @@ type Generator struct {
 	freeConnections   *list.List
 	connCleanupTicker *time.Ticker
 
-	CacheMaxTTL     int
-	CacheMinTTL     int
-	CacheNoReplyTTL int
+	CacheMaxTTL               int
+	CacheMinTTL               int
+	CacheNoReplyTTL           int
+	CacheStaleEntryKeepPeriod time.Duration
 
 	RecordMinTTL uint32
 	RecordMaxTTL uint32
@@ -62,9 +63,10 @@ func New(servers []*ServerConfig) *Generator {
 		AllowOnlyFromPrivate: true,
 		RetryWait:            time.Second,
 
-		CacheMaxTTL:     3600,
-		CacheMinTTL:     0,
-		CacheNoReplyTTL: 30,
+		CacheMaxTTL:               3600,
+		CacheMinTTL:               0,
+		CacheNoReplyTTL:           30,
+		CacheStaleEntryKeepPeriod: time.Second * 15,
 
 		RecordMinTTL: 0,
 		RecordMaxTTL: math.MaxUint32,

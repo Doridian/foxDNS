@@ -52,10 +52,11 @@ type Config struct {
 		RetryWait      time.Duration `yaml:"retry-wait"`
 		Timeout        time.Duration `yaml:"timeout"`
 
-		CacheSize        int           `yaml:"cache-size"`
-		CacheMaxTime     time.Duration `yaml:"cache-max-time"`
-		CacheMinTime     time.Duration `yaml:"cache-min-time"`
-		CacheNoReplyTime time.Duration `yaml:"cache-no-reply-time"`
+		CacheSize                 int           `yaml:"cache-size"`
+		CacheMaxTime              time.Duration `yaml:"cache-max-time"`
+		CacheMinTime              time.Duration `yaml:"cache-min-time"`
+		CacheNoReplyTime          time.Duration `yaml:"cache-no-reply-time"`
+		CacheStaleEntryKeepPeriod time.Duration `yaml:"cache-stale-entry-keep-period"`
 
 		OpportunisticCacheMinHits    int           `yaml:"opportunistic-cache-min-hits"`
 		OpportunisticCacheMaxTimeLef time.Duration `yaml:"opportunistic-cache-max-time-left"`
