@@ -41,6 +41,9 @@ type Generator struct {
 	RecordMinTTL uint32
 	RecordMaxTTL uint32
 
+	OpportunisticCacheMinHits     uint64
+	OpportunisticCacheMaxTimeLeft time.Duration
+
 	cache              *lru.Cache[string, *cacheEntry]
 	cacheLock          *sync.Map
 	cacheCleanupTicker *time.Ticker
@@ -69,6 +72,9 @@ func New(servers []*ServerConfig) *Generator {
 		connCond:        sync.NewCond(&sync.Mutex{}),
 		connections:     0,
 		freeConnections: list.New(),
+
+		OpportunisticCacheMinHits:     math.MaxUint64,
+		OpportunisticCacheMaxTimeLeft: 0,
 
 		cache:     cache,
 		cacheLock: &sync.Map{},

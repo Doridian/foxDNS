@@ -177,6 +177,14 @@ func reloadConfig() {
 			resolv.RecordMaxTTL = uint32(resolvConf.RecordMaxTTL.Seconds())
 		}
 
+		if resolvConf.OpportunisticCacheMinHits > 0 {
+			resolv.OpportunisticCacheMinHits = uint64(resolvConf.OpportunisticCacheMinHits)
+		}
+
+		if resolvConf.OpportunisticCacheMaxTimeLef > 0 {
+			resolv.OpportunisticCacheMaxTimeLeft = resolvConf.OpportunisticCacheMaxTimeLef
+		}
+
 		mux.Handle(resolvConf.Zone, resolv)
 
 		log.Printf("Resolver enabled for zone %s (only private clients: %v)", resolvConf.Zone, resolv.AllowOnlyFromPrivate)

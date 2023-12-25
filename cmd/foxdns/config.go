@@ -57,6 +57,9 @@ type Config struct {
 		CacheMinTime     time.Duration `yaml:"cache-min-time"`
 		CacheNoReplyTime time.Duration `yaml:"cache-no-reply-time"`
 
+		OpportunisticCacheMinHits    int           `yaml:"opportunistic-cache-min-hits"`
+		OpportunisticCacheMaxTimeLef time.Duration `yaml:"opportunistic-cache-max-time-left"`
+
 		RecordMinTTL time.Duration `yaml:"record-min-ttl"`
 		RecordMaxTTL time.Duration `yaml:"record-max-ttl"`
 

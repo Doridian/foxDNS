@@ -21,6 +21,8 @@ type cacheEntry struct {
 	qtype  uint16
 	qclass uint16
 	hits   atomic.Uint64
+
+	opportunisticRefreshTriggered bool
 }
 
 var (
@@ -152,11 +154,19 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	}
 
 	now := time.Now()
-	if entry.expiry.Before(now) {
+	entryExpiresIn := entry.expiry.Sub(now)
+	if entryExpiresIn <= 0 {
 		return nil, nil, ""
 	}
 
-	entry.hits.Add(1)
+	entryHits := entry.hits.Add(1)
+
+	if entryHits >= r.OpportunisticCacheMinHits && entryExpiresIn <= r.OpportunisticCacheMaxTimeLeft && !entry.opportunisticRefreshTriggered {
+		entry.opportunisticRefreshTriggered = true
+		go func() {
+			_, _, _ = r.getOrAddCache(q, true)
+		}()
+	}
 
 	ttlAdjust := uint32(now.Sub(entry.time).Seconds())
 
