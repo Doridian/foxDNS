@@ -57,6 +57,7 @@ type Config struct {
 		CacheMinTime              time.Duration `yaml:"cache-min-time"`
 		CacheNoReplyTime          time.Duration `yaml:"cache-no-reply-time"`
 		CacheStaleEntryKeepPeriod time.Duration `yaml:"cache-stale-entry-keep-period"`
+		CacheReturnStalePeriod    time.Duration `yaml:"cache-return-stale-period"`
 
 		OpportunisticCacheMinHits    int           `yaml:"opportunistic-cache-min-hits"`
 		OpportunisticCacheMaxTimeLef time.Duration `yaml:"opportunistic-cache-max-time-left"`

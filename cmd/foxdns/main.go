@@ -173,6 +173,10 @@ func reloadConfig() {
 			resolv.CacheStaleEntryKeepPeriod = resolvConf.CacheStaleEntryKeepPeriod
 		}
 
+		if resolvConf.CacheReturnStalePeriod > 0 {
+			resolv.CacheReturnStalePeriod = resolvConf.CacheReturnStalePeriod
+		}
+
 		if resolvConf.RecordMinTTL > 0 {
 			resolv.RecordMinTTL = uint32(resolvConf.RecordMinTTL.Seconds())
 		}
