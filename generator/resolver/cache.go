@@ -41,6 +41,12 @@ var (
 		Help:    "Upstream TTLs for DNS cache entries",
 		Buckets: []float64{1, 10, 30, 60, 300, 600, 1800, 3600},
 	})
+
+	cacheHitsAtAgeOutHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "foxdns_resolver_cache_hits_at_age_out",
+		Help:    "Number of cache hits for DNS cache entries at age out",
+		Buckets: []float64{1, 2, 3, 4, 5, 10},
+	})
 )
 
 func (r *Generator) SetCacheSize(size int) {
@@ -112,6 +118,7 @@ func (r *Generator) cleanupCache() {
 		entry, ok := r.cache.Get(key)
 		if ok && entry.expiry.Before(now) {
 			r.cache.Remove(key)
+			cacheHitsAtAgeOutHistogram.Observe(float64(entry.hits.Load()))
 		}
 	}
 	cacheSize.Set(float64(r.cache.Len()))
