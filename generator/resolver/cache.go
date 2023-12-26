@@ -131,6 +131,8 @@ func (r *Generator) cleanupCache() {
 			cacheHitsAtAgeOutHistogram.Observe(float64(entry.hits.Load()))
 		}
 	}
+	r.cacheWriteLock.Unlock()
+
 	cacheSize.Set(float64(r.cache.Len()))
 }
 
@@ -299,7 +301,11 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 		key = keyDomain
 		matchType = "domain"
 	}
+
+	r.cacheWriteLock.Lock()
 	r.cache.Add(key, entry)
+	r.cacheWriteLock.Unlock()
+
 	cacheSize.Set(float64(r.cache.Len()))
 	return edns0, matchType
 }

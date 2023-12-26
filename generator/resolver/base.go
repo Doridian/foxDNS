@@ -48,6 +48,7 @@ type Generator struct {
 
 	cache              *lru.Cache[string, *cacheEntry]
 	cacheLock          *sync.Map
+	cacheWriteLock     sync.Mutex
 	cacheCleanupTicker *time.Ticker
 }
 
