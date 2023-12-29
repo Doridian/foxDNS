@@ -5,6 +5,10 @@
   ],
   "packageRules": [
     {
+      "matchDepTypes": ["golang"],
+      "enabled": true
+    },
+    {
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
       "enabled": true
@@ -12,5 +16,8 @@
   ],
   "postUpdateOptions": [
     "gomodTidy"
-  ]
+  ],
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "automerge": true
 }
