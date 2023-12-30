@@ -31,14 +31,16 @@ var (
 		Help: "The number of cache hits/misses for DNS queries",
 	}, []string{"result", "match_type"})
 
-	cacheStaleHits = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "foxdns_resolver_cache_stale_hits",
-		Help: "The number of cache hits for DNS queries that were stale",
+	cacheStaleHits = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "foxdns_resolver_cache_stale_hits",
+		Help:    "The number of cache hits for DNS queries that were stale",
+		Buckets: []float64{1, 10, 30, 60, 300, 600, 1800, 3600},
 	})
 
-	cacheStaleReturns = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "foxdns_resolver_cache_stale_returns",
-		Help: "The number of cache hits for DNS queries that were stale but got returned to the client",
+	cacheStaleMisses = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "foxdns_resolver_cache_stale_misses",
+		Help:    "The time since expiry of stale cache entries that were present but not usable",
+		Buckets: []float64{1, 10, 30, 60, 300, 600, 1800, 3600},
 	})
 
 	cacheSize = promauto.NewGauge(prometheus.GaugeOpts{
@@ -189,12 +191,12 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	now := time.Now()
 	entryExpiresIn := entry.expiry.Sub(now)
 	if entryExpiresIn <= -r.CacheReturnStalePeriod {
-		cacheStaleHits.Inc()
+		cacheStaleMisses.Observe(float64(-entryExpiresIn.Seconds()))
 		return nil, nil, ""
 	}
 
 	if entryExpiresIn <= 0 {
-		cacheStaleReturns.Inc()
+		cacheStaleHits.Observe(float64(-entryExpiresIn.Seconds()))
 	}
 
 	entryHits := entry.hits.Add(1)
