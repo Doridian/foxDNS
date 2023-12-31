@@ -102,26 +102,26 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 
 		cacheLockWG.Wait()
 
-		entry, edns0, matchType := r.getFromCache(key, keyDomain, q)
-		if entry != nil {
+		msg, edns0, matchType := r.getFromCache(key, keyDomain, q)
+		if msg != nil {
 			// Can't be  hit when forceRequery is true
 			cacheResults.WithLabelValues("wait", matchType).Inc()
-			return entry, edns0, nil
+			return msg, edns0, nil
 		}
 	} else {
 		defer r.cacheLock.Delete(key)
 	}
 
-	reply, err := r.exchangeWithRetry(q)
+	msg, err := r.exchangeWithRetry(q)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	edns0, matchType := r.processAndWriteToCache(key, keyDomain, q, reply)
+	edns0, matchType := r.processAndWriteToCache(key, keyDomain, q, msg)
 	if !forceRequery {
 		cacheResults.WithLabelValues("miss", matchType).Inc()
 	}
-	return reply, edns0, nil
+	return msg, edns0, nil
 }
 
 func (r *Generator) cleanupCache() {
