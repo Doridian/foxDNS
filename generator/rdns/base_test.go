@@ -1,6 +1,7 @@
 package rdns_test
 
 import (
+	"net"
 	"testing"
 
 	"github.com/Doridian/foxDNS/generator"
@@ -27,4 +28,12 @@ func runRDNSTest(t *testing.T, handler *rdns.Generator, host string, qtype uint1
 			util.FillHeader(expected, host, qtype, 3600),
 		}, rr)
 	}
+}
+
+func mustParseCIDR(s string) *net.IPNet {
+	_, ipnet, err := net.ParseCIDR(s)
+	if err != nil {
+		panic(err)
+	}
+	return ipnet
 }

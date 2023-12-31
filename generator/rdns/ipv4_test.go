@@ -11,6 +11,9 @@ import (
 func TestIPv4Addr(t *testing.T) {
 	handler := rdns.NewIPv4()
 	handler.PTRSuffix = "ip4.example.com"
+	handler.AllowedSubnets = []*net.IPNet{
+		mustParseCIDR("0.0.0.0/0"),
+	}
 
 	runRDNSTest(t, handler, "1-2-3-4.ip4.example.com.", dns.TypeA, &dns.A{
 		A: net.IPv4(1, 2, 3, 4).To4(),
@@ -25,6 +28,9 @@ func TestIPv4Addr(t *testing.T) {
 func TestIPv4PTR(t *testing.T) {
 	handler := rdns.NewIPv4()
 	handler.PTRSuffix = "ip4.example.com"
+	handler.AllowedSubnets = []*net.IPNet{
+		mustParseCIDR("0.0.0.0/0"),
+	}
 
 	runRDNSTest(t, handler, "4.3.2.1.in-addr.arpa.", dns.TypePTR, &dns.PTR{
 		Ptr: "1-2-3-4.ip4.example.com.",
