@@ -11,7 +11,7 @@ import (
 
 func TestIPv6Addr(t *testing.T) {
 	handler := rdns.NewIPv6()
-	handler.PTRSuffix = "ip6.example.com"
+	handler.SetPTRSuffix("ip6.example.com")
 	handler.AllowedSubnets = []*net.IPNet{
 		mustParseCIDR("0::/0"),
 	}
@@ -33,7 +33,7 @@ func TestIPv6Addr(t *testing.T) {
 
 func TestIPv6PTR(t *testing.T) {
 	handler := rdns.NewIPv6()
-	handler.PTRSuffix = "ip6.example.com"
+	handler.SetPTRSuffix("ip6.example.com")
 	handler.AllowedSubnets = []*net.IPNet{
 		mustParseCIDR("0::/0"),
 	}
@@ -54,7 +54,7 @@ func TestIPv6PTR(t *testing.T) {
 
 func TestIPv6GetZones(t *testing.T) {
 	handler := rdns.NewIPv6()
-	handler.PTRSuffix = "ip6.example.com"
+	handler.SetPTRSuffix("ip6.example.com")
 	handler.AllowedSubnets = []*net.IPNet{
 		mustParseCIDR("fe80::/64"),
 		mustParseCIDR("fc00::/7"),

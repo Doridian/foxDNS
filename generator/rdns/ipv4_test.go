@@ -11,7 +11,7 @@ import (
 
 func TestIPv4Addr(t *testing.T) {
 	handler := rdns.NewIPv4()
-	handler.PTRSuffix = "ip4.example.com"
+	handler.SetPTRSuffix("ip4.example.com")
 	handler.AllowedSubnets = []*net.IPNet{
 		mustParseCIDR("0.0.0.0/0"),
 	}
@@ -28,7 +28,7 @@ func TestIPv4Addr(t *testing.T) {
 
 func TestIPv4PTR(t *testing.T) {
 	handler := rdns.NewIPv4()
-	handler.PTRSuffix = "ip4.example.com"
+	handler.SetPTRSuffix("ip4.example.com")
 	handler.AllowedSubnets = []*net.IPNet{
 		mustParseCIDR("0.0.0.0/0"),
 	}
@@ -45,7 +45,7 @@ func TestIPv4PTR(t *testing.T) {
 
 func TestIPv4GetZones(t *testing.T) {
 	handler := rdns.NewIPv4()
-	handler.PTRSuffix = "ip4.example.com"
+	handler.SetPTRSuffix("ip4.example.com")
 	handler.AllowedSubnets = []*net.IPNet{
 		mustParseCIDR("10.0.0.0/8"),
 		mustParseCIDR("192.168.0.0/16"),

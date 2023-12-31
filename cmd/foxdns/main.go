@@ -94,7 +94,7 @@ func reloadConfig() {
 		if rdnsGen == nil {
 			log.Panicf("Unknown IP version: %d", rdnsConf.IPVersion)
 		}
-		rdnsGen.PTRSuffix = rdnsConf.Suffix
+		rdnsGen.SetPTRSuffix(rdnsConf.Suffix)
 
 		allowedSubnets := make([]*net.IPNet, 0, len(rdnsConf.Subnets))
 		for _, subnet := range rdnsConf.Subnets {

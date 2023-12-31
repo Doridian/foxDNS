@@ -11,7 +11,7 @@ import (
 )
 
 type Generator struct {
-	PTRSuffix  string
+	ptrSuffix  string
 	AddressTtl uint32
 	PtrTtl     uint32
 
@@ -26,6 +26,13 @@ type Generator struct {
 	makeRec          func(net.IP) dns.RR
 
 	addPTRZones func(r *Generator, zones []string) []string
+}
+
+func (r *Generator) SetPTRSuffix(ptrSuffix string) {
+	if !strings.HasSuffix(ptrSuffix, ".") {
+		ptrSuffix += "."
+	}
+	r.ptrSuffix = ptrSuffix
 }
 
 func (r *Generator) servePTR(name string) dns.RR {
@@ -45,7 +52,7 @@ func (r *Generator) servePTR(name string) dns.RR {
 	}
 
 	return &dns.PTR{
-		Ptr: fmt.Sprintf("%s.%s.", r.encodeIp(ip), r.PTRSuffix),
+		Ptr: fmt.Sprintf("%s.%s", r.encodeIp(ip), r.ptrSuffix),
 	}
 }
 
@@ -116,11 +123,7 @@ func (r *Generator) GetName() string {
 }
 
 func (r *Generator) GetZones() []string {
-	ptrSuffix := r.PTRSuffix
-	if !strings.HasSuffix(ptrSuffix, ".") {
-		ptrSuffix += "."
-	}
-	res := []string{ptrSuffix}
+	res := []string{r.ptrSuffix}
 	res = r.addPTRZones(r, res)
 	return res
 }
