@@ -104,7 +104,7 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 
 		msg, edns0, matchType := r.getFromCache(key, keyDomain, q)
 		if msg != nil {
-			// Can't be  hit when forceRequery is true
+			// Can't be hit when forceRequery is true
 			cacheResults.WithLabelValues("wait", matchType).Inc()
 			return msg, edns0, nil
 		}
