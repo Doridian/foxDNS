@@ -191,7 +191,8 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	now := time.Now()
 	entryExpiresIn := entry.expiry.Sub(now)
 	if entryExpiresIn <= -r.CacheReturnStalePeriod {
-		cacheStaleMisses.Observe(float64(-entryExpiresIn.Seconds()))
+		timeSinceMiss := entryExpiresIn + r.CacheReturnStalePeriod
+		cacheStaleMisses.Observe(float64(-timeSinceMiss.Seconds()))
 		return nil, nil, ""
 	}
 
