@@ -2,8 +2,10 @@ package rdns
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/miekg/dns"
 )
@@ -35,6 +37,37 @@ func ipv4Encode(ip net.IP) string {
 	return fmt.Sprintf("%d-%d-%d-%d", ip[0], ip[1], ip[2], ip[3])
 }
 
+func ipv4AddPTRZones(r *Generator, zones []string) []string {
+	for _, subnet := range r.AllowedSubnets {
+		subnetIP := subnet.IP.To4()
+		ones, _ := subnet.Mask.Size()
+		if ones == 0 {
+			log.Panicf("invalid subnet %v", subnet)
+		}
+
+		leftoverBits := ones % 8
+		fullPieces := ones / 8
+
+		zoneRecordPieces := make([]string, 0, net.IPv4len+1)
+		for i := fullPieces - 1; i >= 0; i-- {
+			zoneRecordPieces = append(zoneRecordPieces, fmt.Sprintf("%d", subnetIP[i]))
+		}
+		zoneRecordPieces = append(zoneRecordPieces, "in-addr.arpa.")
+
+		fullZoneName := strings.Join(zoneRecordPieces, ".")
+
+		if leftoverBits == 0 {
+			zones = append(zones, fullZoneName)
+			continue
+		}
+
+		for i := 0; i < 1<<(8-leftoverBits); i++ {
+			zones = append(zones, fmt.Sprintf("%d.%s", i+int(subnetIP[fullPieces]), fullZoneName))
+		}
+	}
+	return zones
+}
+
 func NewIPv4() *Generator {
 	return &Generator{
 		AddressTtl: 3600,
@@ -47,5 +80,6 @@ func NewIPv4() *Generator {
 		decodeIpSegments: ipv4Decode,
 		encodeIp:         ipv4Encode,
 		makeRec:          ipv4MakeRec,
+		addPTRZones:      ipv4AddPTRZones,
 	}
 }
