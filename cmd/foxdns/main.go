@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"os"
 
@@ -95,6 +96,16 @@ func reloadConfig() {
 		}
 		rdnsGen.PTRSuffix = rdnsConf.Suffix
 
+		allowedSubnets := make([]*net.IPNet, 0, len(rdnsConf.Subnets))
+		for _, subnet := range rdnsConf.Subnets {
+			_, subnet, err := net.ParseCIDR(subnet)
+			if err != nil {
+				log.Panicf("Error parsing subnet %s: %v", subnet, err)
+			}
+			allowedSubnets = append(allowedSubnets, subnet)
+		}
+		rdnsGen.AllowedSubnets = allowedSubnets
+
 		if rdnsConf.AddressTtl > 0 {
 			rdnsGen.AddressTtl = uint32(rdnsConf.AddressTtl.Seconds())
 		}
@@ -105,16 +116,12 @@ func reloadConfig() {
 
 		rdnsAuthorityConfig := mergeAuthorityConfig(rdnsConf.AuthorityConfig, authorityConfig)
 
-		rdnsAuthMain := authority.NewAuthorityHandler(rdnsConf.Suffix, rdnsAuthorityConfig)
-		rdnsAuthMain.Child = rdnsGen
-		generators = append(generators, rdnsAuthMain)
-		rdnsAuthMain.Register(mux)
-
-		for _, subnet := range rdnsConf.Subnets {
-			rdnsAuthSub := authority.NewAuthorityHandler(subnet, rdnsAuthorityConfig)
-			rdnsAuthSub.Child = rdnsGen
-			generators = append(generators, rdnsAuthSub)
-			rdnsAuthSub.Register(mux)
+		rdnsZones := rdnsGen.GetZones()
+		for _, zone := range rdnsZones {
+			rdnsAuth := authority.NewAuthorityHandler(zone, rdnsAuthorityConfig)
+			rdnsAuth.Child = rdnsGen
+			generators = append(generators, rdnsAuth)
+			rdnsAuth.Register(mux)
 		}
 	}
 

@@ -35,6 +35,10 @@ func ipv4Encode(ip net.IP) string {
 	return fmt.Sprintf("%d-%d-%d-%d", ip[0], ip[1], ip[2], ip[3])
 }
 
+func ipv4AddPTRZones(zones []string) []string {
+	return zones
+}
+
 func NewIPv4() *Generator {
 	return &Generator{
 		AddressTtl: 3600,
@@ -47,5 +51,6 @@ func NewIPv4() *Generator {
 		decodeIpSegments: ipv4Decode,
 		encodeIp:         ipv4Encode,
 		makeRec:          ipv4MakeRec,
+		addPTRZones:      ipv4AddPTRZones,
 	}
 }

@@ -19,9 +19,13 @@ type Generator struct {
 	ipSegments  int
 	ipSeparator string
 
+	AllowedSubnets []*net.IPNet
+
 	decodeIpSegments func(nameSplit []string) net.IP
 	encodeIp         func(ip net.IP) string
 	makeRec          func(net.IP) dns.RR
+
+	addPTRZones func(zones []string) []string
 }
 
 func (r *Generator) servePTR(name string) dns.RR {
@@ -53,7 +57,13 @@ func (r *Generator) serveRec(name string) dns.RR {
 		return nil
 	}
 
-	return r.makeRec(rdnsIp)
+	for _, subnet := range r.AllowedSubnets {
+		if subnet.Contains(rdnsIp) {
+			return r.makeRec(rdnsIp)
+		}
+	}
+
+	return nil
 }
 
 func (r *Generator) HandleQuestion(q *dns.Question, _ simple.DNSResponseWriter) ([]dns.RR, bool) {
@@ -92,4 +102,10 @@ func (r *Generator) Stop() error {
 
 func (r *Generator) GetName() string {
 	return "rdns"
+}
+
+func (r *Generator) GetZones() []string {
+	res := []string{r.PTRSuffix}
+	res = r.addPTRZones(res)
+	return res
 }

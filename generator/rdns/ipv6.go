@@ -36,6 +36,10 @@ func ipv6Encode(ip net.IP) string {
 		ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7], ip[8], ip[9], ip[10], ip[11], ip[12], ip[13], ip[14], ip[15])
 }
 
+func ipv6AddPTRZones(zones []string) []string {
+	return zones
+}
+
 func NewIPv6() *Generator {
 	return &Generator{
 		AddressTtl: 3600,
@@ -48,5 +52,6 @@ func NewIPv6() *Generator {
 		decodeIpSegments: ipv6Decode,
 		encodeIp:         ipv6Encode,
 		makeRec:          ipv6MakeRec,
+		addPTRZones:      ipv6AddPTRZones,
 	}
 }
