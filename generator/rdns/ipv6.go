@@ -2,7 +2,9 @@ package rdns
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"strings"
 
 	"github.com/miekg/dns"
 )
@@ -36,7 +38,42 @@ func ipv6Encode(ip net.IP) string {
 		ip[0], ip[1], ip[2], ip[3], ip[4], ip[5], ip[6], ip[7], ip[8], ip[9], ip[10], ip[11], ip[12], ip[13], ip[14], ip[15])
 }
 
-func ipv6AddPTRZones(zones []string) []string {
+func ipv6AddPTRZones(r *Generator, zones []string) []string {
+	for _, subnet := range r.AllowedSubnets {
+		subnetIP := subnet.IP.To16()
+		ones, _ := subnet.Mask.Size()
+		if ones == 0 {
+			log.Panicf("invalid subnet %v", subnet)
+		}
+
+		fullPieces := ones / 8
+		leftoverBits := ones % 8
+
+		zoneRecordPieces := make([]string, 0, net.IPv6len+1)
+		for i := fullPieces - 1; i >= 0; i-- {
+			zoneRecordPieces = append(zoneRecordPieces, fmt.Sprintf("%x.%x", subnetIP[i]&0xF, subnetIP[i]>>4))
+		}
+		zoneRecordPieces = append(zoneRecordPieces, "ip6.arpa.")
+
+		fullZoneName := strings.Join(zoneRecordPieces, ".")
+		if leftoverBits == 0 {
+			zones = append(zones, fullZoneName)
+			continue
+		}
+
+		if leftoverBits >= 4 {
+			fullZoneName = fmt.Sprintf("%x.%s", subnetIP[fullPieces]>>4, fullZoneName)
+			leftoverBits -= 4
+			if leftoverBits == 0 {
+				zones = append(zones, fullZoneName)
+				continue
+			}
+		}
+
+		for i := 0; i < 1<<(4-leftoverBits); i++ {
+			zones = append(zones, fmt.Sprintf("%x.%s", i+int(subnetIP[fullPieces]&0xF), fullZoneName))
+		}
+	}
 	return zones
 }
 

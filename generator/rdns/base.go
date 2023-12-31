@@ -25,7 +25,7 @@ type Generator struct {
 	encodeIp         func(ip net.IP) string
 	makeRec          func(net.IP) dns.RR
 
-	addPTRZones func(zones []string) []string
+	addPTRZones func(r *Generator, zones []string) []string
 }
 
 func (r *Generator) servePTR(name string) dns.RR {
@@ -37,6 +37,10 @@ func (r *Generator) servePTR(name string) dns.RR {
 
 	ip := r.decodeIpSegments(nameSplit[:r.ipSegments])
 	if ip == nil {
+		return nil
+	}
+
+	if !r.isAllowed(ip) {
 		return nil
 	}
 
@@ -57,13 +61,20 @@ func (r *Generator) serveRec(name string) dns.RR {
 		return nil
 	}
 
-	for _, subnet := range r.AllowedSubnets {
-		if subnet.Contains(rdnsIp) {
-			return r.makeRec(rdnsIp)
-		}
+	if !r.isAllowed(rdnsIp) {
+		return nil
 	}
 
-	return nil
+	return r.makeRec(rdnsIp)
+}
+
+func (r *Generator) isAllowed(ip net.IP) bool {
+	for _, subnet := range r.AllowedSubnets {
+		if subnet.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Generator) HandleQuestion(q *dns.Question, _ simple.DNSResponseWriter) ([]dns.RR, bool) {
@@ -105,7 +116,11 @@ func (r *Generator) GetName() string {
 }
 
 func (r *Generator) GetZones() []string {
-	res := []string{r.PTRSuffix}
-	res = r.addPTRZones(res)
+	ptrSuffix := r.PTRSuffix
+	if !strings.HasSuffix(ptrSuffix, ".") {
+		ptrSuffix += "."
+	}
+	res := []string{ptrSuffix}
+	res = r.addPTRZones(r, res)
 	return res
 }
