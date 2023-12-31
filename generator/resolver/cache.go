@@ -34,13 +34,13 @@ var (
 	cacheStaleHits = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "foxdns_resolver_cache_stale_hits",
 		Help:    "The number of cache hits for DNS queries that were stale",
-		Buckets: []float64{1, 10, 30, 60, 300, 600, 1800, 3600},
+		Buckets: []float64{1, 10, 30, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600},
 	})
 
 	cacheStaleMisses = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "foxdns_resolver_cache_stale_misses",
 		Help:    "The time since expiry of stale cache entries that were present but not usable",
-		Buckets: []float64{1, 10, 30, 60, 300, 600, 1800, 3600},
+		Buckets: []float64{1, 10, 30, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600},
 	})
 
 	cacheSize = promauto.NewGauge(prometheus.GaugeOpts{
