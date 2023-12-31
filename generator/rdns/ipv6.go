@@ -85,6 +85,7 @@ func NewIPv6() *Generator {
 		recordType:  dns.TypeAAAA,
 		ipSegments:  32,
 		ipSeparator: ":",
+		arpaSuffix:  "ip6.arpa.",
 
 		decodeIpSegments: ipv6Decode,
 		encodeIp:         ipv6Encode,

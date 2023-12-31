@@ -76,6 +76,7 @@ func NewIPv4() *Generator {
 		recordType:  dns.TypeA,
 		ipSegments:  4,
 		ipSeparator: ".",
+		arpaSuffix:  "in-addr.arpa.",
 
 		decodeIpSegments: ipv4Decode,
 		encodeIp:         ipv4Encode,

@@ -18,6 +18,7 @@ type Generator struct {
 	recordType  uint16
 	ipSegments  int
 	ipSeparator string
+	arpaSuffix  string
 
 	AllowedSubnets []*net.IPNet
 
@@ -36,9 +37,13 @@ func (r *Generator) SetPTRSuffix(ptrSuffix string) {
 }
 
 func (r *Generator) servePTR(name string) dns.RR {
-	nameSplit := strings.Split(name, ".")
+	nameSplit := strings.SplitN(name, ".", r.ipSegments+1)
 
-	if len(nameSplit) != r.ipSegments+3 {
+	if len(nameSplit) != r.ipSegments+1 {
+		return nil
+	}
+
+	if nameSplit[len(nameSplit)-1] != r.arpaSuffix {
 		return nil
 	}
 
@@ -57,8 +62,12 @@ func (r *Generator) servePTR(name string) dns.RR {
 }
 
 func (r *Generator) serveRec(name string) dns.RR {
-	nameSplit := strings.Split(name, ".")
+	nameSplit := strings.SplitN(name, ".", 2)
 	if len(nameSplit) < 2 {
+		return nil
+	}
+
+	if nameSplit[1] != r.ptrSuffix {
 		return nil
 	}
 
