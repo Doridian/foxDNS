@@ -23,26 +23,23 @@ var (
 	}, []string{"server"})
 )
 
-func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err error, success bool) {
+func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err error) {
 	var info *connInfo
-	success = false
 	info, err = r.acquireConn()
 	server = info.server.Addr
 	if err != nil {
-		r.returnConn(info, success)
+		r.returnConn(info, err)
 		return
 	}
 
 	startTime := time.Now()
 	resp, _, err = info.server.client.ExchangeWithConn(m, info.conn)
-	success = (err == nil && resp != nil && resp.Rcode != dns.RcodeServerFailure)
-	r.returnConn(info, success)
+	r.returnConn(info, err)
 
 	if err == nil {
 		duration := time.Since(startTime)
 		upstreamQueryTime.WithLabelValues(info.server.Addr).Observe(duration.Seconds())
 	}
-
 	return
 }
 
@@ -58,10 +55,9 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 	util.SetEDNS0(m)
 
 	var server string
-	var success bool
 	for i := r.Retries; i > 0; i-- {
-		resp, server, err, success = r.exchange(m)
-		if success {
+		resp, server, err = r.exchange(m)
+		if err == nil {
 			return
 		}
 		if r.LogFailures {
@@ -69,7 +65,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 			if resp != nil {
 				rcodeStr = dns.RcodeToString[resp.Rcode]
 			}
-			log.Printf("Failed to resolve %s[%s] @%s: %s (%s)", q.Name, dns.TypeToString[q.Qtype], server, err, rcodeStr)
+			log.Printf("Failed to resolve %s[%s] @%s: %v (%s)", q.Name, dns.TypeToString[q.Qtype], server, err, rcodeStr)
 		}
 		upstreamQueryErrors.WithLabelValues(server).Inc()
 		time.Sleep(r.RetryWait)

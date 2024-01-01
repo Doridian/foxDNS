@@ -54,7 +54,7 @@ func (r *Generator) acquireConn() (info *connInfo, err error) {
 	}
 }
 
-func (r *Generator) returnConn(info *connInfo, success bool) {
+func (r *Generator) returnConn(info *connInfo, err error) {
 	if info == nil {
 		return
 	}
@@ -62,7 +62,7 @@ func (r *Generator) returnConn(info *connInfo, success bool) {
 	r.connCond.L.Lock()
 	defer r.connCond.L.Unlock()
 
-	if success {
+	if err == nil {
 		info.lastUse = time.Now()
 		r.freeConnections.PushFront(info)
 	} else {
