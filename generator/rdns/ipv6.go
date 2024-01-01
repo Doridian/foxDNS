@@ -9,6 +9,8 @@ import (
 	"github.com/miekg/dns"
 )
 
+const ipv6ArpaSuffix = "ip6.arpa."
+
 func ipv6Decode(nameSplit []string) net.IP {
 	var ok bool
 	ip := net.IP(make([]byte, net.IPv6len))
@@ -53,7 +55,7 @@ func ipv6AddPTRZones(r *Generator, zones []string) []string {
 		for i := fullPieces - 1; i >= 0; i-- {
 			zoneRecordPieces = append(zoneRecordPieces, fmt.Sprintf("%x.%x", subnetIP[i]&0xF, subnetIP[i]>>4))
 		}
-		zoneRecordPieces = append(zoneRecordPieces, "ip6.arpa.")
+		zoneRecordPieces = append(zoneRecordPieces, ipv6ArpaSuffix)
 
 		fullZoneName := strings.Join(zoneRecordPieces, ".")
 		if leftoverBits == 0 {
@@ -85,7 +87,7 @@ func NewIPv6() *Generator {
 		recordType:  dns.TypeAAAA,
 		ipSegments:  32,
 		ipSeparator: ":",
-		arpaSuffix:  "ip6.arpa.",
+		arpaSuffix:  ipv6ArpaSuffix,
 
 		decodeIpSegments: ipv6Decode,
 		encodeIp:         ipv6Encode,

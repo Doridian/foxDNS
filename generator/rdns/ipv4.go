@@ -10,6 +10,8 @@ import (
 	"github.com/miekg/dns"
 )
 
+const ipv4ArpaSuffix = "in-addr.arpa."
+
 func ipv4Decode(nameSplit []string) net.IP {
 	ip := net.IP(make([]byte, net.IPv4len))
 	for i := 0; i < 4; i++ {
@@ -52,7 +54,7 @@ func ipv4AddPTRZones(r *Generator, zones []string) []string {
 		for i := fullPieces - 1; i >= 0; i-- {
 			zoneRecordPieces = append(zoneRecordPieces, fmt.Sprintf("%d", subnetIP[i]))
 		}
-		zoneRecordPieces = append(zoneRecordPieces, "in-addr.arpa.")
+		zoneRecordPieces = append(zoneRecordPieces, ipv4ArpaSuffix)
 
 		fullZoneName := strings.Join(zoneRecordPieces, ".")
 
@@ -76,7 +78,7 @@ func NewIPv4() *Generator {
 		recordType:  dns.TypeA,
 		ipSegments:  4,
 		ipSeparator: ".",
-		arpaSuffix:  "in-addr.arpa.",
+		arpaSuffix:  ipv4ArpaSuffix,
 
 		decodeIpSegments: ipv4Decode,
 		encodeIp:         ipv4Encode,
