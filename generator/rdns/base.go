@@ -38,7 +38,6 @@ func (r *Generator) SetPTRSuffix(ptrSuffix string) {
 
 func (r *Generator) servePTR(name string) dns.RR {
 	nameSplit := strings.SplitN(name, ".", r.ipSegments+1)
-
 	if len(nameSplit) != r.ipSegments+1 {
 		return nil
 	}
