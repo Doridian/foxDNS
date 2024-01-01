@@ -55,7 +55,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 	var server string
 	for i := r.Retries; i > 0; i-- {
 		resp, server, err = r.exchange(m)
-		if err == nil {
+		if err == nil && resp != nil && resp.Rcode != dns.RcodeServerFailure {
 			return
 		}
 		upstreamQueryErrors.WithLabelValues(server).Inc()
