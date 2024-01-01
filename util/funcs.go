@@ -71,25 +71,29 @@ func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0,
 		return nil
 	}
 
-	paddingLen := 0
+	// TODO: Allow padding for UDP with COOKIE set
+	paddingAllowed := paddingAllowedProtocols[wr.LocalAddr().Network()]
+	clientRequestedPadding := false
 
-	if queryEdns0.Version() != 0 {
+	if queryEdns0.Version() == 0 {
+		for _, opt := range queryEdns0.Option {
+			if opt.Option() == dns.EDNS0PADDING {
+				clientRequestedPadding = true
+				break
+			}
+		}
+	} else {
 		reply.Answer = []dns.RR{}
 		reply.Ns = []dns.RR{}
 		reply.Extra = []dns.RR{}
 		reply.Rcode = dns.RcodeBadVers
-	} else {
-		// TODO: Allow padding for UDP with COOKIE set
-		if paddingAllowedProtocols[wr.LocalAddr().Network()] {
-			for _, opt := range queryEdns0.Option {
-				if opt.Option() == dns.EDNS0PADDING {
-					paddingLen = 468
-					break
-				}
-			}
-		}
+		clientRequestedPadding = true
 	}
 
+	paddingLen := 0
+	if paddingAllowed && clientRequestedPadding {
+		paddingLen = 468
+	}
 	return SetEDNS0(reply, option, paddingLen)
 }
 
