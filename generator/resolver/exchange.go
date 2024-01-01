@@ -22,18 +22,21 @@ var (
 	}, []string{"server"})
 )
 
-func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err error) {
+func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err error, success bool) {
 	var info *connInfo
+	success = false
 	info, err = r.acquireConn()
 	server = info.server.Addr
 	if err != nil {
-		r.returnConn(info, err)
+		r.returnConn(info, success)
 		return
 	}
 
 	startTime := time.Now()
 	resp, _, err = info.server.client.ExchangeWithConn(m, info.conn)
-	r.returnConn(info, err)
+	success = (err == nil && resp != nil && resp.Rcode != dns.RcodeServerFailure)
+
+	r.returnConn(info, success)
 	if err == nil {
 		duration := time.Since(startTime)
 		upstreamQueryTime.WithLabelValues(info.server.Addr).Observe(duration.Seconds())
@@ -53,9 +56,10 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 	util.SetEDNS0(m)
 
 	var server string
+	var success bool
 	for i := r.Retries; i > 0; i-- {
-		resp, server, err = r.exchange(m)
-		if err == nil && resp != nil && resp.Rcode != dns.RcodeServerFailure {
+		resp, server, err, success = r.exchange(m)
+		if success {
 			return
 		}
 		upstreamQueryErrors.WithLabelValues(server).Inc()
