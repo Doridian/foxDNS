@@ -70,9 +70,13 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 }
 
 func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
-	reply := new(dns.Msg)
+	reply := &dns.Msg{
+		Compress: true,
+		MsgHdr: dns.MsgHdr{
+			Authoritative: true,
+		},
+	}
 	reply.SetRcode(msg, dns.RcodeSuccess)
-	reply.Authoritative = true
 
 	defer func() {
 		util.ApplyEDNS0ReplyIfNeeded(msg, reply, wr)

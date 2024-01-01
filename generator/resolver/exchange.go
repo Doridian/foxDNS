@@ -46,11 +46,12 @@ func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err erro
 func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
 	m := &dns.Msg{
 		Question: []dns.Question{*q},
+		MsgHdr: dns.MsgHdr{
+			Id:               dns.Id(),
+			Opcode:           dns.OpcodeQuery,
+			RecursionDesired: true,
+		},
 	}
-
-	m.Id = dns.Id()
-	m.Opcode = dns.OpcodeQuery
-	m.RecursionDesired = true
 
 	util.SetEDNS0(m, r.shouldPadLen)
 

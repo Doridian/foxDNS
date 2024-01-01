@@ -118,7 +118,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 				Rrtype:   dns.TypeSOA,
 				Class:    dns.ClassINET,
 				Ttl:      5,
-				Rdlength: 61,
+				Rdlength: 39,
 			},
 			Ns:      "ns1.example.com.",
 			Mbox:    "hostmaster.example.com.",

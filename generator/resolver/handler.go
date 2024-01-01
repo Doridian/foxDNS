@@ -10,7 +10,9 @@ import (
 func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	util.SetHandlerName(wr, r)
 
-	reply := &dns.Msg{}
+	reply := &dns.Msg{
+		Compress: true,
+	}
 	if len(msg.Question) != 1 {
 		_ = wr.WriteMsg(reply.SetRcode(msg, dns.RcodeRefused))
 		return
