@@ -79,7 +79,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.SetRcode(msg, dns.RcodeSuccess)
 
 	defer func() {
-		util.ApplyEDNS0ReplyIfNeeded(msg, reply, wr)
+		util.ApplyEDNS0ReplyIfNeeded(msg, reply, []dns.EDNS0{}, wr)
 		_ = wr.WriteMsg(reply)
 	}()
 

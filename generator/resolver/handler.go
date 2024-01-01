@@ -22,7 +22,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	reply.SetRcode(msg, dns.RcodeServerFailure)
 	defer func() {
-		replyEdns0 := util.ApplyEDNS0ReplyIfNeeded(msg, reply, wr)
+		replyEdns0 := util.ApplyEDNS0ReplyIfNeeded(msg, reply, []dns.EDNS0{}, wr)
 		if replyEdns0 != nil && recursionReplyEdns0 != nil && recursionReplyEdns0.Version() == 0 {
 			replyEdns0.SetDo(recursionReplyEdns0.Do())
 		}

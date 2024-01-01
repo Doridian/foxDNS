@@ -54,7 +54,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 		},
 	}
 
-	util.SetEDNS0(m, r.shouldPadLen)
+	util.SetEDNS0(m, []dns.EDNS0{}, r.shouldPadLen)
 
 	var server string
 	for i := r.Retries; i > 0; i-- {

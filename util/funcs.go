@@ -33,12 +33,13 @@ func FillHeader(rr dns.RR, name string, rtype uint16, ttl uint32) dns.RR {
 	return rr
 }
 
-func SetEDNS0(msg *dns.Msg, paddingLen int) *dns.OPT {
+func SetEDNS0(msg *dns.Msg, option []dns.EDNS0, paddingLen int) *dns.OPT {
 	edns0 := &dns.OPT{
 		Hdr: dns.RR_Header{
 			Name:   ".",
 			Rrtype: dns.TypeOPT,
 		},
+		Option: option,
 	}
 	edns0.SetUDPSize(UDPSize)
 
@@ -64,7 +65,7 @@ var paddingAllowedProtocols = map[string]bool{
 	"tcp6":    true,
 }
 
-func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter) *dns.OPT {
+func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr dns.ResponseWriter) *dns.OPT {
 	queryEdns0 := query.IsEdns0()
 	if queryEdns0 == nil {
 		return nil
@@ -81,7 +82,7 @@ func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWrit
 		}
 	}
 
-	return SetEDNS0(reply, paddingLen)
+	return SetEDNS0(reply, option, paddingLen)
 }
 
 type DNSHandler interface {
