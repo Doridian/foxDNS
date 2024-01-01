@@ -247,10 +247,17 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 			continue
 		}
 
+		if optRR.Version() != 0 {
+			continue
+		}
+
 		if optRR.Do() {
 			edns0.SetDo()
 		}
-		edns0.SetExtendedRcode(uint16(optRR.ExtendedRcode()))
+		extendedRCode := optRR.ExtendedRcode()
+		if extendedRCode != 0 {
+			edns0.SetExtendedRcode(uint16(extendedRCode))
+		}
 		break
 	}
 
