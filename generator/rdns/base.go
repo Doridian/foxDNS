@@ -43,7 +43,7 @@ func (r *Generator) servePTR(name string) dns.RR {
 		return nil
 	}
 
-	if nameSplit[len(nameSplit)-1] != r.arpaSuffix {
+	if nameSplit[r.ipSegments] != r.arpaSuffix {
 		return nil
 	}
 
@@ -63,7 +63,7 @@ func (r *Generator) servePTR(name string) dns.RR {
 
 func (r *Generator) serveRec(name string) dns.RR {
 	nameSplit := strings.SplitN(name, ".", 2)
-	if len(nameSplit) < 2 {
+	if len(nameSplit) != 2 {
 		return nil
 	}
 
