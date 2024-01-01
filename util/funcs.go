@@ -70,6 +70,7 @@ func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWrit
 		return nil, nil
 	}
 
+	// TODO: Allow padding for UDP with COOKIE set
 	paddingLen := 0
 	if paddingAllowedProtocols[wr.LocalAddr().Network()] {
 		for _, opt := range queryEdns0.Option {
