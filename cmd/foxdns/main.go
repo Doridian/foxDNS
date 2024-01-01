@@ -139,6 +139,7 @@ func reloadConfig() {
 		generators = append(generators, resolv)
 
 		resolv.AllowOnlyFromPrivate = resolvConf.AllowOnlyFromPrivate
+		resolv.LogFailures = resolvConf.LogFailures
 
 		if resolvConf.MaxConnections > 0 {
 			resolv.MaxConnections = resolvConf.MaxConnections

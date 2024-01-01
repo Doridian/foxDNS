@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"log"
 	"time"
 
 	"github.com/Doridian/foxDNS/util"
@@ -63,8 +64,12 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 		if success {
 			return
 		}
+		if r.LogFailures {
+			log.Printf("Failed to resolve %s %s: %s (%s)", q.Name, dns.TypeToString[q.Qtype], err, dns.RcodeToString[resp.Rcode])
+		}
 		upstreamQueryErrors.WithLabelValues(server).Inc()
 		time.Sleep(r.RetryWait)
 	}
+
 	return
 }

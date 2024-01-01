@@ -25,6 +25,7 @@ type Generator struct {
 	MaxIdleTime    time.Duration
 	Retries        int
 	RetryWait      time.Duration
+	LogFailures    bool
 
 	AllowOnlyFromPrivate bool
 
@@ -64,6 +65,7 @@ func New(servers []*ServerConfig) *Generator {
 		Retries:              3,
 		AllowOnlyFromPrivate: true,
 		RetryWait:            time.Second,
+		LogFailures:          false,
 
 		CacheMaxTTL:               3600,
 		CacheMinTTL:               0,
