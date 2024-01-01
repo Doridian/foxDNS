@@ -61,7 +61,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 			return
 		}
 		if r.LogFailures {
-			log.Printf("Failed to resolve %s[%s] @%s: %v (%s)", q.Name, dns.TypeToString[q.Qtype], server, err)
+			log.Printf("Failed to resolve %s[%s] @%s: %v", q.Name, dns.TypeToString[q.Qtype], server, err)
 		}
 		upstreamQueryErrors.WithLabelValues(server).Inc()
 		time.Sleep(r.RetryWait)
