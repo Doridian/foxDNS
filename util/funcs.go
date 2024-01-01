@@ -60,7 +60,8 @@ func SetEDNS0(msg *dns.Msg, paddingLen int) *dns.OPT {
 var paddingAllowedProtocols = map[string]bool{
 	"tcp":     true,
 	"tcp-tls": true,
-	"udp":     false,
+	"tcp4":    true,
+	"tcp6":    true,
 }
 
 func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter) (*dns.OPT, *dns.OPT) {
