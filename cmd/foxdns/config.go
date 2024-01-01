@@ -51,6 +51,7 @@ type Config struct {
 		Retries        int           `yaml:"retries"`
 		RetryWait      time.Duration `yaml:"retry-wait"`
 		Timeout        time.Duration `yaml:"timeout"`
+		LogFailures    bool          `yaml:"log-failures"`
 
 		CacheSize                 int           `yaml:"cache-size"`
 		CacheMaxTime              time.Duration `yaml:"cache-max-time"`
@@ -66,8 +67,6 @@ type Config struct {
 		RecordMaxTTL time.Duration `yaml:"record-max-ttl"`
 
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
-
-		LogFailures bool `yaml:"log-failures"`
 	} `yaml:"resolvers"`
 
 	Localizers []struct {
