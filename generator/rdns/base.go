@@ -94,8 +94,8 @@ func (r *Generator) isAllowed(ip net.IP) bool {
 
 func (r *Generator) HandleQuestion(q *dns.Question, _ simple.DNSResponseWriter) ([]dns.RR, bool) {
 	var resp dns.RR
-
 	var ttl uint32
+
 	switch q.Qtype {
 	case dns.TypePTR:
 		resp = r.servePTR(q.Name)
