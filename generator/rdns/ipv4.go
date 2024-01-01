@@ -16,7 +16,7 @@ func ipv4Decode(nameSplit []string) net.IP {
 	ip := net.IP(make([]byte, net.IPv4len))
 	for i := 0; i < 4; i++ {
 		r, err := strconv.Atoi(nameSplit[3-i])
-		if err != nil || r < 0 || r > 0xFF {
+		if err != nil || r < 0 || r > 255 {
 			return nil
 		}
 		ip[i] = byte(r)
