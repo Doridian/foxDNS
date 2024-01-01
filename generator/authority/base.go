@@ -75,7 +75,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.Authoritative = true
 
 	defer func() {
-		util.ApplyEDNS0ReplyIfNeeded(msg, reply)
+		util.ApplyEDNS0ReplyIfNeeded(msg, reply, wr)
 		_ = wr.WriteMsg(reply)
 	}()
 

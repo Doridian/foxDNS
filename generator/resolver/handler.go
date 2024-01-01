@@ -18,7 +18,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	reply.SetRcode(msg, dns.RcodeServerFailure)
 	defer func() {
-		replyEdns0, queryEdns0 := util.ApplyEDNS0ReplyIfNeeded(msg, reply)
+		replyEdns0, queryEdns0 := util.ApplyEDNS0ReplyIfNeeded(msg, reply, wr)
 		if replyEdns0 != nil && queryEdns0 != nil && queryEdns0.Version() == 0 {
 			replyEdns0.SetDo(queryEdns0.Do())
 			replyEdns0.SetExtendedRcode(uint16(queryEdns0.ExtendedRcode()))

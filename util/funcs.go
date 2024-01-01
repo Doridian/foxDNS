@@ -57,17 +57,25 @@ func SetEDNS0(msg *dns.Msg, paddingLen int) *dns.OPT {
 	return edns0
 }
 
-func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg) (*dns.OPT, *dns.OPT) {
+var paddingAllowedProtocols = map[string]bool{
+	"tcp":     true,
+	"tcp-tls": true,
+	"udp":     false,
+}
+
+func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter) (*dns.OPT, *dns.OPT) {
 	queryEdns0 := query.IsEdns0()
 	if queryEdns0 == nil {
 		return nil, nil
 	}
 
 	paddingLen := 0
-	for _, opt := range queryEdns0.Option {
-		if opt.Option() == dns.EDNS0PADDING {
-			paddingLen = 468
-			break
+	if paddingAllowedProtocols[wr.LocalAddr().Network()] {
+		for _, opt := range queryEdns0.Option {
+			if opt.Option() == dns.EDNS0PADDING {
+				paddingLen = 468
+				break
+			}
 		}
 	}
 
