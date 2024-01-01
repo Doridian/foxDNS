@@ -47,10 +47,11 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	reply.Rcode = recursionReply.Rcode
 	reply.Answer = recursionReply.Answer
-	reply.Extra = recursionReply.Extra
 	reply.Ns = recursionReply.Ns
 
 	if msg.IsEdns0() != nil {
-		reply.Extra = append(reply.Extra, downstreamEdns0)
+		reply.Extra = []dns.RR{downstreamEdns0}
+	} else {
+		reply.Extra = []dns.RR{}
 	}
 }

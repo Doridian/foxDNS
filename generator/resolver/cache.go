@@ -230,28 +230,31 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 	cacheTTL := -1
 	authTTL := -1
 
-	edns0Index := -1
 	edns0 := &dns.OPT{
 		Hdr: dns.RR_Header{
 			Name:   ".",
 			Rrtype: dns.TypeOPT,
 		},
 	}
-	edns0.SetUDPSize(util.UDPSize)
 
-	for idx, rr := range m.Extra {
+	for _, rr := range m.Extra {
 		if rr.Header().Rrtype != dns.TypeOPT {
 			continue
 		}
 
-		edns0Index = idx
-		edns0.Hdr.Ttl = rr.Header().Ttl
+		optRR, ok := rr.(*dns.OPT)
+		if !ok {
+			continue
+		}
+
+		if optRR.Do() {
+			edns0.SetDo()
+		}
+		edns0.SetExtendedRcode(uint16(optRR.ExtendedRcode()))
 		break
 	}
 
-	if edns0Index >= 0 {
-		m.Extra = append(m.Extra[:edns0Index], m.Extra[edns0Index+1:]...)
-	}
+	edns0.SetUDPSize(util.UDPSize)
 
 	for _, rr := range m.Answer {
 		_, ttl := r.adjustRecordTTL(rr)
