@@ -52,7 +52,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 	m.Opcode = dns.OpcodeQuery
 	m.RecursionDesired = true
 
-	util.SetEDNS0(m)
+	util.SetEDNS0(m, r.shouldPadLen)
 
 	var server string
 	for i := r.Retries; i > 0; i-- {

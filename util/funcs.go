@@ -33,8 +33,45 @@ func FillHeader(rr dns.RR, name string, rtype uint16, ttl uint32) dns.RR {
 	return rr
 }
 
-func SetEDNS0(msg *dns.Msg) {
-	msg.SetEdns0(UDPSize, false)
+func SetEDNS0(msg *dns.Msg, paddingLen int) *dns.OPT {
+	edns0 := &dns.OPT{
+		Hdr: dns.RR_Header{
+			Name:   ".",
+			Rrtype: dns.TypeOPT,
+		},
+	}
+	edns0.SetUDPSize(UDPSize)
+
+	msg.Extra = append(msg.Extra, edns0)
+
+	if paddingLen > 0 {
+		edns0Padding := &dns.EDNS0_PADDING{}
+		edns0.Option = append(edns0.Option, edns0Padding)
+
+		padMissing := msg.Len() % paddingLen
+		if padMissing > 0 {
+			edns0Padding.Padding = make([]byte, paddingLen-padMissing)
+		}
+	}
+
+	return edns0
+}
+
+func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg) (*dns.OPT, *dns.OPT) {
+	queryEdns0 := query.IsEdns0()
+	if queryEdns0 == nil {
+		return nil, nil
+	}
+
+	paddingLen := 0
+	for _, opt := range queryEdns0.Option {
+		if opt.Option() == dns.EDNS0PADDING {
+			paddingLen = 468
+			break
+		}
+	}
+
+	return SetEDNS0(reply, paddingLen), queryEdns0
 }
 
 type DNSHandler interface {

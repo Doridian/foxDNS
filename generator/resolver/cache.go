@@ -6,15 +6,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type cacheEntry struct {
-	msg   *dns.Msg
-	edns0 *dns.OPT
+	msg *dns.Msg
 
 	time   time.Time
 	expiry time.Time
@@ -77,15 +75,15 @@ func cacheKeyDomain(q *dns.Question) string {
 	return fmt.Sprintf("%s:ANY", q.Name)
 }
 
-func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg, *dns.OPT, error) {
+func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
 	if !forceRequery {
-		msg, edns0, matchType := r.getFromCache(key, keyDomain, q)
+		msg, matchType := r.getFromCache(key, keyDomain, q)
 		if msg != nil {
 			cacheResults.WithLabelValues("hit", matchType).Inc()
-			return msg, edns0, nil
+			return msg, nil
 		}
 	}
 
@@ -97,16 +95,16 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 
 	if loaded {
 		if forceRequery {
-			return nil, nil, nil
+			return nil, nil
 		}
 
 		cacheLockWG.Wait()
 
-		msg, edns0, matchType := r.getFromCache(key, keyDomain, q)
+		msg, matchType := r.getFromCache(key, keyDomain, q)
 		if msg != nil {
 			// Can't be hit when forceRequery is true
 			cacheResults.WithLabelValues("wait", matchType).Inc()
-			return msg, edns0, nil
+			return msg, nil
 		}
 	} else {
 		defer r.cacheLock.Delete(key)
@@ -114,14 +112,14 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 
 	msg, err := r.exchangeWithRetry(q)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	edns0, matchType := r.processAndWriteToCache(key, keyDomain, q, msg)
+	matchType := r.processAndWriteToCache(key, keyDomain, q, msg)
 	if !forceRequery {
 		cacheResults.WithLabelValues("miss", matchType).Inc()
 	}
-	return msg, edns0, nil
+	return msg, nil
 }
 
 func (r *Generator) cleanupCache() {
@@ -175,13 +173,13 @@ func (r *Generator) adjustRecordTTL(rr dns.RR) (*dns.RR_Header, int) {
 	return rrHdr, int(origTtl)
 }
 
-func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) (*dns.Msg, *dns.OPT, string) {
+func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) (*dns.Msg, string) {
 	entry, ok := r.cache.Get(key)
 	matchType := "exact"
 	if !ok {
 		entry, ok = r.cache.Get(keyDomain)
 		if !ok {
-			return nil, nil, ""
+			return nil, ""
 		}
 		if entry.qtype != q.Qtype || entry.qclass != q.Qclass {
 			matchType = "domain"
@@ -193,7 +191,7 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	if entryExpiresIn <= -r.CacheReturnStalePeriod {
 		timeSinceMiss := entryExpiresIn + r.CacheReturnStalePeriod
 		cacheStaleMisses.Observe(float64(-timeSinceMiss.Seconds()))
-		return nil, nil, ""
+		return nil, ""
 	}
 
 	if entryExpiresIn <= 0 {
@@ -205,7 +203,7 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	if (entryExpiresIn <= 0 || (entryHits >= r.OpportunisticCacheMinHits && entryExpiresIn <= r.OpportunisticCacheMaxTimeLeft)) && !entry.refreshTriggered {
 		entry.refreshTriggered = true
 		go func() {
-			_, _, _ = r.getOrAddCache(q, true)
+			_, _ = r.getOrAddCache(q, true)
 		}()
 	}
 
@@ -222,46 +220,13 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 		}
 	}
 
-	return msg, entry.edns0, matchType
+	return msg, matchType
 }
 
-func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg) (*dns.OPT, string) {
+func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg) string {
 	minTTL := -1
 	cacheTTL := -1
 	authTTL := -1
-
-	edns0 := &dns.OPT{
-		Hdr: dns.RR_Header{
-			Name:   ".",
-			Rrtype: dns.TypeOPT,
-		},
-	}
-
-	for _, rr := range m.Extra {
-		if rr.Header().Rrtype != dns.TypeOPT {
-			continue
-		}
-
-		optRR, ok := rr.(*dns.OPT)
-		if !ok {
-			continue
-		}
-
-		if optRR.Version() != 0 {
-			continue
-		}
-
-		if optRR.Do() {
-			edns0.SetDo()
-		}
-		extendedRCode := optRR.ExtendedRcode()
-		if extendedRCode != 0 {
-			edns0.SetExtendedRcode(uint16(extendedRCode))
-		}
-		break
-	}
-
-	edns0.SetUDPSize(util.UDPSize)
 
 	for _, rr := range m.Answer {
 		_, ttl := r.adjustRecordTTL(rr)
@@ -283,7 +248,7 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 	}
 
 	if m.Rcode != dns.RcodeSuccess && m.Rcode != dns.RcodeNameError {
-		return edns0, ""
+		return ""
 	}
 
 	if cacheTTL < 0 {
@@ -309,7 +274,7 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 	}
 
 	if cacheTTL == 0 {
-		return edns0, ""
+		return ""
 	}
 
 	now := time.Now()
@@ -319,7 +284,6 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 		qtype:  q.Qtype,
 		qclass: q.Qclass,
 		msg:    m,
-		edns0:  edns0,
 	}
 	entry.hits.Store(1)
 
@@ -334,5 +298,5 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 	r.cacheWriteLock.Unlock()
 
 	cacheSize.Set(float64(r.cache.Len()))
-	return edns0, matchType
+	return matchType
 }

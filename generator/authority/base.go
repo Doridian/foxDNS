@@ -74,14 +74,14 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.SetRcode(msg, dns.RcodeSuccess)
 	reply.Authoritative = true
 
-	if msg.IsEdns0() != nil {
-		util.SetEDNS0(reply)
-	}
+	defer func() {
+		util.ApplyEDNS0ReplyIfNeeded(msg, reply)
+		_ = wr.WriteMsg(reply)
+	}()
 
 	q := &msg.Question[0]
 	if q.Qclass != dns.ClassINET {
 		reply.Rcode = dns.RcodeRefused
-		_ = wr.WriteMsg(reply)
 		return
 	}
 
@@ -110,8 +110,6 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	} else {
 		util.SetHandlerName(wr, r)
 	}
-
-	_ = wr.WriteMsg(reply)
 }
 
 func (r *AuthorityHandler) Register(mux *dns.ServeMux) {

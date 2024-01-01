@@ -34,6 +34,7 @@ type Generator struct {
 	lastServerIdx     int
 	freeConnections   *list.List
 	connCleanupTicker *time.Ticker
+	shouldPadLen      int
 
 	CacheMaxTTL               int
 	CacheMinTTL               int
@@ -76,6 +77,7 @@ func New(servers []*ServerConfig) *Generator {
 		RecordMinTTL: 0,
 		RecordMaxTTL: math.MaxUint32,
 
+		shouldPadLen:    0,
 		connCond:        sync.NewCond(&sync.Mutex{}),
 		connections:     0,
 		freeConnections: list.New(),
@@ -90,6 +92,10 @@ func New(servers []*ServerConfig) *Generator {
 	for _, srv := range gen.Servers {
 		srv.client = &dns.Client{
 			Net: srv.Proto,
+		}
+
+		if srv.Proto == "tcp-tls" {
+			gen.shouldPadLen = 128
 		}
 
 		if srv.ServerName != "" {

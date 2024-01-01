@@ -10,7 +10,7 @@ import (
 func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	util.SetHandlerName(wr, r)
 
-	reply := new(dns.Msg)
+	reply := &dns.Msg{}
 	if len(msg.Question) != 1 {
 		_ = wr.WriteMsg(reply.SetRcode(msg, dns.RcodeRefused))
 		return
@@ -18,6 +18,12 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	reply.SetRcode(msg, dns.RcodeServerFailure)
 	defer func() {
+		replyEdns0, queryEdns0 := util.ApplyEDNS0ReplyIfNeeded(msg, reply)
+		if replyEdns0 != nil && queryEdns0 != nil && queryEdns0.Version() == 0 {
+			replyEdns0.SetDo(queryEdns0.Do())
+			replyEdns0.SetExtendedRcode(uint16(queryEdns0.ExtendedRcode()))
+		}
+
 		_ = wr.WriteMsg(reply)
 	}()
 
@@ -39,7 +45,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 	q.Name = dns.CanonicalName(q.Name)
 
-	recursionReply, downstreamEdns0, err := r.getOrAddCache(q, false)
+	recursionReply, err := r.getOrAddCache(q, false)
 	if err != nil {
 		log.Printf("Error handling DNS request: %v", err)
 		return
@@ -48,10 +54,4 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.Rcode = recursionReply.Rcode
 	reply.Answer = recursionReply.Answer
 	reply.Ns = recursionReply.Ns
-
-	if msg.IsEdns0() != nil {
-		reply.Extra = []dns.RR{downstreamEdns0}
-	} else {
-		reply.Extra = []dns.RR{}
-	}
 }

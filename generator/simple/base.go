@@ -23,15 +23,15 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.SetRcode(msg, dns.RcodeSuccess)
 	reply.Authoritative = true
 
-	if msg.IsEdns0() != nil {
-		util.SetEDNS0(reply)
-	}
+	defer func() {
+		util.ApplyEDNS0ReplyIfNeeded(msg, reply)
+		_ = wr.WriteMsg(reply)
+	}()
 
 	q := &msg.Question[0]
 	if util.IsBadQuery(q) {
 		util.SetHandlerName(wr, r)
 		reply.Rcode = dns.RcodeRefused
-		_ = wr.WriteMsg(reply)
 		return
 	}
 
@@ -49,8 +49,6 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		q.Name = r.zone
 		reply.Ns, _ = r.Child.HandleQuestion(q, wr)
 	}
-
-	_ = wr.WriteMsg(reply)
 }
 
 func (r *Generator) Register(mux *dns.ServeMux) {
