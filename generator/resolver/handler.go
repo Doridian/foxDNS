@@ -27,9 +27,9 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 			replyEdns0.SetDo(recursionReplyEdns0.Do())
 		}
 
-		if replyEdns0 == nil {
+		if replyEdns0 == nil && reply.Rcode > 0xF {
 			// Unset extended RCODE if client doesn't speak EDNS0
-			reply.Rcode &= 0xF
+			reply.Rcode = dns.RcodeServerFailure
 		}
 
 		_ = wr.WriteMsg(reply)
