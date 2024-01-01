@@ -18,12 +18,18 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		return
 	}
 
+	var recursionReplyEdns0 *dns.OPT
+
 	reply.SetRcode(msg, dns.RcodeServerFailure)
 	defer func() {
-		replyEdns0, queryEdns0 := util.ApplyEDNS0ReplyIfNeeded(msg, reply, wr)
-		if replyEdns0 != nil && queryEdns0 != nil && queryEdns0.Version() == 0 {
-			replyEdns0.SetDo(queryEdns0.Do())
-			replyEdns0.SetExtendedRcode(uint16(queryEdns0.ExtendedRcode()))
+		replyEdns0 := util.ApplyEDNS0ReplyIfNeeded(msg, reply, wr)
+		if replyEdns0 != nil && recursionReplyEdns0 != nil && recursionReplyEdns0.Version() == 0 {
+			replyEdns0.SetDo(recursionReplyEdns0.Do())
+		}
+
+		if replyEdns0 == nil {
+			// Unset extended RCODE if client doesn't speak EDNS0
+			reply.Rcode &= 0xF
 		}
 
 		_ = wr.WriteMsg(reply)
@@ -56,4 +62,5 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.Rcode = recursionReply.Rcode
 	reply.Answer = recursionReply.Answer
 	reply.Ns = recursionReply.Ns
+	recursionReplyEdns0 = recursionReply.IsEdns0()
 }

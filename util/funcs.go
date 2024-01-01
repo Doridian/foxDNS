@@ -64,10 +64,10 @@ var paddingAllowedProtocols = map[string]bool{
 	"tcp6":    true,
 }
 
-func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter) (*dns.OPT, *dns.OPT) {
+func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter) *dns.OPT {
 	queryEdns0 := query.IsEdns0()
 	if queryEdns0 == nil {
-		return nil, nil
+		return nil
 	}
 
 	// TODO: Allow padding for UDP with COOKIE set
@@ -81,7 +81,7 @@ func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWrit
 		}
 	}
 
-	return SetEDNS0(reply, paddingLen), queryEdns0
+	return SetEDNS0(reply, paddingLen)
 }
 
 type DNSHandler interface {
