@@ -35,12 +35,13 @@ func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err erro
 	startTime := time.Now()
 	resp, _, err = info.server.client.ExchangeWithConn(m, info.conn)
 	success = (err == nil && resp != nil && resp.Rcode != dns.RcodeServerFailure)
-
 	r.returnConn(info, success)
+
 	if err == nil {
 		duration := time.Since(startTime)
 		upstreamQueryTime.WithLabelValues(info.server.Addr).Observe(duration.Seconds())
 	}
+
 	return
 }
 
