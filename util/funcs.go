@@ -87,6 +87,7 @@ func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0,
 		reply.Ns = []dns.RR{}
 		reply.Extra = []dns.RR{}
 		reply.Rcode = dns.RcodeBadVers
+		option = []dns.EDNS0{}
 		clientRequestedPadding = true
 	}
 
