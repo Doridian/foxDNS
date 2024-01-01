@@ -60,11 +60,16 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 		if err == nil {
 			return
 		}
-		if r.LogFailures {
-			log.Printf("Failed to resolve %s[%s] @%s: %v", q.Name, dns.TypeToString[q.Qtype], server, err)
-		}
 		upstreamQueryErrors.WithLabelValues(server).Inc()
 		time.Sleep(r.RetryWait)
+	}
+
+	if r.LogFailures && (err != nil || resp == nil || resp.Rcode == dns.RcodeServerFailure) {
+		rcodeStr := ""
+		if resp != nil {
+			rcodeStr = dns.RcodeToString[resp.Rcode]
+		}
+		log.Printf("Failed to resolve %s[%s] @%s: %v (%s)", q.Name, dns.TypeToString[q.Qtype], server, err, rcodeStr)
 	}
 
 	return
