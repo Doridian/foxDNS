@@ -58,11 +58,13 @@ func ipv4AddPTRZones(r *Generator, zones []string) []string {
 
 		fullZoneName := strings.Join(zoneRecordPieces, ".")
 
+		// We stopped right at a octet boundary, so we can just add the full zone
 		if leftoverBits == 0 {
 			zones = append(zones, fullZoneName)
 			continue
 		}
 
+		// We need to add the possibilities for the non-fully-fixed octets
 		for i := 0; i < 1<<(8-leftoverBits); i++ {
 			zones = append(zones, fmt.Sprintf("%d.%s", i+int(subnetIP[fullPieces]), fullZoneName))
 		}

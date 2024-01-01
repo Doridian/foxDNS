@@ -64,14 +64,17 @@ func ipv6AddPTRZones(r *Generator, zones []string) []string {
 		}
 
 		if leftoverBits >= 4 {
+			// This means at least one half-octet is fixed, therefor prepend it
 			fullZoneName = fmt.Sprintf("%x.%s", subnetIP[fullPieces]>>4, fullZoneName)
 			leftoverBits -= 4
 			if leftoverBits == 0 {
+				// Exactly one half-octet is fixed, therefor early return
 				zones = append(zones, fullZoneName)
 				continue
 			}
 		}
 
+		// We need to iterate over all possible values of the remaining bits of the last half-octet
 		for i := 0; i < 1<<(4-leftoverBits); i++ {
 			zones = append(zones, fmt.Sprintf("%x.%s", i+int(subnetIP[fullPieces]&0xF), fullZoneName))
 		}
