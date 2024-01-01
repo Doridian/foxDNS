@@ -45,6 +45,7 @@ func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err erro
 
 func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
 	m := &dns.Msg{
+		Compress: true,
 		Question: []dns.Question{*q},
 		MsgHdr: dns.MsgHdr{
 			Id:               dns.Id(),
