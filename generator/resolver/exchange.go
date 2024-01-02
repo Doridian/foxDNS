@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"encoding/hex"
 	"log"
 	"time"
 
@@ -23,18 +24,9 @@ var (
 	}, []string{"server"})
 )
 
-func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err error) {
-	var info *connInfo
-	info, err = r.acquireConn()
-	server = info.server.Addr
-	if err != nil {
-		r.returnConn(info, err)
-		return
-	}
-
+func (r *Generator) exchange(info *connInfo, m *dns.Msg) (resp *dns.Msg, err error) {
 	startTime := time.Now()
 	resp, _, err = info.server.client.ExchangeWithConn(m, info.conn)
-	r.returnConn(info, err)
 
 	if err == nil {
 		duration := time.Since(startTime)
@@ -44,25 +36,37 @@ func (r *Generator) exchange(m *dns.Msg) (resp *dns.Msg, server string, err erro
 }
 
 func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
-	m := &dns.Msg{
-		Compress: true,
-		Question: []dns.Question{*q},
-		MsgHdr: dns.MsgHdr{
-			Id:               dns.Id(),
-			Opcode:           dns.OpcodeQuery,
-			RecursionDesired: true,
-		},
-	}
-
-	util.SetEDNS0(m, []dns.EDNS0{}, r.shouldPadLen)
-
-	var server string
+	var info *connInfo
 	for i := r.Retries; i > 0; i-- {
-		resp, server, err = r.exchange(m)
+		info, err = r.acquireConn()
 		if err == nil {
-			return
+			m := &dns.Msg{
+				Compress: true,
+				Question: []dns.Question{*q},
+				MsgHdr: dns.MsgHdr{
+					Opcode:           dns.OpcodeQuery,
+					RecursionDesired: true,
+				},
+			}
+
+			edns0Opts := make([]dns.EDNS0, 0, 1)
+			if !util.IsSecureProtocol(info.conn.RemoteAddr().Network()) {
+				edns0Opts = append(edns0Opts, &dns.EDNS0_COOKIE{
+					Code:   dns.EDNS0COOKIE,
+					Cookie: hex.EncodeToString(util.GenerateClientCookie(info.server.Addr)),
+				})
+			}
+			util.SetEDNS0(m, edns0Opts, r.shouldPadLen)
+
+			resp, err = r.exchange(info, m)
+			r.returnConn(info, err)
+			if err == nil {
+				return
+			}
+		} else {
+			r.returnConn(info, err)
 		}
-		upstreamQueryErrors.WithLabelValues(server).Inc()
+		upstreamQueryErrors.WithLabelValues(info.server.Addr).Inc()
 		time.Sleep(r.RetryWait)
 	}
 
@@ -71,7 +75,11 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 		if resp != nil {
 			rcodeStr = dns.RcodeToString[resp.Rcode]
 		}
-		log.Printf("Failed to resolve %s[%s] @%s: %v (%s)", q.Name, dns.TypeToString[q.Qtype], server, err, rcodeStr)
+		serverAddr := ""
+		if info != nil && info.server != nil {
+			serverAddr = info.server.Addr
+		}
+		log.Printf("Failed to resolve %s[%s] @%s: %v (%s)", q.Name, dns.TypeToString[q.Qtype], serverAddr, err, rcodeStr)
 	}
 
 	return

@@ -34,7 +34,7 @@ func getCookieSecret() []byte {
 }
 
 func generateCookie(data ...[]byte) []byte {
-	hash := crypto.SHA3_256.New()
+	hash := crypto.SHA256.New()
 	hash.Write(cookiePrefix)
 	for _, d := range data {
 		hash.Write(d)
@@ -46,16 +46,16 @@ func GenerateClientCookie(server string) []byte {
 	return generateCookie(clientCookiePrefix, []byte(server))[:8]
 }
 
-func GenerateServerCookie(wr dns.ResponseWriter) []byte {
+func GenerateServerCookie(clientCookie string, wr dns.ResponseWriter) []byte {
 	serverIp := ExtractIP(wr.LocalAddr())
 	clientIp := ExtractIP(wr.RemoteAddr())
-	return generateCookie(serverCookiePrefix, serverIp, clientIp)[:32]
+	return generateCookie(serverCookiePrefix, serverIp, clientIp, []byte(clientCookie))[:32]
 }
 
 func CheckClientCookie(server string, cookie []byte) bool {
 	return subtle.ConstantTimeCompare(cookie, GenerateClientCookie(server)) == 1
 }
 
-func CheckServerCookie(wr dns.ResponseWriter, cookie []byte) bool {
-	return subtle.ConstantTimeCompare(cookie, GenerateServerCookie(wr)) == 1
+func CheckServerCookie(wr dns.ResponseWriter, clientCookie string, cookie []byte) bool {
+	return subtle.ConstantTimeCompare(cookie, GenerateServerCookie(clientCookie, wr)) == 1
 }
