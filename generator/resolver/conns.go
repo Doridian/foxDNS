@@ -9,9 +9,10 @@ import (
 )
 
 type connInfo struct {
-	conn    *dns.Conn
-	server  *ServerConfig
-	lastUse time.Time
+	conn         *dns.Conn
+	server       *ServerConfig
+	serverCookie string
+	lastUse      time.Time
 }
 
 var (

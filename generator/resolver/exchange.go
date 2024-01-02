@@ -53,7 +53,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 			if !util.IsSecureProtocol(info.conn.RemoteAddr().Network()) {
 				edns0Opts = append(edns0Opts, &dns.EDNS0_COOKIE{
 					Code:   dns.EDNS0COOKIE,
-					Cookie: hex.EncodeToString(util.GenerateClientCookie(info.server.Addr)),
+					Cookie: hex.EncodeToString(util.GenerateClientCookie(info.server.Addr)) + info.serverCookie,
 				})
 			}
 			util.SetEDNS0(m, edns0Opts, r.shouldPadLen)
@@ -61,6 +61,21 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 			resp, err = r.exchange(info, m)
 			r.returnConn(info, err)
 			if err == nil {
+				if serverEDNS0 := resp.IsEdns0(); serverEDNS0 != nil {
+					for _, opt := range serverEDNS0.Option {
+						if opt.Option() != dns.EDNS0COOKIE {
+							continue
+						}
+						cookie, ok := opt.(*dns.EDNS0_COOKIE)
+						if !ok {
+							continue
+						}
+						if len(cookie.Cookie) < 32 {
+							continue
+						}
+						info.serverCookie = cookie.Cookie[16:] // hex encoded
+					}
+				}
 				return
 			}
 		} else {
