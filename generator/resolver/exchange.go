@@ -61,7 +61,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 			resp, err = r.exchange(info, m)
 			r.returnConn(info, err)
 			if err == nil {
-				if serverEDNS0 := resp.IsEdns0(); serverEDNS0 != nil {
+				if serverEDNS0 := resp.IsEdns0(); serverEDNS0 != nil && serverEDNS0.Version() == 0 {
 					for _, opt := range serverEDNS0.Option {
 						if opt.Option() != dns.EDNS0COOKIE {
 							continue
