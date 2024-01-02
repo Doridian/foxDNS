@@ -100,7 +100,6 @@ func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter,
 			continue
 		}
 
-		// TODO: Check sent server cookie here?
 		cookieOpt, ok := opt.(*dns.EDNS0_COOKIE)
 		if !ok {
 			continue
