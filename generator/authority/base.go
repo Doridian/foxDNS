@@ -7,22 +7,24 @@ import (
 )
 
 type AuthConfig struct {
-	Nameservers []string
-	Mbox        string
-	SOATtl      uint32
-	NSTtl       uint32
-	Serial      uint32
-	Refresh     uint32
-	Retry       uint32
-	Expire      uint32
-	Minttl      uint32
+	Nameservers   []string
+	Mbox          string
+	SOATtl        uint32
+	NSTtl         uint32
+	Serial        uint32
+	Refresh       uint32
+	Retry         uint32
+	Expire        uint32
+	Minttl        uint32
+	RequireCookie bool
 }
 
 type AuthorityHandler struct {
-	soa   []dns.RR
-	ns    []dns.RR
-	zone  string
-	Child simple.Handler
+	soa           []dns.RR
+	ns            []dns.RR
+	zone          string
+	RequireCookie bool
+	Child         simple.Handler
 }
 
 func GetDefaultAuthorityConfig() AuthConfig {
@@ -47,6 +49,7 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 	zone = dns.CanonicalName(zone)
 
 	hdl.zone = zone
+	hdl.RequireCookie = config.RequireCookie
 	hdl.ns = make([]dns.RR, 0, len(config.Nameservers))
 	hdl.soa = []dns.RR{
 		FillAuthHeader(&dns.SOA{
@@ -78,8 +81,14 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 	reply.SetRcode(msg, dns.RcodeSuccess)
 
+	ok, option := util.ApplyEDNS0ReplyEarly(msg, reply, wr, r.RequireCookie)
+	if !ok {
+		_ = wr.WriteMsg(reply)
+		return
+	}
+
 	defer func() {
-		util.ApplyEDNS0ReplyIfNeeded(msg, reply, []dns.EDNS0{}, wr)
+		util.ApplyEDNS0Reply(msg, reply, option, wr, r.RequireCookie)
 		_ = wr.WriteMsg(reply)
 	}()
 

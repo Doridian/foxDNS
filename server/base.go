@@ -81,7 +81,7 @@ func msgAcceptFunc(dh dns.Header) dns.MsgAcceptAction {
 		return dns.MsgRejectNotImplemented
 	}
 
-	if dh.Qdcount != 1 || dh.Ancount > 0 || dh.Nscount > 0 || dh.Arcount > 1 {
+	if dh.Qdcount != 1 || dh.Ancount > 0 || dh.Nscount > 0 || dh.Arcount > 2 {
 		return dns.MsgReject
 	}
 

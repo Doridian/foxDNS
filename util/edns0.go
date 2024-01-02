@@ -7,6 +7,10 @@ import (
 )
 
 func SetEDNS0(msg *dns.Msg, option []dns.EDNS0, paddingLen int) *dns.OPT {
+	if option == nil {
+		option = []dns.EDNS0{}
+	}
+
 	edns0 := &dns.OPT{
 		Hdr: dns.RR_Header{
 			Name:   ".",
@@ -42,42 +46,21 @@ func IsSecureProtocol(proto string) bool {
 	return secureProtocols[proto]
 }
 
-func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr dns.ResponseWriter) *dns.OPT {
+func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr dns.ResponseWriter, requireCookie bool) *dns.OPT {
 	queryEdns0 := query.IsEdns0()
 	if queryEdns0 == nil {
 		return nil
 	}
 
-	// TODO: Allow padding for UDP with COOKIE set?
-	paddingAllowed := IsSecureProtocol(wr.LocalAddr().Network())
+	paddingAllowed := requireCookie || IsSecureProtocol(wr.LocalAddr().Network())
 	clientRequestedPadding := false
 
-	if queryEdns0.Version() == 0 {
-		for _, opt := range queryEdns0.Option {
-			switch opt.Option() {
-			case dns.EDNS0PADDING:
-				clientRequestedPadding = true
-			case dns.EDNS0COOKIE:
-				cookieOpt, ok := opt.(*dns.EDNS0_COOKIE)
-				if !ok {
-					continue
-				}
-				if len(cookieOpt.Cookie) < 16 {
-					continue
-				}
-				clientCookie := cookieOpt.Cookie[:16] // hex encoded
-				option = append(option, &dns.EDNS0_COOKIE{
-					Code:   dns.EDNS0COOKIE,
-					Cookie: clientCookie + hex.EncodeToString(GenerateServerCookie(clientCookie, wr)),
-				})
-			}
+	for _, opt := range queryEdns0.Option {
+		if opt.Option() != dns.EDNS0PADDING {
+			continue
 		}
-	} else {
-		reply.Answer = []dns.RR{}
-		reply.Ns = []dns.RR{}
-		reply.Extra = []dns.RR{}
-		reply.Rcode = dns.RcodeBadVers
-		option = []dns.EDNS0{}
+		clientRequestedPadding = true
+		break
 	}
 
 	paddingLen := 0
@@ -85,4 +68,68 @@ func ApplyEDNS0ReplyIfNeeded(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0,
 		paddingLen = 468
 	}
 	return SetEDNS0(reply, option, paddingLen)
+}
+
+func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter, requireCookie bool) (bool, []dns.EDNS0) {
+	queryEdns0 := query.IsEdns0()
+	option := make([]dns.EDNS0, 0, 1)
+
+	if IsSecureProtocol(wr.LocalAddr().Network()) {
+		requireCookie = false
+	}
+
+	if queryEdns0 == nil {
+		if requireCookie {
+			reply.Rcode = dns.RcodeRefused
+			return false, nil
+		}
+		return true, nil
+	}
+
+	if queryEdns0.Version() != 0 {
+		reply.Rcode = dns.RcodeBadVers
+		SetEDNS0(reply, nil, 0)
+		return false, nil
+	}
+
+	var cookieMatch bool
+	var cookieFound bool
+
+	for _, opt := range queryEdns0.Option {
+		if opt.Option() != dns.EDNS0COOKIE {
+			continue
+		}
+
+		// TODO: Check sent server cookie here?
+		cookieOpt, ok := opt.(*dns.EDNS0_COOKIE)
+		if !ok {
+			continue
+		}
+		if len(cookieOpt.Cookie) < 16 {
+			continue
+		}
+
+		clientCookie := cookieOpt.Cookie[:16] // hex encoded
+		serverCookie := hex.EncodeToString(GenerateServerCookie(clientCookie, wr))
+
+		cookieFound = true
+		cookieMatch = cookieOpt.Cookie[16:] == serverCookie
+		option = append(option, &dns.EDNS0_COOKIE{
+			Code:   dns.EDNS0COOKIE,
+			Cookie: clientCookie + serverCookie,
+		})
+		break
+	}
+
+	if requireCookie && !cookieMatch {
+		if cookieFound {
+			reply.Rcode = dns.RcodeBadCookie
+		} else {
+			reply.Rcode = dns.RcodeRefused
+		}
+		SetEDNS0(reply, option, 0)
+		return false, option
+	}
+
+	return true, option
 }

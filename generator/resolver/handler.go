@@ -17,12 +17,18 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		_ = wr.WriteMsg(reply.SetRcode(msg, dns.RcodeRefused))
 		return
 	}
+	reply.SetRcode(msg, dns.RcodeServerFailure)
+
+	ok, option := util.ApplyEDNS0ReplyEarly(msg, reply, wr, r.RequireCookie)
+	if !ok {
+		_ = wr.WriteMsg(reply)
+		return
+	}
 
 	var recursionReplyEdns0 *dns.OPT
 
-	reply.SetRcode(msg, dns.RcodeServerFailure)
 	defer func() {
-		replyEdns0 := util.ApplyEDNS0ReplyIfNeeded(msg, reply, []dns.EDNS0{}, wr)
+		replyEdns0 := util.ApplyEDNS0Reply(msg, reply, option, wr, r.RequireCookie)
 		if replyEdns0 != nil && recursionReplyEdns0 != nil && recursionReplyEdns0.Version() == 0 {
 			replyEdns0.SetDo(recursionReplyEdns0.Do())
 		}

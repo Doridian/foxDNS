@@ -6,8 +6,9 @@ import (
 )
 
 type Generator struct {
-	zone  string
-	Child Handler
+	zone          string
+	Child         Handler
+	RequireCookie bool
 }
 
 func New(zone string) *Generator {
@@ -27,8 +28,14 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 	reply.SetRcode(msg, dns.RcodeSuccess)
 
+	ok, option := util.ApplyEDNS0ReplyEarly(msg, reply, wr, r.RequireCookie)
+	if !ok {
+		_ = wr.WriteMsg(reply)
+		return
+	}
+
 	defer func() {
-		util.ApplyEDNS0ReplyIfNeeded(msg, reply, []dns.EDNS0{}, wr)
+		util.ApplyEDNS0Reply(msg, reply, option, wr, r.RequireCookie)
 		_ = wr.WriteMsg(reply)
 	}()
 

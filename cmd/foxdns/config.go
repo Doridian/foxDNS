@@ -8,15 +8,16 @@ import (
 )
 
 type YAMLAuthorityConfig struct {
-	NameServers []string      `yaml:"nameservers"`
-	Mailbox     string        `yaml:"mailbox"`
-	SOATtl      time.Duration `yaml:"soa-ttl"`
-	NSTtl       time.Duration `yaml:"ns-ttl"`
-	Serial      uint32        `yaml:"serial"`
-	Refresh     time.Duration `yaml:"refresh"`
-	Retry       time.Duration `yaml:"retry"`
-	Expire      time.Duration `yaml:"expire"`
-	Minttl      time.Duration `yaml:"minttl"`
+	NameServers   []string      `yaml:"nameservers"`
+	Mailbox       string        `yaml:"mailbox"`
+	SOATtl        time.Duration `yaml:"soa-ttl"`
+	NSTtl         time.Duration `yaml:"ns-ttl"`
+	Serial        uint32        `yaml:"serial"`
+	Refresh       time.Duration `yaml:"refresh"`
+	Retry         time.Duration `yaml:"retry"`
+	Expire        time.Duration `yaml:"expire"`
+	Minttl        time.Duration `yaml:"minttl"`
+	RequireCookie bool          `yaml:"require-cookie"`
 }
 
 type Config struct {
@@ -39,12 +40,11 @@ type Config struct {
 	Resolvers []struct {
 		Zone        string `yaml:"zone"`
 		NameServers []struct {
-			Addr       string `yaml:"addr"`
-			Proto      string `yaml:"proto"`
-			ServerName string `yaml:"server-name"`
+			Addr          string `yaml:"addr"`
+			Proto         string `yaml:"proto"`
+			ServerName    string `yaml:"server-name"`
+			RequireCookie bool   `yaml:"require-cookie"`
 		} `yaml:"nameservers"`
-
-		ServerName string `yaml:"server-name"`
 
 		MaxConnections int           `yaml:"max-connections"`
 		MaxIdleTime    time.Duration `yaml:"max-idle-time"`
@@ -52,6 +52,7 @@ type Config struct {
 		RetryWait      time.Duration `yaml:"retry-wait"`
 		Timeout        time.Duration `yaml:"timeout"`
 		LogFailures    bool          `yaml:"log-failures"`
+		RequireCookie  bool          `yaml:"require-cookie"`
 
 		CacheSize                 int           `yaml:"cache-size"`
 		CacheMaxTime              time.Duration `yaml:"cache-max-time"`
@@ -76,7 +77,8 @@ type Config struct {
 		AuthorityConfig *YAMLAuthorityConfig `yaml:"authority-config"`
 	} `yaml:"localizers"`
 
-	StaticZones map[string]string `yaml:"static-zones"`
+	StaticZonesRequireCookie bool              `yaml:"static-zones-require-cookie"`
+	StaticZones              map[string]string `yaml:"static-zones"`
 }
 
 func LoadConfig(file string) *Config {

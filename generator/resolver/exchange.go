@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"encoding/hex"
+	"errors"
 	"log"
 	"time"
 
@@ -35,55 +36,95 @@ func (r *Generator) exchange(info *connInfo, m *dns.Msg) (resp *dns.Msg, err err
 	return
 }
 
+var ErrCookieMismatch = errors.New("client cookie returned from server invalid")
+
 func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
 	var info *connInfo
+	var keepConn bool = false
+
 	for i := r.Retries; i > 0; i-- {
-		info, err = r.acquireConn()
-		if err == nil {
-			m := &dns.Msg{
-				Compress: true,
-				Question: []dns.Question{*q},
-				MsgHdr: dns.MsgHdr{
-					Opcode:           dns.OpcodeQuery,
-					RecursionDesired: true,
-				},
-			}
-
-			edns0Opts := make([]dns.EDNS0, 0, 1)
-			if !util.IsSecureProtocol(info.conn.RemoteAddr().Network()) {
-				edns0Opts = append(edns0Opts, &dns.EDNS0_COOKIE{
-					Code:   dns.EDNS0COOKIE,
-					Cookie: hex.EncodeToString(util.GenerateClientCookie(info.server.Addr)) + info.serverCookie,
-				})
-			}
-			util.SetEDNS0(m, edns0Opts, r.shouldPadLen)
-
-			resp, err = r.exchange(info, m)
+		if info != nil && !keepConn {
 			r.returnConn(info, err)
-			if err == nil {
-				if serverEDNS0 := resp.IsEdns0(); serverEDNS0 != nil && serverEDNS0.Version() == 0 {
-					for _, opt := range serverEDNS0.Option {
-						if opt.Option() != dns.EDNS0COOKIE {
-							continue
-						}
-						cookie, ok := opt.(*dns.EDNS0_COOKIE)
-						if !ok {
-							continue
-						}
-						if len(cookie.Cookie) < 32 {
-							continue
-						}
-						info.serverCookie = cookie.Cookie[16:] // hex encoded
-					}
-				}
-				return
-			}
-		} else {
-			r.returnConn(info, err)
+			upstreamQueryErrors.WithLabelValues(info.server.Addr).Inc()
+			info = nil
+			err = nil
+			time.Sleep(r.RetryWait)
 		}
-		upstreamQueryErrors.WithLabelValues(info.server.Addr).Inc()
-		time.Sleep(r.RetryWait)
+
+		keepConn = false
+		if info == nil {
+			info, err = r.acquireConn()
+		}
+
+		if err != nil {
+			continue
+		}
+
+		m := &dns.Msg{
+			Compress: true,
+			Question: []dns.Question{*q},
+			MsgHdr: dns.MsgHdr{
+				Opcode:           dns.OpcodeQuery,
+				RecursionDesired: true,
+			},
+		}
+
+		clientCookie := hex.EncodeToString(util.GenerateClientCookie(info.server.Addr))
+
+		edns0Opts := make([]dns.EDNS0, 0, 1)
+		if info.server.RequireCookie || !util.IsSecureProtocol(info.conn.RemoteAddr().Network()) {
+			edns0Opts = append(edns0Opts, &dns.EDNS0_COOKIE{
+				Code:   dns.EDNS0COOKIE,
+				Cookie: clientCookie + info.serverCookie,
+			})
+		}
+		util.SetEDNS0(m, edns0Opts, r.shouldPadLen)
+
+		resp, err = r.exchange(info, m)
+		if err != nil {
+			continue
+		}
+		if resp == nil {
+			err = errors.New("nil response")
+			continue
+		}
+
+		cookieMatch := false
+		if serverEDNS0 := resp.IsEdns0(); serverEDNS0 != nil && serverEDNS0.Version() == 0 {
+			for _, opt := range serverEDNS0.Option {
+				if opt.Option() != dns.EDNS0COOKIE {
+					continue
+				}
+				cookie, ok := opt.(*dns.EDNS0_COOKIE)
+				if !ok {
+					continue
+				}
+				if len(cookie.Cookie) < 32 {
+					continue
+				}
+
+				if cookie.Cookie[:16] == clientCookie {
+					info.serverCookie = cookie.Cookie[16:] // hex encoded
+					cookieMatch = true
+				}
+			}
+		}
+
+		if !cookieMatch && info.server.RequireCookie {
+			err = ErrCookieMismatch
+			continue
+		}
+
+		if resp.Rcode == dns.RcodeBadCookie {
+			keepConn = true
+			continue
+		}
+
+		r.returnConn(info, nil)
+		return
 	}
+
+	r.returnConn(info, err)
 
 	if r.LogFailures && (err != nil || resp == nil || resp.Rcode == dns.RcodeServerFailure) {
 		rcodeStr := ""

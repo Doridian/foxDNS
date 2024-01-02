@@ -65,6 +65,10 @@ func mergeAuthorityConfig(config *YAMLAuthorityConfig, base authority.AuthConfig
 		base.Minttl = uint32(config.Minttl.Seconds())
 	}
 
+	if config.RequireCookie {
+		base.RequireCookie = true
+	}
+
 	return base
 }
 
@@ -129,9 +133,10 @@ func reloadConfig() {
 		nameServers := make([]*resolver.ServerConfig, len(resolvConf.NameServers))
 		for i, ns := range resolvConf.NameServers {
 			nameServers[i] = &resolver.ServerConfig{
-				Addr:       ns.Addr,
-				Proto:      ns.Proto,
-				ServerName: ns.ServerName,
+				Addr:          ns.Addr,
+				Proto:         ns.Proto,
+				ServerName:    ns.ServerName,
+				RequireCookie: ns.RequireCookie,
 			}
 		}
 
@@ -201,6 +206,8 @@ func reloadConfig() {
 			resolv.OpportunisticCacheMaxTimeLeft = resolvConf.OpportunisticCacheMaxTimeLef
 		}
 
+		resolv.RequireCookie = resolvConf.RequireCookie
+
 		mux.Handle(resolvConf.Zone, resolv)
 
 		log.Printf("Resolver enabled for zone %s (only private clients: %v)", resolvConf.Zone, resolv.AllowOnlyFromPrivate)
@@ -241,6 +248,7 @@ func reloadConfig() {
 			}
 
 			statAuth := simple.New(statName)
+			statAuth.RequireCookie = config.StaticZonesRequireCookie
 			generators = append(generators, statAuth)
 			statAuth.Child = stat
 			statAuth.Register(mux)

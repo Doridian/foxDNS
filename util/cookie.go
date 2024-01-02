@@ -3,7 +3,6 @@ package util
 import (
 	"crypto"
 	"crypto/rand"
-	"crypto/subtle"
 	"sync"
 	"time"
 
@@ -49,13 +48,5 @@ func GenerateClientCookie(server string) []byte {
 func GenerateServerCookie(clientCookie string, wr dns.ResponseWriter) []byte {
 	serverIp := ExtractIP(wr.LocalAddr())
 	clientIp := ExtractIP(wr.RemoteAddr())
-	return generateCookie(serverCookiePrefix, serverIp, clientIp, []byte(clientCookie))[:32]
-}
-
-func CheckClientCookie(server string, cookie []byte) bool {
-	return subtle.ConstantTimeCompare(cookie, GenerateClientCookie(server)) == 1
-}
-
-func CheckServerCookie(wr dns.ResponseWriter, clientCookie string, cookie []byte) bool {
-	return subtle.ConstantTimeCompare(cookie, GenerateServerCookie(clientCookie, wr)) == 1
+	return generateCookie(serverCookiePrefix, serverIp, clientIp, []byte(clientCookie))[:8]
 }

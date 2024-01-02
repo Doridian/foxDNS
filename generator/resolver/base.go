@@ -12,10 +12,11 @@ import (
 )
 
 type ServerConfig struct {
-	Addr       string
-	Proto      string
-	ServerName string
-	client     *dns.Client
+	Addr          string
+	Proto         string
+	ServerName    string
+	RequireCookie bool
+	client        *dns.Client
 }
 
 type Generator struct {
@@ -26,6 +27,7 @@ type Generator struct {
 	Retries        int
 	RetryWait      time.Duration
 	LogFailures    bool
+	RequireCookie  bool
 
 	AllowOnlyFromPrivate bool
 
@@ -65,7 +67,7 @@ func New(servers []*ServerConfig) *Generator {
 		MaxIdleTime:          time.Second * 15,
 		Retries:              3,
 		AllowOnlyFromPrivate: true,
-		RetryWait:            time.Second,
+		RetryWait:            time.Millisecond * 100,
 		LogFailures:          false,
 
 		CacheMaxTTL:               3600,
