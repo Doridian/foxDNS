@@ -11,7 +11,7 @@ import (
 type connInfo struct {
 	conn         *dns.Conn
 	server       *ServerConfig
-	serverCookie string
+	serverCookie []byte
 	lastUse      time.Time
 }
 
@@ -45,7 +45,8 @@ func (r *Generator) acquireConn() (info *connInfo, err error) {
 
 			r.connCond.L.Unlock()
 			info = &connInfo{
-				server: srv,
+				server:       srv,
+				serverCookie: []byte{},
 			}
 			info.conn, err = srv.client.Dial(srv.Addr)
 			return

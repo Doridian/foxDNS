@@ -108,14 +108,25 @@ func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter,
 			continue
 		}
 
-		clientCookie := cookieOpt.Cookie[:16] // hex encoded
-		serverCookie := hex.EncodeToString(GenerateServerCookie(clientCookie, wr))
+		binaryCookie, err := hex.DecodeString(cookieOpt.Cookie)
+		if err != nil || binaryCookie == nil {
+			continue
+		}
+
+		clientCookie := binaryCookie[:8]
+		receivedServerCookie := binaryCookie[8:]
+
+		generatedServerCookie := GenerateServerCookie(false, clientCookie, wr)
+		cookieMatch = CookieCompare(receivedServerCookie, generatedServerCookie)
+		if !cookieMatch { // If no match, try previous cookie
+			generatedServerCookie = GenerateServerCookie(true, clientCookie, wr)
+			cookieMatch = CookieCompare(receivedServerCookie, generatedServerCookie)
+		}
 
 		cookieFound = true
-		cookieMatch = cookieOpt.Cookie[16:] == serverCookie
 		option = append(option, &dns.EDNS0_COOKIE{
 			Code:   dns.EDNS0COOKIE,
-			Cookie: clientCookie + serverCookie,
+			Cookie: hex.EncodeToString(append(clientCookie, generatedServerCookie...)),
 		})
 		break
 	}

@@ -69,13 +69,18 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 			},
 		}
 
-		clientCookie := hex.EncodeToString(util.GenerateClientCookie(info.server.Addr))
+		// We never need the previous cookie here as we just compare generated vs returned
+		clientCookie := util.GenerateClientCookie(false, info.server.Addr)
+		if clientCookie == nil {
+			err = errors.New("failed to generate client cookie")
+			continue
+		}
 
 		edns0Opts := make([]dns.EDNS0, 0, 1)
 		if info.server.RequireCookie || !util.IsSecureProtocol(info.conn.RemoteAddr().Network()) {
 			edns0Opts = append(edns0Opts, &dns.EDNS0_COOKIE{
 				Code:   dns.EDNS0COOKIE,
-				Cookie: clientCookie + info.serverCookie,
+				Cookie: hex.EncodeToString(append(clientCookie, info.serverCookie...)),
 			})
 		}
 		util.SetEDNS0(m, edns0Opts, r.shouldPadLen)
@@ -95,16 +100,21 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 				if opt.Option() != dns.EDNS0COOKIE {
 					continue
 				}
-				cookie, ok := opt.(*dns.EDNS0_COOKIE)
+				cookieOpt, ok := opt.(*dns.EDNS0_COOKIE)
 				if !ok {
 					continue
 				}
-				if len(cookie.Cookie) < 32 {
+				if len(cookieOpt.Cookie) < 32 {
 					continue
 				}
 
-				if cookie.Cookie[:16] == clientCookie {
-					info.serverCookie = cookie.Cookie[16:] // hex encoded
+				binaryCookie, err := hex.DecodeString(cookieOpt.Cookie)
+				if err != nil || binaryCookie == nil {
+					continue
+				}
+
+				if util.CookieCompare(binaryCookie[:8], clientCookie) {
+					info.serverCookie = binaryCookie[8:]
 					cookieMatch = true
 				}
 			}
