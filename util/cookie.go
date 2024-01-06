@@ -41,7 +41,7 @@ func getCookieSecret(previous bool) []byte {
 	return currentCookieSecret
 }
 
-func generateCookie(previous bool, data ...[]byte) []byte {
+func generateCookie(previous bool, len int, data ...[]byte) []byte {
 	hash := crypto.SHA256.New()
 	cookieSecret := getCookieSecret(previous)
 	if cookieSecret == nil {
@@ -52,21 +52,21 @@ func generateCookie(previous bool, data ...[]byte) []byte {
 	for _, d := range data {
 		hash.Write(d)
 	}
-	return hash.Sum(cookieSecret[32:64])
+	return hash.Sum(cookieSecret[32:64])[:len]
 }
 
 func GenerateClientCookie(previous bool, server string) []byte {
-	return generateCookie(previous, clientCookiePrefix, []byte(server))[:8]
+	return generateCookie(previous, 8, clientCookiePrefix, []byte(server))
 }
 
 func GenerateServerCookie(previous bool, clientCookie []byte, wr dns.ResponseWriter) []byte {
 	serverIp := ExtractIP(wr.LocalAddr())
 	clientIp := ExtractIP(wr.RemoteAddr())
-	return generateCookie(previous, serverCookiePrefix, serverIp, clientIp, clientCookie)[:8]
+	return generateCookie(previous, 8, serverCookiePrefix, serverIp, clientIp, clientCookie)
 }
 
 func CookieCompare(a []byte, b []byte) bool {
-	if a == nil || b == nil {
+	if a == nil || b == nil || len(a) == 0 || len(b) == 0 {
 		return false
 	}
 	return subtle.ConstantTimeCompare(a, b) == 1
