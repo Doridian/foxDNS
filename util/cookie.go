@@ -9,10 +9,9 @@ import (
 	"github.com/miekg/dns"
 )
 
-var currentCookieSecret = make([]byte, 16)
+var currentCookieSecret = make([]byte, 64)
 var currentCookieSecretTime time.Time
 var currentCookieSecretWriteLock sync.Mutex
-var cookiePrefix = []byte("foxDNS")
 var clientCookiePrefix = []byte("client")
 var serverCookiePrefix = []byte("server")
 
@@ -34,11 +33,12 @@ func getCookieSecret() []byte {
 
 func generateCookie(data ...[]byte) []byte {
 	hash := crypto.SHA256.New()
-	hash.Write(cookiePrefix)
+	cookieSecret := getCookieSecret()
+	hash.Write(cookieSecret[0:32])
 	for _, d := range data {
 		hash.Write(d)
 	}
-	return hash.Sum(getCookieSecret())
+	return hash.Sum(cookieSecret[32:64])
 }
 
 func GenerateClientCookie(server string) []byte {
