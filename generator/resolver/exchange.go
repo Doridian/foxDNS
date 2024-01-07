@@ -110,7 +110,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 					continue
 				}
 
-				if len(cookieOpt.Cookie) < util.ClientCookieLength+util.MinServerCookieLength {
+				if len(binaryCookie) < util.ClientCookieLength+util.MinServerCookieLength {
 					continue
 				}
 
