@@ -117,9 +117,7 @@ func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter,
 		clientCookie := binaryCookie[:ClientCookieLength]
 		generatedServerCookie := GenerateServerCookie(false, clientCookie, wr)
 
-		if len(binaryCookie) != ClientCookieLength+ServerCookieLength {
-			cookieMatch = false
-		} else {
+		if len(binaryCookie) == ClientCookieLength+ServerCookieLength {
 			receivedServerCookie := binaryCookie[ClientCookieLength:]
 
 			cookieMatch = CookieCompare(receivedServerCookie, generatedServerCookie)
