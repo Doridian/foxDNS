@@ -92,8 +92,8 @@ func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter,
 		return false, nil
 	}
 
-	var cookieMatch bool
-	var cookieFound bool
+	cookieMatch := false
+	cookieFound := false
 
 	for _, opt := range queryEdns0.Option {
 		if opt.Option() != dns.EDNS0COOKIE {
