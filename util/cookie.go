@@ -19,6 +19,13 @@ var serverCookiePrefix = []byte("server")
 
 const cookieRotationTime = time.Minute * 30
 
+// These are specified by DNS and not adjustable
+const ClientCookieLength = 8
+const MinServerCookieLength = 8
+
+// This length can be adjusted between 8 and 32
+const ServerCookieLength = 8
+
 func getCookieSecret(previous bool) []byte {
 	cookieSecretTimeCache := currentCookieSecretTime
 	if time.Since(cookieSecretTimeCache) > cookieRotationTime {
@@ -56,13 +63,13 @@ func generateCookie(previous bool, len int, data ...[]byte) []byte {
 }
 
 func GenerateClientCookie(previous bool, server string) []byte {
-	return generateCookie(previous, 8, clientCookiePrefix, []byte(server))
+	return generateCookie(previous, ClientCookieLength, clientCookiePrefix, []byte(server))
 }
 
 func GenerateServerCookie(previous bool, clientCookie []byte, wr dns.ResponseWriter) []byte {
 	serverIp := ExtractIP(wr.LocalAddr())
 	clientIp := ExtractIP(wr.RemoteAddr())
-	return generateCookie(previous, 8, serverCookiePrefix, serverIp, clientIp, clientCookie)
+	return generateCookie(previous, ServerCookieLength, serverCookiePrefix, serverIp, clientIp, clientCookie)
 }
 
 func CookieCompare(a []byte, b []byte) bool {

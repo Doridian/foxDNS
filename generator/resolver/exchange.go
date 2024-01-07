@@ -104,17 +104,18 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 				if !ok {
 					continue
 				}
-				if len(cookieOpt.Cookie) < 32 {
-					continue
-				}
 
 				binaryCookie, err := hex.DecodeString(cookieOpt.Cookie)
 				if err != nil || binaryCookie == nil {
 					continue
 				}
 
-				if util.CookieCompare(binaryCookie[:8], clientCookie) {
-					info.serverCookie = binaryCookie[8:]
+				if len(cookieOpt.Cookie) < util.ClientCookieLength+util.MinServerCookieLength {
+					continue
+				}
+
+				if util.CookieCompare(binaryCookie[:util.ClientCookieLength], clientCookie) {
+					info.serverCookie = binaryCookie[util.ClientCookieLength:]
 					cookieMatch = true
 				}
 			}
