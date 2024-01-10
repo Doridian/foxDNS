@@ -55,7 +55,7 @@ var (
 	cacheHitsAtAgeOutHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "foxdns_resolver_cache_hits_at_age_out",
 		Help:    "Number of cache hits for DNS cache entries at age out",
-		Buckets: []float64{1, 2, 3, 4, 5, 10, 20, 50, 100},
+		Buckets: []float64{0, 1, 2, 3, 4, 5, 10, 20, 50, 100},
 	})
 )
 
