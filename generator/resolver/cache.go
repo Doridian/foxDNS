@@ -23,7 +23,7 @@ type cacheEntry struct {
 	refreshTriggered bool
 }
 
-var ErrCantBypassCacheDuringRefetch = fmt.Errorf("can't bypass cache during refetch")
+var ErrNoRefreshCacheDuringRefetch = fmt.Errorf("unnecessary to refresh cache during refetch")
 
 var (
 	cacheResults = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -86,11 +86,11 @@ func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
 	return msg, nil
 }
 
-func (r *Generator) getOrAddCacheInt(q *dns.Question, bypassCache bool, incrementHits uint64) (string, string, *dns.Msg, error) {
+func (r *Generator) getOrAddCacheInt(q *dns.Question, isCacheRefresh bool, incrementHits uint64) (string, string, *dns.Msg, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
-	if !bypassCache {
+	if !isCacheRefresh {
 		msg, matchType := r.getFromCache(key, keyDomain, q, incrementHits)
 		if msg != nil {
 			return "hit", matchType, msg, nil
@@ -104,8 +104,8 @@ func (r *Generator) getOrAddCacheInt(q *dns.Question, bypassCache bool, incremen
 	cacheLockWG := cacheLock.(*sync.WaitGroup)
 
 	if loaded {
-		if bypassCache {
-			return "", "", nil, ErrCantBypassCacheDuringRefetch
+		if isCacheRefresh {
+			return "", "", nil, ErrNoRefreshCacheDuringRefetch
 		}
 
 		cacheLockWG.Wait()
