@@ -59,11 +59,12 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 	q.Name = dns.CanonicalName(q.Name)
 
-	recursionReply, err := r.getOrAddCache(q)
+	cacheResult, matchType, recursionReply, err := r.getOrAddCache(q, false, 1)
 	if err != nil {
 		log.Printf("Error handling DNS request: %v", err)
 		return
 	}
+	cacheResults.WithLabelValues(cacheResult, matchType).Inc()
 
 	reply.Rcode = recursionReply.Rcode
 	reply.Answer = recursionReply.Answer

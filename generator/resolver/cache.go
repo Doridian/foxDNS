@@ -77,16 +77,7 @@ func cacheKeyDomain(q *dns.Question) string {
 	return fmt.Sprintf("%s:ANY", q.Name)
 }
 
-func (r *Generator) getOrAddCache(q *dns.Question) (*dns.Msg, error) {
-	cacheResult, matchType, msg, err := r.getOrAddCacheInt(q, false, 1)
-	if err != nil {
-		return nil, err
-	}
-	cacheResults.WithLabelValues(cacheResult, matchType).Inc()
-	return msg, nil
-}
-
-func (r *Generator) getOrAddCacheInt(q *dns.Question, isCacheRefresh bool, incrementHits uint64) (string, string, *dns.Msg, error) {
+func (r *Generator) getOrAddCache(q *dns.Question, isCacheRefresh bool, incrementHits uint64) (string, string, *dns.Msg, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
@@ -208,7 +199,7 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question, 
 	if (entryExpiresIn <= 0 || (entryHits >= r.OpportunisticCacheMinHits && entryExpiresIn <= r.OpportunisticCacheMaxTimeLeft)) && !entry.refreshTriggered {
 		entry.refreshTriggered = true
 		go func() {
-			_, _, _, _ = r.getOrAddCacheInt(q, true, 0)
+			_, _, _, _ = r.getOrAddCache(q, true, 0)
 		}()
 	}
 
