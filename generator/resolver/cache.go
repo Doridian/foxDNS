@@ -55,7 +55,7 @@ var (
 	cacheHitsAtAgeOutHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "foxdns_resolver_cache_hits_at_age_out",
 		Help:    "Number of cache hits for DNS cache entries at age out",
-		Buckets: []float64{1, 2, 3, 4, 5, 10, 20, 50, 100},
+		Buckets: []float64{0, 1, 2, 3, 4, 5, 10, 20, 50, 100},
 	})
 )
 
@@ -75,14 +75,16 @@ func cacheKeyDomain(q *dns.Question) string {
 	return fmt.Sprintf("%s:ANY", q.Name)
 }
 
-func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg, error) {
+func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool, isReturned bool) (*dns.Msg, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
 	if !forceRequery {
-		msg, matchType := r.getFromCache(key, keyDomain, q)
+		msg, matchType := r.getFromCache(key, keyDomain, q, isReturned)
 		if msg != nil {
-			cacheResults.WithLabelValues("hit", matchType).Inc()
+			if isReturned {
+				cacheResults.WithLabelValues("hit", matchType).Inc()
+			}
 			return msg, nil
 		}
 	}
@@ -100,10 +102,12 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 
 		cacheLockWG.Wait()
 
-		msg, matchType := r.getFromCache(key, keyDomain, q)
+		msg, matchType := r.getFromCache(key, keyDomain, q, isReturned)
 		if msg != nil {
 			// Can't be hit when forceRequery is true
-			cacheResults.WithLabelValues("wait", matchType).Inc()
+			if isReturned {
+				cacheResults.WithLabelValues("wait", matchType).Inc()
+			}
 			return msg, nil
 		}
 	} else {
@@ -115,8 +119,8 @@ func (r *Generator) getOrAddCache(q *dns.Question, forceRequery bool) (*dns.Msg,
 		return nil, err
 	}
 
-	matchType := r.processAndWriteToCache(key, keyDomain, q, msg)
-	if !forceRequery {
+	matchType := r.processAndWriteToCache(key, keyDomain, q, msg, isReturned)
+	if isReturned {
 		cacheResults.WithLabelValues("miss", matchType).Inc()
 	}
 	return msg, nil
@@ -173,7 +177,7 @@ func (r *Generator) adjustRecordTTL(rr dns.RR) (*dns.RR_Header, int) {
 	return rrHdr, int(origTtl)
 }
 
-func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) (*dns.Msg, string) {
+func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question, isReturned bool) (*dns.Msg, string) {
 	entry, ok := r.cache.Get(key)
 	matchType := "exact"
 	if !ok {
@@ -198,13 +202,15 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 		cacheStaleHits.Observe(float64(-entryExpiresIn.Seconds()))
 	}
 
-	entryHits := entry.hits.Add(1)
+	if isReturned {
+		entryHits := entry.hits.Add(1)
 
-	if (entryExpiresIn <= 0 || (entryHits >= r.OpportunisticCacheMinHits && entryExpiresIn <= r.OpportunisticCacheMaxTimeLeft)) && !entry.refreshTriggered {
-		entry.refreshTriggered = true
-		go func() {
-			_, _ = r.getOrAddCache(q, true)
-		}()
+		if (entryExpiresIn <= 0 || (entryHits >= r.OpportunisticCacheMinHits && entryExpiresIn <= r.OpportunisticCacheMaxTimeLeft)) && !entry.refreshTriggered {
+			entry.refreshTriggered = true
+			go func() {
+				_, _ = r.getOrAddCache(q, true, false)
+			}()
+		}
 	}
 
 	ttlAdjust := uint32(now.Sub(entry.time).Seconds())
@@ -223,7 +229,7 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question) 
 	return msg, matchType
 }
 
-func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg) string {
+func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg, isReturned bool) string {
 	minTTL := -1
 	cacheTTL := -1
 	authTTL := -1
@@ -285,7 +291,11 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 		qclass: q.Qclass,
 		msg:    m,
 	}
-	entry.hits.Store(1)
+	if isReturned {
+		entry.hits.Store(1)
+	} else {
+		entry.hits.Store(0)
+	}
 
 	matchType := "exact"
 	if m.Rcode == dns.RcodeNameError {
