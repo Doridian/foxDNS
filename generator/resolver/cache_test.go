@@ -8,15 +8,16 @@ import (
 	"github.com/Doridian/foxDNS/generator"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
-	"github.com/tkuchiki/faketime"
 )
 
 func TestExistingRecordWithCache(t *testing.T) {
 	emptyZoneHandler := loadSimpleZone(emptyZone)
 
 	timeBegin := time.Now()
-	fakedTime := faketime.NewFaketimeWithTime(timeBegin)
-	fakedTime.Do()
+	fakedTime := timeBegin
+	resolverGenerator.CurrentTime = func() time.Time {
+		return fakedTime
+	}
 
 	testWriter := &generator.TestResponseWriter{}
 	qmsg := &dns.Msg{
@@ -49,11 +50,8 @@ func TestExistingRecordWithCache(t *testing.T) {
 	// Empty out zone such that any returned A record must come from cache
 	dummyServer.SetHandler(emptyZoneHandler)
 
-	fakedTime.Undo()
-
-	// Fake time 0.1 seconds ahead to test TTL countdown not tripping just yet
-	fakedTime = faketime.NewFaketimeWithTime(timeBegin.Add(800 * time.Millisecond))
-	fakedTime.Do()
+	// Fake time 0.8 seconds ahead to test TTL countdown not tripping just yet
+	fakedTime = timeBegin.Add(800 * time.Millisecond)
 
 	testWriter = &generator.TestResponseWriter{}
 	resolverGenerator.ServeDNS(testWriter, qmsg)
@@ -74,11 +72,8 @@ func TestExistingRecordWithCache(t *testing.T) {
 	}, testWriter.LastMsg.Answer)
 	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Ns)
 
-	fakedTime.Undo()
-
 	// Fake time 3.1 seconds ahead to test TTL countdown
-	fakedTime = faketime.NewFaketimeWithTime(timeBegin.Add(3100 * time.Millisecond))
-	fakedTime.Do()
+	fakedTime = timeBegin.Add(3100 * time.Millisecond)
 
 	testWriter = &generator.TestResponseWriter{}
 	resolverGenerator.ServeDNS(testWriter, qmsg)
@@ -99,11 +94,8 @@ func TestExistingRecordWithCache(t *testing.T) {
 	}, testWriter.LastMsg.Answer)
 	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Ns)
 
-	fakedTime.Undo()
-
 	// Fake time 6 secodns ahead to force record to be uncached
-	fakedTime = faketime.NewFaketimeWithTime(timeBegin.Add(6 * time.Second))
-	fakedTime.Do()
+	fakedTime = timeBegin.Add(6 * time.Second)
 
 	testWriter = &generator.TestResponseWriter{}
 	resolverGenerator.ServeDNS(testWriter, qmsg)
@@ -130,5 +122,5 @@ func TestExistingRecordWithCache(t *testing.T) {
 		},
 	}, testWriter.LastMsg.Ns)
 
-	fakedTime.Undo()
+	resolverGenerator.CurrentTime = time.Now
 }

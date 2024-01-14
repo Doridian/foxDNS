@@ -3,6 +3,7 @@ package resolver_test
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/Doridian/foxDNS/generator"
 	"github.com/Doridian/foxDNS/generator/resolver"
@@ -36,6 +37,7 @@ func initTests() {
 		dummyServer.SetHandler(simpleHandler)
 		resolverGenerator.FlushCache()
 		resolverGenerator.AllowOnlyFromPrivate = false
+		resolverGenerator.CurrentTime = time.Now
 		return
 	}
 
