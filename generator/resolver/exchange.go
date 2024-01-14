@@ -26,7 +26,7 @@ var (
 )
 
 func (r *Generator) exchange(info *connInfo, m *dns.Msg) (resp *dns.Msg, err error) {
-	startTime := time.Now()
+	startTime := r.CurrentTime()
 	resp, _, err = info.server.client.ExchangeWithConn(m, info.conn)
 
 	if err == nil {

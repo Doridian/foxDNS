@@ -65,7 +65,7 @@ func (r *Generator) returnConn(info *connInfo, err error) {
 	defer r.connCond.L.Unlock()
 
 	if err == nil {
-		info.lastUse = time.Now()
+		info.lastUse = r.CurrentTime()
 		r.freeConnections.PushFront(info)
 	} else {
 		r.connections--

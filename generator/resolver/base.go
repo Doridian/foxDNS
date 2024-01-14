@@ -44,6 +44,8 @@ type Generator struct {
 	CacheStaleEntryKeepPeriod time.Duration
 	CacheReturnStalePeriod    time.Duration
 
+	CurrentTime func() time.Time
+
 	RecordMinTTL uint32
 	RecordMaxTTL uint32
 
@@ -75,6 +77,8 @@ func New(servers []*ServerConfig) *Generator {
 		CacheNoReplyTTL:           30,
 		CacheStaleEntryKeepPeriod: time.Second * 15,
 		CacheReturnStalePeriod:    0,
+
+		CurrentTime: time.Now,
 
 		RecordMinTTL: 0,
 		RecordMaxTTL: math.MaxUint32,

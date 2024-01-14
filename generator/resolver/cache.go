@@ -119,7 +119,7 @@ func (r *Generator) getOrAddCache(q *dns.Question, isCacheRefresh bool, incremen
 }
 
 func (r *Generator) cleanupCache() {
-	minTime := time.Now().Add(-r.CacheStaleEntryKeepPeriod)
+	minTime := r.CurrentTime().Add(-r.CacheStaleEntryKeepPeriod)
 
 	toRemove := make([]string, 0)
 	for _, key := range r.cache.Keys() {
@@ -182,7 +182,7 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question, 
 		}
 	}
 
-	now := time.Now()
+	now := r.CurrentTime()
 	entryExpiresIn := entry.expiry.Sub(now)
 	if entryExpiresIn <= -r.CacheReturnStalePeriod {
 		timeSinceMiss := entryExpiresIn + r.CacheReturnStalePeriod
@@ -273,7 +273,7 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 		return ""
 	}
 
-	now := time.Now()
+	now := r.CurrentTime()
 	entry := &cacheEntry{
 		time:   now,
 		expiry: now.Add(time.Duration(cacheTTL) * time.Second),
