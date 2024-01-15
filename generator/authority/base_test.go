@@ -2,6 +2,7 @@ package authority_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/Doridian/foxDNS/generator"
 	"github.com/Doridian/foxDNS/generator/authority"
@@ -67,14 +68,14 @@ func testQuestion(t *testing.T, handler *authority.AuthorityHandler, q dns.Quest
 
 func TestBasics(t *testing.T) {
 	soaConfig := authority.AuthConfig{
-		SOATtl:      300,
-		NSTtl:       300,
+		SOATtl:      300 * time.Second,
+		NSTtl:       300 * time.Second,
 		Mbox:        "hostmaster.example.com",
 		Serial:      2022010169,
-		Refresh:     43200,
-		Retry:       3600,
-		Expire:      86400,
-		Minttl:      300,
+		Refresh:     43200 * time.Second,
+		Retry:       3600 * time.Second,
+		Expire:      86400 * time.Second,
+		Minttl:      300 * time.Second,
 		Nameservers: []string{"ns1.example.com", "ns2.example.com"},
 	}
 	handler := authority.NewAuthorityHandler("example.com", soaConfig)
