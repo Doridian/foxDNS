@@ -10,7 +10,6 @@ import (
 )
 
 type LocalizerRecordMap = map[string][]*LocalizerRecord
-
 type LocalizerRewrite struct {
 	From string `yaml:"from"`
 	To   string `yaml:"to"`

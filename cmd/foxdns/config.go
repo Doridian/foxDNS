@@ -4,38 +4,26 @@ import (
 	"os"
 	"time"
 
+	"github.com/Doridian/foxDNS/generator/authority"
 	"github.com/Doridian/foxDNS/generator/localizer"
 	"gopkg.in/yaml.v3"
 )
 
-type YAMLAuthorityConfig struct {
-	NameServers   []string      `yaml:"nameservers"`
-	Mailbox       string        `yaml:"mailbox"`
-	SOATtl        time.Duration `yaml:"soa-ttl"`
-	NSTtl         time.Duration `yaml:"ns-ttl"`
-	Serial        uint32        `yaml:"serial"`
-	Refresh       time.Duration `yaml:"refresh"`
-	Retry         time.Duration `yaml:"retry"`
-	Expire        time.Duration `yaml:"expire"`
-	Minttl        time.Duration `yaml:"minttl"`
-	RequireCookie bool          `yaml:"require-cookie"`
-}
-
 type Config struct {
 	Global struct {
-		Listen           []string             `yaml:"listen"`
-		PrometheusListen string               `yaml:"prometheus-listen"`
-		AuthorityConfig  *YAMLAuthorityConfig `yaml:"authority-config"`
-		UDPSize          int                  `yaml:"udp-size"`
+		Listen           []string              `yaml:"listen"`
+		PrometheusListen string                `yaml:"prometheus-listen"`
+		AuthorityConfig  *authority.AuthConfig `yaml:"authority-config"`
+		UDPSize          int                   `yaml:"udp-size"`
 	} `yaml:"global"`
 
 	RDNS []struct {
-		IPVersion       int                  `yaml:"ip_version"`
-		Suffix          string               `yaml:"suffix"`
-		Subnets         []string             `yaml:"subnets"`
-		AuthorityConfig *YAMLAuthorityConfig `yaml:"authority-config"`
-		AddressTtl      time.Duration        `yaml:"address-ttl"`
-		PtrTtl          time.Duration        `yaml:"ptr-ttl"`
+		IPVersion       int                   `yaml:"ip_version"`
+		Suffix          string                `yaml:"suffix"`
+		Subnets         []string              `yaml:"subnets"`
+		AuthorityConfig *authority.AuthConfig `yaml:"authority-config"`
+		AddressTtl      time.Duration         `yaml:"address-ttl"`
+		PtrTtl          time.Duration         `yaml:"ptr-ttl"`
 	} `yaml:"rdns"`
 
 	Resolvers []struct {
@@ -75,7 +63,7 @@ type Config struct {
 		Zone            string                       `yaml:"zone"`
 		Subnets         []string                     `yaml:"subnets"`
 		Ttl             time.Duration                `yaml:"ttl"`
-		AuthorityConfig *YAMLAuthorityConfig         `yaml:"authority-config"`
+		AuthorityConfig *authority.AuthConfig        `yaml:"authority-config"`
 		Rewrites        []localizer.LocalizerRewrite `yaml:"rewrites"`
 	} `yaml:"localizers"`
 

@@ -24,25 +24,25 @@ var configFile string
 var srv *server.Server
 var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
-func mergeAuthorityConfig(config *YAMLAuthorityConfig, base authority.AuthConfig) authority.AuthConfig {
+func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfig) authority.AuthConfig {
 	if config == nil {
 		return base
 	}
 
-	if config.NameServers != nil {
-		base.Nameservers = config.NameServers
+	if config.Nameservers != nil {
+		base.Nameservers = config.Nameservers
 	}
 
-	if config.Mailbox != "" {
-		base.Mbox = config.Mailbox
+	if config.Mbox != "" {
+		base.Mbox = config.Mbox
 	}
 
 	if config.SOATtl > 0 {
-		base.SOATtl = uint32(config.SOATtl.Seconds())
+		base.SOATtl = config.SOATtl
 	}
 
 	if config.NSTtl > 0 {
-		base.NSTtl = uint32(config.NSTtl.Seconds())
+		base.NSTtl = config.NSTtl
 	}
 
 	if config.Serial > 0 {
@@ -50,19 +50,19 @@ func mergeAuthorityConfig(config *YAMLAuthorityConfig, base authority.AuthConfig
 	}
 
 	if config.Refresh > 0 {
-		base.Refresh = uint32(config.Refresh.Seconds())
+		base.Refresh = config.Refresh
 	}
 
 	if config.Retry > 0 {
-		base.Retry = uint32(config.Retry.Seconds())
+		base.Retry = config.Retry
 	}
 
 	if config.Expire > 0 {
-		base.Expire = uint32(config.Expire.Seconds())
+		base.Expire = config.Expire
 	}
 
 	if config.Minttl > 0 {
-		base.Minttl = uint32(config.Minttl.Seconds())
+		base.Minttl = config.Minttl
 	}
 
 	if config.RequireCookie {

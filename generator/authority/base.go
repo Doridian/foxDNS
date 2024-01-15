@@ -7,16 +7,16 @@ import (
 )
 
 type AuthConfig struct {
-	Nameservers   []string
-	Mbox          string
-	SOATtl        uint32
-	NSTtl         uint32
-	Serial        uint32
-	Refresh       uint32
-	Retry         uint32
-	Expire        uint32
-	Minttl        uint32
-	RequireCookie bool
+	Nameservers   []string `yaml:"nameservers"`
+	Mbox          string   `yaml:"mailbox"`
+	SOATtl        uint32   `yaml:"soa-ttl"`
+	NSTtl         uint32   `yaml:"ns-ttl"`
+	Serial        uint32   `yaml:"serial"`
+	Refresh       uint32   `yaml:"refresh"`
+	Retry         uint32   `yaml:"retry"`
+	Expire        uint32   `yaml:"expire"`
+	Minttl        uint32   `yaml:"minttl"`
+	RequireCookie bool     `yaml:"require-cookie"`
 }
 
 type AuthorityHandler struct {
