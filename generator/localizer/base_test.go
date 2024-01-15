@@ -71,3 +71,14 @@ func TestAAAAFromIPv6(t *testing.T) {
 		AAAA: net.ParseIP("fd00:abcd::1"),
 	})
 }
+
+func TestAAAAFromIPv6WithRewrite(t *testing.T) {
+	runLocalizerTest(t, "example.com.", dns.TypeAAAA, net.ParseIP("fe00:abcd::1234:1"), []localizer.LocalizerRewrite{
+		{
+			From: "fe00::/8",
+			To:   "fd00::",
+		},
+	}, &dns.AAAA{
+		AAAA: net.ParseIP("fd00:abcd::1"),
+	})
+}
