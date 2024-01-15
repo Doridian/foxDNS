@@ -130,7 +130,7 @@ type dummyDNSHandler struct {
 
 func (r *dummyDNSHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	r.msg = msg
-	wr.WriteMsg(&dns.Msg{
+	_ = wr.WriteMsg(&dns.Msg{
 		Answer: r.answer,
 	})
 }
