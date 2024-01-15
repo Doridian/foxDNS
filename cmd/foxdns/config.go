@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Doridian/foxDNS/generator/localizer"
 	"gopkg.in/yaml.v3"
 )
 
@@ -71,10 +72,11 @@ type Config struct {
 	} `yaml:"resolvers"`
 
 	Localizers []struct {
-		Zone            string               `yaml:"zone"`
-		Subnets         []string             `yaml:"subnets"`
-		Ttl             time.Duration        `yaml:"ttl"`
-		AuthorityConfig *YAMLAuthorityConfig `yaml:"authority-config"`
+		Zone            string                       `yaml:"zone"`
+		Subnets         []string                     `yaml:"subnets"`
+		Ttl             time.Duration                `yaml:"ttl"`
+		AuthorityConfig *YAMLAuthorityConfig         `yaml:"authority-config"`
+		Rewrites        []localizer.LocalizerRewrite `yaml:"rewrites"`
 	} `yaml:"localizers"`
 
 	StaticZonesRequireCookie bool              `yaml:"static-zones-require-cookie"`

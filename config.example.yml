@@ -35,6 +35,9 @@ localizers:
   - zone: x.example.com
     subnets:
       - 0.0.0.123/16
+    rewrites:
+      - from: 10.100.0.0/16
+        to: 10.2.0.0
 
 static-zones:
   static.example.com: static.example.com.db

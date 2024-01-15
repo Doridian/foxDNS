@@ -224,7 +224,7 @@ func reloadConfig() {
 			generators = append(generators, loc)
 
 			for _, ip := range locConfig.Subnets {
-				err := loc.AddRecord(locConfig.Zone, ip)
+				err := loc.AddRecord(locConfig.Zone, ip, locConfig.Rewrites)
 				if err != nil {
 					log.Printf("Error adding localizer record %s -> %s: %v", locConfig.Zone, ip, err)
 				}

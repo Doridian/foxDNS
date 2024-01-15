@@ -1,6 +1,7 @@
 package localizer
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/Doridian/foxDNS/generator/simple"
@@ -10,9 +11,21 @@ import (
 
 type LocalizerRecordMap = map[string][]*LocalizerRecord
 
+type LocalizerRewrite struct {
+	From string `yaml:"from"`
+	To   string `yaml:"to"`
+}
+
+type localizerRewriteParsed struct {
+	FromSubnet *net.IPNet
+	FromIP     net.IP
+	To         net.IP
+}
+
 type LocalizerRecord struct {
-	Subnet *net.IPNet
-	IP     net.IP
+	Subnet   *net.IPNet
+	IP       net.IP
+	Rewrites []localizerRewriteParsed
 }
 
 type LocalizedRecordGenerator struct {
@@ -31,7 +44,11 @@ func New() *LocalizedRecordGenerator {
 	}
 }
 
-func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string) error {
+func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string, rewrites []LocalizerRewrite) error {
+	if rewrites == nil {
+		rewrites = make([]LocalizerRewrite, 0)
+	}
+
 	hostStr = dns.CanonicalName(hostStr)
 
 	ip, subnet, err := net.ParseCIDR(subnetStr)
@@ -45,8 +62,29 @@ func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string) e
 	}
 
 	rec := &LocalizerRecord{
-		Subnet: subnet,
-		IP:     ip,
+		Subnet:   subnet,
+		IP:       ip,
+		Rewrites: make([]localizerRewriteParsed, 0, len(rewrites)),
+	}
+
+	for _, rewrite := range rewrites {
+		fromIP, fromSubnet, err := net.ParseCIDR(rewrite.From)
+		if err != nil {
+			return err
+		}
+		toIP := net.ParseIP(rewrite.To)
+		if toIP == nil {
+			return fmt.Errorf("invalid to IP: %s", rewrite.To)
+		}
+		toIPv4 := toIP.To4()
+		if toIPv4 != nil {
+			toIP = toIPv4
+		}
+		rec.Rewrites = append(rec.Rewrites, localizerRewriteParsed{
+			FromIP:     fromIP,
+			FromSubnet: fromSubnet,
+			To:         toIP,
+		})
 	}
 
 	var recMap LocalizerRecordMap
@@ -124,6 +162,14 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr simple.DNS
 		if ipRec == nil {
 			continue
 		}
+
+		for _, rewrite := range rec.Rewrites {
+			if rewrite.FromSubnet.Contains(ipRec) {
+				ipRec = IPNetAdd(rewrite.FromSubnet, ipRec, rewrite.To)
+				break
+			}
+		}
+
 		ipResRec := makeRecFunc(ipRec)
 		util.FillHeader(ipResRec, q.Name, q.Qtype, r.Ttl)
 		resp = append(resp, ipResRec)
