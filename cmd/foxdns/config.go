@@ -67,8 +67,12 @@ type Config struct {
 		Rewrites        []localizer.LocalizerRewrite `yaml:"rewrites"`
 	} `yaml:"localizers"`
 
-	StaticZonesRequireCookie bool              `yaml:"static-zones-require-cookie"`
-	StaticZones              map[string]string `yaml:"static-zones"`
+	StaticZones []struct {
+		Zone                  string `yaml:"zone"`
+		File                  string `yaml:"file"`
+		ResolveExternalCNAMES bool   `yaml:"resolve-external-cnames"`
+		RequireCookie         bool   `yaml:"require-cookie"`
+	} `yaml:"static-zones"`
 }
 
 func LoadConfig(file string) *Config {

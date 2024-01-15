@@ -239,16 +239,20 @@ func reloadConfig() {
 	}
 
 	if len(config.StaticZones) > 0 {
-		for statName, statFile := range config.StaticZones {
-			stat := static.New(enableFSNotify)
+		for _, statConf := range config.StaticZones {
+			cnameResolver := mux
+			if !statConf.ResolveExternalCNAMES {
+				cnameResolver = nil
+			}
+			stat := static.New(enableFSNotify, cnameResolver)
 			generators = append(generators, stat)
-			err := stat.LoadZoneFile(statFile, statName, 3600, false)
+			err := stat.LoadZoneFile(statConf.File, statConf.Zone, 3600, false)
 			if err != nil {
-				log.Printf("Error loading static zone %s: %v", statName, err)
+				log.Printf("Error loading static zone %s: %v", statConf.Zone, err)
 			}
 
-			statAuth := simple.New(statName)
-			statAuth.RequireCookie = config.StaticZonesRequireCookie
+			statAuth := simple.New(statConf.Zone)
+			statAuth.RequireCookie = statConf.RequireCookie
 			generators = append(generators, statAuth)
 			statAuth.Child = stat
 			statAuth.Register(mux)

@@ -22,7 +22,7 @@ var resolverGenerator *resolver.Generator
 var simpleHandler *simple.Generator
 
 func loadSimpleZone(zone string) *simple.Generator {
-	staticHandler := static.New(false)
+	staticHandler := static.New(false, nil)
 	err := staticHandler.LoadZone(bytes.NewReader([]byte(zone)), "example.com.db", "example.com.", 300, false)
 	if err != nil {
 		panic(err)

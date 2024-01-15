@@ -5,7 +5,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/Doridian/foxDNS/generator/simple"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
@@ -92,7 +91,7 @@ func (r *Generator) isAllowed(ip net.IP) bool {
 	return false
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, _ simple.DNSResponseWriter) ([]dns.RR, bool) {
+func (r *Generator) HandleQuestion(q *dns.Question, _ util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
 	var resp dns.RR
 	var ttl uint32
 

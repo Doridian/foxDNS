@@ -20,7 +20,7 @@ func runStaticTest(t *testing.T, handler simple.Handler, q *dns.Question) (rr []
 }
 
 func TestBasicZone(t *testing.T) {
-	handler := static.New(false)
+	handler := static.New(false, nil)
 
 	recA := &dns.A{
 		A: net.IPv4(127, 0, 0, 1),
@@ -44,6 +44,12 @@ func TestBasicZone(t *testing.T) {
 	}
 	util.FillHeader(recA2_2, "a2.example.com.", dns.TypeA, 60)
 	handler.AddRecord(recA2_2)
+
+	recCNAME := &dns.CNAME{
+		Target: "example.com.",
+	}
+	util.FillHeader(recCNAME, "cname.example.com.", dns.TypeCNAME, 60)
+	handler.AddRecord(recCNAME)
 
 	rr, nxdomain := runStaticTest(t, handler, &dns.Question{
 		Name:   "example.com.",
@@ -88,10 +94,19 @@ func TestBasicZone(t *testing.T) {
 	})
 	assert.False(t, nxdomain)
 	assert.ElementsMatch(t, []dns.RR{recA2_1, recA2_2}, rr)
+
+	// Resolves local CNAMEs
+	rr, nxdomain = runStaticTest(t, handler, &dns.Question{
+		Name:   "cname.example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	})
+	assert.False(t, nxdomain)
+	assert.ElementsMatch(t, []dns.RR{recCNAME, recA}, rr)
 }
 
 func TestRejectsNonINET(t *testing.T) {
-	handler := static.New(false)
+	handler := static.New(false, nil)
 
 	recA := &dns.A{
 		A: net.IPv4(127, 0, 0, 1),
@@ -106,4 +121,51 @@ func TestRejectsNonINET(t *testing.T) {
 		Qclass: dns.ClassINET,
 	})
 	assert.ElementsMatch(t, []dns.RR{}, rr)
+}
+
+type dummyDNSHandler struct {
+	msg    *dns.Msg
+	answer []dns.RR
+}
+
+func (r *dummyDNSHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
+	r.msg = msg
+	wr.WriteMsg(&dns.Msg{
+		Answer: r.answer,
+	})
+}
+
+func TestCallsCNAMEResolver(t *testing.T) {
+	recA := &dns.A{
+		A: net.IPv4(127, 0, 0, 1),
+	}
+	util.FillHeader(recA, "example.net.", dns.TypeA, 60)
+
+	upstreamHandler := &dummyDNSHandler{
+		answer: []dns.RR{recA},
+	}
+	handler := static.New(false, upstreamHandler)
+
+	recCNAME := &dns.CNAME{
+		Target: "example.net.",
+	}
+	util.FillHeader(recCNAME, "cname.example.com.", dns.TypeCNAME, 60)
+	handler.AddRecord(recCNAME)
+
+	// Resolves external CNAMEs
+	rr, nxdomain := runStaticTest(t, handler, &dns.Question{
+		Name:   "cname.example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	})
+	assert.False(t, nxdomain)
+	assert.ElementsMatch(t, []dns.RR{recCNAME, recA}, rr)
+
+	assert.ElementsMatch(t, []dns.Question{
+		{
+			Name:   "example.net.",
+			Qtype:  dns.TypeA,
+			Qclass: dns.ClassINET,
+		},
+	}, upstreamHandler.msg.Question)
 }

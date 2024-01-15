@@ -40,4 +40,5 @@ localizers:
         to: 10.2.0.0
 
 static-zones:
-  static.example.com: static.example.com.db
+  - zone: static.example.com
+    file: static.example.com.db

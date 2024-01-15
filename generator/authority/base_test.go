@@ -6,7 +6,6 @@ import (
 
 	"github.com/Doridian/foxDNS/generator"
 	"github.com/Doridian/foxDNS/generator/authority"
-	"github.com/Doridian/foxDNS/generator/simple"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +21,7 @@ func (*TestHandler) GetName() string {
 	return "test"
 }
 
-func (t *TestHandler) HandleQuestion(q *dns.Question, wr simple.DNSResponseWriter) (recs []dns.RR, nxdomain bool) {
+func (t *TestHandler) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) (recs []dns.RR, nxdomain bool) {
 	t.q = q
 	return t.recs, t.nxdomain
 }

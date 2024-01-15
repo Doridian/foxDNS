@@ -3,9 +3,10 @@ package static
 import (
 	"io"
 	"log"
+	"net"
 	"os"
 
-	"github.com/Doridian/foxDNS/generator/simple"
+	"github.com/Doridian/foxDNS/util"
 	"github.com/fsnotify/fsnotify"
 	"github.com/miekg/dns"
 )
@@ -22,14 +23,16 @@ type Generator struct {
 	records        map[string]map[uint16][]dns.RR
 	watcher        *fsnotify.Watcher
 	enableFSNotify bool
+	cnameResolver  dns.Handler
 }
 
-func New(enableFSNotify bool) *Generator {
+func New(enableFSNotify bool, cnameResolver dns.Handler) *Generator {
 	return &Generator{
 		configs:        make([]zoneConfig, 0),
 		records:        make(map[string]map[uint16][]dns.RR),
 		watcher:        nil,
 		enableFSNotify: enableFSNotify,
+		cnameResolver:  cnameResolver,
 	}
 }
 
@@ -94,7 +97,7 @@ func (r *Generator) AddRecord(rr dns.RR) {
 	nameRecs[hdr.Rrtype] = append(typeRecs, rr)
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, wr simple.DNSResponseWriter) ([]dns.RR, bool) {
+func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
 	nameRecs := r.records[q.Name]
 	if nameRecs == nil {
 		return []dns.RR{}, true
@@ -111,12 +114,35 @@ func (r *Generator) HandleQuestion(q *dns.Question, wr simple.DNSResponseWriter)
 		if cnameRecs != nil {
 			cname := cnameRecs[0].(*dns.CNAME)
 			resultRecs := []dns.RR{cname}
-			subRes, _ := r.HandleQuestion(&dns.Question{
-				Name:   cname.Target,
-				Qtype:  q.Qtype,
-				Qclass: q.Qclass,
-			}, wr)
-			resultRecs = append(resultRecs, subRes...)
+			var subRes []dns.RR
+			if r.cnameResolver != nil {
+				subWR := util.NewResponseWriter(wr, &net.TCPAddr{
+					IP:   net.IP([]byte{127, 0, 0, 1}),
+					Port: 53,
+				})
+				r.cnameResolver.ServeDNS(subWR, &dns.Msg{
+					Question: []dns.Question{
+						{
+							Name:   cname.Target,
+							Qtype:  q.Qtype,
+							Qclass: q.Qclass,
+						},
+					},
+				})
+				if subWR.Result != nil && subWR.Result.Rcode == dns.RcodeSuccess {
+					subRes = subWR.Result.Answer
+				}
+			} else {
+				subRes, _ = r.HandleQuestion(&dns.Question{
+					Name:   cname.Target,
+					Qtype:  q.Qtype,
+					Qclass: q.Qclass,
+				}, wr)
+			}
+
+			if subRes != nil {
+				resultRecs = append(resultRecs, subRes...)
+			}
 			return resultRecs, false
 		}
 	}
