@@ -1,22 +1,24 @@
 package authority
 
 import (
+	"time"
+
 	"github.com/Doridian/foxDNS/generator/simple"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
 
 type AuthConfig struct {
-	Nameservers   []string `yaml:"nameservers"`
-	Mbox          string   `yaml:"mailbox"`
-	SOATtl        uint32   `yaml:"soa-ttl"`
-	NSTtl         uint32   `yaml:"ns-ttl"`
-	Serial        uint32   `yaml:"serial"`
-	Refresh       uint32   `yaml:"refresh"`
-	Retry         uint32   `yaml:"retry"`
-	Expire        uint32   `yaml:"expire"`
-	Minttl        uint32   `yaml:"minttl"`
-	RequireCookie bool     `yaml:"require-cookie"`
+	Nameservers   []string      `yaml:"nameservers"`
+	Mbox          string        `yaml:"mailbox"`
+	SOATtl        time.Duration `yaml:"soa-ttl"`
+	NSTtl         time.Duration `yaml:"ns-ttl"`
+	Serial        uint32        `yaml:"serial"`
+	Refresh       time.Duration `yaml:"refresh"`
+	Retry         time.Duration `yaml:"retry"`
+	Expire        time.Duration `yaml:"expire"`
+	Minttl        time.Duration `yaml:"minttl"`
+	RequireCookie bool          `yaml:"require-cookie"`
 }
 
 type AuthorityHandler struct {
@@ -56,17 +58,18 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 			Ns:      dns.CanonicalName(config.Nameservers[0]),
 			Mbox:    dns.CanonicalName(config.Mbox),
 			Serial:  config.Serial,
-			Refresh: config.Refresh,
-			Retry:   config.Retry,
-			Expire:  config.Expire,
-			Minttl:  config.Minttl,
-		}, dns.TypeSOA, zone, config.SOATtl),
+			Refresh: uint32(config.Refresh.Seconds()),
+			Retry:   uint32(config.Retry.Seconds()),
+			Expire:  uint32(config.Expire.Seconds()),
+			Minttl:  uint32(config.Minttl.Seconds()),
+		}, dns.TypeSOA, zone, uint32(config.SOATtl.Seconds())),
 	}
 
+	nsTtl := uint32(config.NSTtl.Seconds())
 	for _, ns := range config.Nameservers {
 		hdl.ns = append(hdl.ns, FillAuthHeader(&dns.NS{
 			Ns: dns.CanonicalName(ns),
-		}, dns.TypeNS, zone, config.NSTtl))
+		}, dns.TypeNS, zone, nsTtl))
 	}
 
 	return hdl
