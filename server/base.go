@@ -18,8 +18,9 @@ type Server struct {
 	privDropWait   sync.WaitGroup
 	enablePrivDrop bool
 
-	serverLock sync.Mutex
-	servers    map[*dns.Server]bool
+	serverLock  sync.Mutex
+	servers     map[*dns.Server]bool
+	handlerLock sync.RWMutex
 }
 
 func NewServer(listen []string, enablePrivDrop bool) *Server {
@@ -30,14 +31,16 @@ func NewServer(listen []string, enablePrivDrop bool) *Server {
 	}
 }
 
-func (s *Server) SetHandler(handler dns.Handler) {
-	s.serverLock.Lock()
-	defer s.serverLock.Unlock()
+func (s *Server) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
+	s.handlerLock.RLock()
+	defer s.handlerLock.RUnlock()
+	s.handler.ServeDNS(wr, msg)
+}
 
+func (s *Server) SetHandler(handler dns.Handler) {
+	s.handlerLock.Lock()
+	defer s.handlerLock.Unlock()
 	s.handler = handler
-	for server := range s.servers {
-		server.Handler = handler
-	}
 }
 
 func (s *Server) WaitReady() {
@@ -108,7 +111,7 @@ func (s *Server) serve(net string, addr string) {
 	dnsServer := &dns.Server{
 		Addr:          addr,
 		Net:           net,
-		Handler:       s.handler,
+		Handler:       s,
 		UDPSize:       int(util.UDPSize),
 		ReadTimeout:   util.DefaultTimeout,
 		WriteTimeout:  util.DefaultTimeout,

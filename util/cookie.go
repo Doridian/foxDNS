@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/subtle"
-	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -12,8 +11,6 @@ import (
 
 var previousCookieSecret []byte
 var currentCookieSecret []byte
-var currentCookieSecretTime time.Time
-var currentCookieSecretWriteLock sync.Mutex
 var clientCookiePrefix = []byte("client")
 var serverCookiePrefix = []byte("server")
 
@@ -26,22 +23,29 @@ const MinServerCookieLength = 8
 // This length can be adjusted between 8 and 32
 const ServerCookieLength = 8
 
-func getCookieSecret(previous bool) []byte {
-	cookieSecretTimeCache := currentCookieSecretTime
-	if time.Since(cookieSecretTimeCache) > cookieRotationTime {
-		currentCookieSecretWriteLock.Lock()
-		if currentCookieSecretTime == cookieSecretTimeCache {
-			previousCookieSecret = currentCookieSecret
-			currentCookieSecret = make([]byte, 64)
-			_, err := rand.Read(currentCookieSecret)
-			if err != nil {
-				panic(err)
-			}
-			currentCookieSecretTime = time.Now()
-		}
-		currentCookieSecretWriteLock.Unlock()
-	}
+var cookieRotateTicket = time.NewTicker(cookieRotationTime)
 
+func init() {
+	rotateCookieSecret()
+
+	go func() {
+		for {
+			<-cookieRotateTicket.C
+			rotateCookieSecret()
+		}
+	}()
+}
+
+func rotateCookieSecret() {
+	previousCookieSecret = currentCookieSecret
+	currentCookieSecret = make([]byte, 64)
+	_, err := rand.Read(currentCookieSecret)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func getCookieSecret(previous bool) []byte {
 	if previous {
 		return previousCookieSecret
 	}
