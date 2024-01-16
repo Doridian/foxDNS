@@ -119,11 +119,6 @@ func (r *Generator) addRecord(rr dns.RR) {
 	nameRecs[hdr.Rrtype] = append(typeRecs, rr)
 }
 
-func (r *Generator) Swap() {
-	r.recordsLock.Lock()
-	defer r.recordsLock.Unlock()
-}
-
 func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
 	r.recordsLock.RLock()
 	defer r.recordsLock.RUnlock()
