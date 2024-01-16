@@ -22,8 +22,7 @@ type zoneConfig struct {
 type Generator struct {
 	configs        []zoneConfig
 	records        map[string]map[uint16][]dns.RR
-	newRecords     map[string]map[uint16][]dns.RR
-	newRecordLock  sync.Mutex
+	recordsLock    sync.RWMutex
 	watcher        *fsnotify.Watcher
 	enableFSNotify bool
 	cnameResolver  dns.Handler
@@ -32,6 +31,7 @@ type Generator struct {
 func New(enableFSNotify bool, cnameResolver dns.Handler) *Generator {
 	return &Generator{
 		configs:        make([]zoneConfig, 0),
+		records:        make(map[string]map[uint16][]dns.RR),
 		watcher:        nil,
 		enableFSNotify: enableFSNotify,
 		cnameResolver:  cnameResolver,
@@ -39,8 +39,8 @@ func New(enableFSNotify bool, cnameResolver dns.Handler) *Generator {
 }
 
 func (r *Generator) LoadZoneFile(file string, origin string, defaultTTL uint32, includeAllowed bool) error {
-	r.newRecordLock.Lock()
-	defer r.newRecordLock.Unlock()
+	r.recordsLock.Lock()
+	defer r.recordsLock.Unlock()
 
 	err := r.loadZoneFile(file, origin, defaultTTL, includeAllowed)
 	if err != nil {
@@ -73,8 +73,8 @@ func (r *Generator) loadZoneFile(file string, origin string, defaultTTL uint32, 
 }
 
 func (r *Generator) LoadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) error {
-	r.newRecordLock.Lock()
-	defer r.newRecordLock.Unlock()
+	r.recordsLock.Lock()
+	defer r.recordsLock.Unlock()
 	return r.loadZone(rd, file, origin, defaultTTL, includeAllowed)
 }
 
@@ -93,16 +93,12 @@ func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTT
 }
 
 func (r *Generator) AddRecord(rr dns.RR) {
-	r.newRecordLock.Lock()
-	defer r.newRecordLock.Unlock()
+	r.recordsLock.Lock()
+	defer r.recordsLock.Unlock()
 	r.addRecord(rr)
 }
 
 func (r *Generator) addRecord(rr dns.RR) {
-	if r.newRecords == nil {
-		r.newRecords = make(map[string]map[uint16][]dns.RR)
-	}
-
 	hdr := rr.Header()
 	if hdr.Class != dns.ClassINET {
 		return
@@ -110,10 +106,10 @@ func (r *Generator) addRecord(rr dns.RR) {
 
 	hdr.Name = dns.CanonicalName(hdr.Name)
 
-	nameRecs := r.newRecords[hdr.Name]
+	nameRecs := r.records[hdr.Name]
 	if nameRecs == nil {
 		nameRecs = make(map[uint16][]dns.RR)
-		r.newRecords[hdr.Name] = nameRecs
+		r.records[hdr.Name] = nameRecs
 	}
 
 	typeRecs := nameRecs[hdr.Rrtype]
@@ -124,17 +120,14 @@ func (r *Generator) addRecord(rr dns.RR) {
 }
 
 func (r *Generator) Swap() {
-	r.newRecordLock.Lock()
-	defer r.newRecordLock.Unlock()
-	r.swap()
-}
-
-func (r *Generator) swap() {
-	r.records = r.newRecords
-	r.newRecords = nil
+	r.recordsLock.Lock()
+	defer r.recordsLock.Unlock()
 }
 
 func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
+	r.recordsLock.RLock()
+	defer r.recordsLock.RUnlock()
+
 	nameRecs := r.records[q.Name]
 	if nameRecs == nil {
 		return []dns.RR{}, true
@@ -188,17 +181,16 @@ func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWri
 }
 
 func (r *Generator) Refresh() error {
-	r.newRecordLock.Lock()
-	defer r.newRecordLock.Unlock()
+	r.recordsLock.Lock()
+	defer r.recordsLock.Unlock()
 
-	r.newRecords = nil
+	r.records = make(map[string]map[uint16][]dns.RR)
 	for _, cf := range r.configs {
 		err := r.loadZoneFile(cf.file, cf.origin, cf.defaultTTL, cf.includeAllowed)
 		if err != nil {
 			return err
 		}
 	}
-	r.swap()
 
 	return nil
 }

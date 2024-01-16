@@ -12,11 +12,10 @@ type Generator struct {
 }
 
 func New(zone string) *Generator {
-	hdl := &Generator{
-		zone: dns.CanonicalName(zone),
+	zone = dns.CanonicalName(zone)
+	return &Generator{
+		zone: zone,
 	}
-
-	return hdl
 }
 
 func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
