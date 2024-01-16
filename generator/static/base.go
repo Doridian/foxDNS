@@ -192,7 +192,6 @@ func (r *Generator) Refresh() error {
 	defer r.newRecordLock.Unlock()
 
 	r.newRecords = nil
-
 	for _, cf := range r.configs {
 		err := r.loadZoneFile(cf.file, cf.origin, cf.defaultTTL, cf.includeAllowed)
 		if err != nil {
