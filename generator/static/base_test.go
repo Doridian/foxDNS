@@ -51,6 +51,8 @@ func TestBasicZone(t *testing.T) {
 	util.FillHeader(recCNAME, "cname.example.com.", dns.TypeCNAME, 60)
 	handler.AddRecord(recCNAME)
 
+	handler.Swap()
+
 	rr, nxdomain := runStaticTest(t, handler, &dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
@@ -115,6 +117,8 @@ func TestRejectsNonINET(t *testing.T) {
 	recA.Hdr.Class = dns.ClassCHAOS
 	handler.AddRecord(recA)
 
+	handler.Swap()
+
 	rr, _ := runStaticTest(t, handler, &dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
@@ -152,6 +156,8 @@ func TestCallsCNAMEResolver(t *testing.T) {
 	util.FillHeader(recCNAME, "cname.example.com.", dns.TypeCNAME, 60)
 	handler.AddRecord(recCNAME)
 
+	handler.Swap()
+
 	// Resolves external CNAMEs
 	rr, nxdomain := runStaticTest(t, handler, &dns.Question{
 		Name:   "cname.example.com.",
@@ -161,6 +167,10 @@ func TestCallsCNAMEResolver(t *testing.T) {
 	assert.False(t, nxdomain)
 	assert.ElementsMatch(t, []dns.RR{recCNAME, recA}, rr)
 
+	assert.NotNil(t, upstreamHandler.msg)
+	if upstreamHandler.msg == nil {
+		return
+	}
 	assert.ElementsMatch(t, []dns.Question{
 		{
 			Name:   "example.net.",

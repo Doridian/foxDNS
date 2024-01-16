@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 
 	"github.com/Doridian/foxDNS/util"
 	"github.com/fsnotify/fsnotify"
@@ -21,6 +22,8 @@ type zoneConfig struct {
 type Generator struct {
 	configs        []zoneConfig
 	records        map[string]map[uint16][]dns.RR
+	newRecords     map[string]map[uint16][]dns.RR
+	newRecordLock  sync.Mutex
 	watcher        *fsnotify.Watcher
 	enableFSNotify bool
 	cnameResolver  dns.Handler
@@ -29,7 +32,6 @@ type Generator struct {
 func New(enableFSNotify bool, cnameResolver dns.Handler) *Generator {
 	return &Generator{
 		configs:        make([]zoneConfig, 0),
-		records:        make(map[string]map[uint16][]dns.RR),
 		watcher:        nil,
 		enableFSNotify: enableFSNotify,
 		cnameResolver:  cnameResolver,
@@ -77,6 +79,13 @@ func (r *Generator) LoadZone(rd io.Reader, file string, origin string, defaultTT
 }
 
 func (r *Generator) AddRecord(rr dns.RR) {
+	r.newRecordLock.Lock()
+	defer r.newRecordLock.Unlock()
+
+	if r.newRecords == nil {
+		r.newRecords = make(map[string]map[uint16][]dns.RR)
+	}
+
 	hdr := rr.Header()
 	if hdr.Class != dns.ClassINET {
 		return
@@ -84,10 +93,10 @@ func (r *Generator) AddRecord(rr dns.RR) {
 
 	hdr.Name = dns.CanonicalName(hdr.Name)
 
-	nameRecs := r.records[hdr.Name]
+	nameRecs := r.newRecords[hdr.Name]
 	if nameRecs == nil {
 		nameRecs = make(map[uint16][]dns.RR)
-		r.records[hdr.Name] = nameRecs
+		r.newRecords[hdr.Name] = nameRecs
 	}
 
 	typeRecs := nameRecs[hdr.Rrtype]
@@ -95,6 +104,14 @@ func (r *Generator) AddRecord(rr dns.RR) {
 		typeRecs = []dns.RR{}
 	}
 	nameRecs[hdr.Rrtype] = append(typeRecs, rr)
+}
+
+func (r *Generator) Swap() {
+	r.newRecordLock.Lock()
+	defer r.newRecordLock.Unlock()
+
+	r.records = r.newRecords
+	r.newRecords = nil
 }
 
 func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
@@ -151,15 +168,17 @@ func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWri
 }
 
 func (r *Generator) Refresh() error {
-	oldRecords := r.records
-	r.records = make(map[string]map[uint16][]dns.RR)
+	r.newRecordLock.Lock()
+	r.newRecords = nil
+	r.newRecordLock.Unlock()
+
 	for _, cf := range r.configs {
 		err := r.LoadZoneFile(cf.file, cf.origin, cf.defaultTTL, cf.includeAllowed)
 		if err != nil {
-			r.records = oldRecords
 			return err
 		}
 	}
+	r.Swap()
 	return nil
 }
 

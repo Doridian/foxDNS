@@ -250,6 +250,7 @@ func reloadConfig() {
 			if err != nil {
 				log.Printf("Error loading static zone %s: %v", statConf.Zone, err)
 			}
+			stat.Swap()
 
 			statAuth := simple.New(statConf.Zone)
 			statAuth.RequireCookie = statConf.RequireCookie

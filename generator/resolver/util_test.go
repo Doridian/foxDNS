@@ -27,6 +27,7 @@ func loadSimpleZone(zone string) *simple.Generator {
 	if err != nil {
 		panic(err)
 	}
+	staticHandler.Swap()
 
 	simpleHandlerMake := simple.New("example.com.")
 	simpleHandlerMake.Child = staticHandler
