@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"sync"
 
 	"github.com/Doridian/foxDNS/util"
 	"github.com/fsnotify/fsnotify"
@@ -25,7 +24,6 @@ type Generator struct {
 	watcher        *fsnotify.Watcher
 	enableFSNotify bool
 	cnameResolver  dns.Handler
-	recordMutex    sync.RWMutex
 }
 
 func New(enableFSNotify bool, cnameResolver dns.Handler) *Generator {
@@ -79,9 +77,6 @@ func (r *Generator) LoadZone(rd io.Reader, file string, origin string, defaultTT
 }
 
 func (r *Generator) AddRecord(rr dns.RR) {
-	r.recordMutex.Lock()
-	defer r.recordMutex.Unlock()
-
 	hdr := rr.Header()
 	if hdr.Class != dns.ClassINET {
 		return
@@ -103,9 +98,6 @@ func (r *Generator) AddRecord(rr dns.RR) {
 }
 
 func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
-	r.recordMutex.RLock()
-	defer r.recordMutex.RUnlock()
-
 	nameRecs := r.records[q.Name]
 	if nameRecs == nil {
 		return []dns.RR{}, true

@@ -18,9 +18,8 @@ type Server struct {
 	privDropWait   sync.WaitGroup
 	enablePrivDrop bool
 
-	serverLock  sync.Mutex
-	servers     map[*dns.Server]bool
-	handlerLock sync.RWMutex
+	serverLock sync.Mutex
+	servers    map[*dns.Server]bool
 }
 
 func NewServer(listen []string, enablePrivDrop bool) *Server {
@@ -32,14 +31,10 @@ func NewServer(listen []string, enablePrivDrop bool) *Server {
 }
 
 func (s *Server) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
-	s.handlerLock.RLock()
-	defer s.handlerLock.RUnlock()
 	s.handler.ServeDNS(wr, msg)
 }
 
 func (s *Server) SetHandler(handler dns.Handler) {
-	s.handlerLock.Lock()
-	defer s.handlerLock.Unlock()
 	s.handler = handler
 }
 
