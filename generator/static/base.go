@@ -39,14 +39,14 @@ func New(enableFSNotify bool, cnameResolver dns.Handler) *Generator {
 }
 
 func (r *Generator) LoadZoneFile(file string, origin string, defaultTTL uint32, includeAllowed bool) error {
-	fh, err := os.Open(file)
+	r.newRecordLock.Lock()
+	defer r.newRecordLock.Unlock()
+
+	err := r.loadZoneFile(file, origin, defaultTTL, includeAllowed)
 	if err != nil {
 		return err
 	}
-	err = r.LoadZone(fh, file, origin, defaultTTL, includeAllowed)
-	if err != nil {
-		return err
-	}
+
 	r.configs = append(r.configs, zoneConfig{
 		file:           file,
 		origin:         origin,
@@ -64,7 +64,21 @@ func (r *Generator) LoadZoneFile(file string, origin string, defaultTTL uint32, 
 	return nil
 }
 
+func (r *Generator) loadZoneFile(file string, origin string, defaultTTL uint32, includeAllowed bool) error {
+	fh, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	return r.loadZone(fh, file, origin, defaultTTL, includeAllowed)
+}
+
 func (r *Generator) LoadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) error {
+	r.newRecordLock.Lock()
+	defer r.newRecordLock.Unlock()
+	return r.loadZone(rd, file, origin, defaultTTL, includeAllowed)
+}
+
+func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) error {
 	parser := dns.NewZoneParser(rd, origin, file)
 	parser.SetDefaultTTL(defaultTTL)
 	parser.SetIncludeAllowed(includeAllowed)
@@ -74,14 +88,17 @@ func (r *Generator) LoadZone(rd io.Reader, file string, origin string, defaultTT
 		if !ok || rr == nil {
 			return parser.Err()
 		}
-		r.AddRecord(rr)
+		r.addRecord(rr)
 	}
 }
 
 func (r *Generator) AddRecord(rr dns.RR) {
 	r.newRecordLock.Lock()
 	defer r.newRecordLock.Unlock()
+	r.addRecord(rr)
+}
 
+func (r *Generator) addRecord(rr dns.RR) {
 	if r.newRecords == nil {
 		r.newRecords = make(map[string]map[uint16][]dns.RR)
 	}
@@ -109,7 +126,10 @@ func (r *Generator) AddRecord(rr dns.RR) {
 func (r *Generator) Swap() {
 	r.newRecordLock.Lock()
 	defer r.newRecordLock.Unlock()
+	r.swap()
+}
 
+func (r *Generator) swap() {
 	r.records = r.newRecords
 	r.newRecords = nil
 }
@@ -169,16 +189,18 @@ func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWri
 
 func (r *Generator) Refresh() error {
 	r.newRecordLock.Lock()
+	defer r.newRecordLock.Unlock()
+
 	r.newRecords = nil
-	r.newRecordLock.Unlock()
 
 	for _, cf := range r.configs {
-		err := r.LoadZoneFile(cf.file, cf.origin, cf.defaultTTL, cf.includeAllowed)
+		err := r.loadZoneFile(cf.file, cf.origin, cf.defaultTTL, cf.includeAllowed)
 		if err != nil {
 			return err
 		}
 	}
-	r.Swap()
+	r.swap()
+
 	return nil
 }
 
