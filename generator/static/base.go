@@ -116,63 +116,71 @@ func (r *Generator) addRecord(rr dns.RR) {
 	if typeRecs == nil {
 		typeRecs = []dns.RR{}
 	}
-	nameRecs[hdr.Rrtype] = append(typeRecs, rr)
+	nameRecs[hdr.Rrtype] = append([]dns.RR{rr}, typeRecs...)
 }
 
 func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
 	r.recordsLock.RLock()
-	defer r.recordsLock.RUnlock()
 
 	nameRecs := r.records[q.Name]
 	if nameRecs == nil {
+		r.recordsLock.RUnlock()
 		return []dns.RR{}, true
 	}
 
 	typedRecs := nameRecs[q.Qtype]
-	if typedRecs != nil {
+	if typedRecs != nil || q.Qtype == dns.TypeCNAME {
+		r.recordsLock.RUnlock()
+		if typedRecs == nil {
+			return []dns.RR{}, false
+		}
 		return typedRecs, false
 	}
 
-	if q.Qtype != dns.TypeCNAME {
-		// Handle CNAMEs
-		cnameRecs := nameRecs[dns.TypeCNAME]
-		if cnameRecs != nil {
-			cname := cnameRecs[0].(*dns.CNAME)
-			resultRecs := []dns.RR{cname}
-			var subRes []dns.RR
-			if r.cnameResolver != nil {
-				subWR := util.NewResponseWriter(wr, &net.TCPAddr{
-					IP:   net.IP([]byte{127, 0, 0, 1}),
-					Port: 53,
-				})
-				r.cnameResolver.ServeDNS(subWR, &dns.Msg{
-					Question: []dns.Question{
-						{
-							Name:   cname.Target,
-							Qtype:  q.Qtype,
-							Qclass: q.Qclass,
-						},
-					},
-				})
-				if subWR.Result != nil && subWR.Result.Rcode == dns.RcodeSuccess {
-					subRes = subWR.Result.Answer
-				}
-			} else {
-				subRes, _ = r.HandleQuestion(&dns.Question{
+	// Handle CNAMEs
+	cnameRecs := nameRecs[dns.TypeCNAME]
+	if cnameRecs == nil || len(cnameRecs) != 1 {
+		r.recordsLock.RUnlock()
+		return []dns.RR{}, false
+	}
+
+	cname := cnameRecs[0].(*dns.CNAME)
+	r.recordsLock.RUnlock()
+
+	var subRes []dns.RR
+	if r.cnameResolver != nil {
+		subWR := util.NewResponseWriter(wr, &net.TCPAddr{
+			IP:   net.IP([]byte{127, 0, 0, 1}),
+			Port: 53,
+		})
+		r.cnameResolver.ServeDNS(subWR, &dns.Msg{
+			Question: []dns.Question{
+				{
 					Name:   cname.Target,
 					Qtype:  q.Qtype,
 					Qclass: q.Qclass,
-				}, wr)
-			}
-
-			if subRes != nil {
-				resultRecs = append(resultRecs, subRes...)
-			}
-			return resultRecs, false
+				},
+			},
+		})
+		if subWR.Result != nil && subWR.Result.Rcode == dns.RcodeSuccess {
+			subRes = subWR.Result.Answer
 		}
+	} else {
+		subRes, _ = r.HandleQuestion(&dns.Question{
+			Name:   cname.Target,
+			Qtype:  q.Qtype,
+			Qclass: q.Qclass,
+		}, wr)
 	}
 
-	return typedRecs, false
+	if subRes == nil {
+		return []dns.RR{cname}, false
+	}
+
+	resultRecs := make([]dns.RR, len(subRes)+1)
+	resultRecs[0] = cname
+	copy(resultRecs[1:], subRes)
+	return resultRecs, false
 }
 
 func (r *Generator) Refresh() error {
