@@ -240,11 +240,12 @@ func reloadConfig() {
 
 	if len(config.StaticZones) > 0 {
 		for _, statConf := range config.StaticZones {
-			cnameResolver := mux
-			if !statConf.ResolveExternalCNAMES {
-				cnameResolver = nil
+			var stat *static.Generator
+			if statConf.ResolveExternalCNAMES {
+				stat = static.New(enableFSNotify, mux)
+			} else {
+				stat = static.New(enableFSNotify, nil)
 			}
-			stat := static.New(enableFSNotify, cnameResolver)
 			generators = append(generators, stat)
 			err := stat.LoadZoneFile(statConf.File, statConf.Zone, 3600, false)
 			if err != nil {

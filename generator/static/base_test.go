@@ -173,3 +173,27 @@ func TestCallsCNAMEResolver(t *testing.T) {
 		},
 	}, upstreamHandler.msg.Question)
 }
+
+func TestDoesntCrashOnCallingNilCNAMEResolver(t *testing.T) {
+	recA := &dns.A{
+		A: net.IPv4(127, 0, 0, 1),
+	}
+	util.FillHeader(recA, "example.net.", dns.TypeA, 60)
+
+	handler := static.New(false, nil)
+
+	recCNAME := &dns.CNAME{
+		Target: "example.net.",
+	}
+	util.FillHeader(recCNAME, "cname.example.com.", dns.TypeCNAME, 60)
+	handler.AddRecord(recCNAME)
+
+	// Resolves external CNAMEs
+	rr, nxdomain := runStaticTest(t, handler, &dns.Question{
+		Name:   "cname.example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	})
+	assert.False(t, nxdomain)
+	assert.ElementsMatch(t, []dns.RR{recCNAME}, rr)
+}
