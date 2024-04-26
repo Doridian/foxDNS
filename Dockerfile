@@ -5,7 +5,7 @@ ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates upx
 
 ARG GIT_REVISION=dev
 
@@ -19,8 +19,9 @@ RUN go mod download
 
 COPY . /src
 RUN go build -ldflags="-s -w -X=github.com/Doridian/foxDNS/util.Version=${GIT_REVISION}" -trimpath -o /foxdns ./cmd/foxdns
+RUN upx -9 /foxdns -o /foxdns-compressed
 
-FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch AS nossl
+FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch AS nossl-base
 
 ENV PUID=1000
 ENV PGID=1000
@@ -28,10 +29,16 @@ ENV PGID=1000
 WORKDIR /config
 VOLUME /config
 
-COPY --from=builder /foxdns /foxdns
-
 ENTRYPOINT [ "/foxdns" ]
 
-FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl AS default
+FROM --platform=${TARGETPLATFORM:-linux/amd64} nnossl-base AS nossl
+COPY --from=builder /foxdns /foxdns
 
+FROM --platform=${TARGETPLATFORM:-linux/amd64} nnossl-base AS nossl-compressed
+COPY --from=builder /foxdns-compressed /foxdns
+
+FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl AS default
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl-compressed AS compressed
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt

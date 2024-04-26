@@ -25,17 +25,19 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build container image
+
+      - name: Build SSL container image
         uses: docker/build-push-action@v5
         with:
           platforms: linux/amd64,linux/arm64
           push: true
+          target: default
           build-args: |
             GIT_REVISION=${{ github.sha }}
           tags: |
             ghcr.io/doridian/foxdns/foxdns:latest
             ghcr.io/doridian/foxdns/foxdns:ssl
-      - name: Build nossl container image
+      - name: Build NOssl container image
         uses: docker/build-push-action@v5
         with:
           platforms: linux/amd64,linux/arm64
@@ -45,3 +47,26 @@ jobs:
             GIT_REVISION=${{ github.sha }}
           tags: |
             ghcr.io/doridian/foxdns/foxdns:nossl
+
+      - name: Build SSL-COMPRESSED container image
+        uses: docker/build-push-action@v5
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          target: compressed
+          build-args: |
+            GIT_REVISION=${{ github.sha }}
+          tags: |
+            ghcr.io/doridian/foxdns/foxdns:compressed
+            ghcr.io/doridian/foxdns/foxdns:ssl-compressed
+      - name: Build NOssl-COMPRESSED container image
+        uses: docker/build-push-action@v5
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          target: nossl-compressed
+          build-args: |
+            GIT_REVISION=${{ github.sha }}
+          tags: |
+            ghcr.io/doridian/foxdns/foxdns:nossl-compressed
+  
