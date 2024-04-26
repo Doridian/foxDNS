@@ -31,10 +31,10 @@ VOLUME /config
 
 ENTRYPOINT [ "/foxdns" ]
 
-FROM --platform=${TARGETPLATFORM:-linux/amd64} nnossl-base AS nossl
+FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl-base AS nossl
 COPY --from=builder /foxdns /foxdns
 
-FROM --platform=${TARGETPLATFORM:-linux/amd64} nnossl-base AS nossl-compressed
+FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl-base AS nossl-compressed
 COPY --from=builder /foxdns-compressed /foxdns
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl AS default
