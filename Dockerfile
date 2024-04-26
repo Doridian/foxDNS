@@ -19,6 +19,10 @@ RUN go mod download
 
 COPY . /src
 RUN go build -ldflags="-s -w -X=github.com/Doridian/foxDNS/util.Version=${GIT_REVISION}" -trimpath -o /foxdns ./cmd/foxdns
+
+FROM alpine AS compressor
+RUN apk add --no-cache upx
+COPY --from=builder /foxdns /foxdns
 RUN upx -9 /foxdns -o /foxdns-compressed
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch AS nossl-base
@@ -35,7 +39,7 @@ FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl-base AS nossl
 COPY --from=builder /foxdns /foxdns
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl-base AS nossl-compressed
-COPY --from=builder /foxdns-compressed /foxdns
+COPY --from=compressor /foxdns-compressed /foxdns
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl AS default
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
