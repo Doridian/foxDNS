@@ -25,7 +25,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		util.ApplyEDNS0Reply(msg, reply, option, wr, false)
 	}
 	util.SetHandlerName(wr, r)
-	wr.WriteMsg(reply)
+	_ = wr.WriteMsg(reply)
 }
 
 func (r *Generator) GetName() string {
