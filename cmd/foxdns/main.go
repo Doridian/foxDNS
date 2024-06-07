@@ -272,6 +272,7 @@ func reloadConfig() {
 			if err != nil {
 				log.Panicf("Error opening domain block file %s: %v", fileName, err)
 			}
+			zoneCount := 0
 			scanner := bufio.NewScanner(file)
 			for scanner.Scan() {
 				line := scanner.Text()
@@ -284,12 +285,15 @@ func reloadConfig() {
 					continue
 				}
 				mux.Handle(line, blackholeGen)
+				zoneCount++
 			}
 			err = scanner.Err()
 			if err != nil {
 				log.Panicf("Error reading domain block file %s: %v", fileName, err)
 			}
 			_ = file.Close()
+
+			log.Printf("Loaded %d domain blocks from file %s", zoneCount, fileName)
 		}
 	}
 

@@ -42,3 +42,7 @@ localizers:
 static-zones:
   - zone: static.example.com
     file: static.example.com.db
+
+domain-block-files:
+  - blocklist.txt
+  - blocklist2.txt
