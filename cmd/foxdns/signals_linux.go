@@ -5,11 +5,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/Doridian/foxDNS/server"
 )
 
-func handleRefresh(srv *server.Server) {
+func handleRefresh() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGUSR1)
 	for {

@@ -11,8 +11,8 @@ import (
 
 func handleSignals(srv *server.Server) {
 	go handleTerm(srv)
-	go handleRefresh(srv)
-	go handleReload(srv)
+	go handleRefresh()
+	go handleReload()
 }
 
 func handleTerm(srv *server.Server) {
@@ -23,7 +23,7 @@ func handleTerm(srv *server.Server) {
 	srv.Shutdown()
 }
 
-func handleReload(srv *server.Server) {
+func handleReload() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGHUP)
 	for {
