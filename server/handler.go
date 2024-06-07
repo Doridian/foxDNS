@@ -14,16 +14,17 @@ type PrometheusDNSHandler struct {
 }
 
 type PrometheusResponseWriter struct {
-	parent      dns.ResponseWriter
-	rcode       string
-	handlerName string
+	parent        dns.ResponseWriter
+	rcode         string
+	extendedRCode string
+	handlerName   string
 }
 
 var (
 	queriesProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "foxdns_queries_processed_total",
 		Help: "The total number of processed DNS queries",
-	}, []string{"qtype", "rcode", "handler"})
+	}, []string{"qtype", "rcode", "handler", "extended_rcode"})
 
 	queryProcessingTime = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "foxdns_query_processing_time_seconds",
@@ -45,7 +46,7 @@ func (h *PrometheusDNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	startTime := time.Now()
 	h.child.ServeDNS(wproxy, r)
 	duration := time.Since(startTime)
-	queriesProcessed.WithLabelValues(dns.TypeToString[r.Question[0].Qtype], wproxy.rcode, wproxy.handlerName).Inc()
+	queriesProcessed.WithLabelValues(dns.TypeToString[r.Question[0].Qtype], wproxy.rcode, wproxy.handlerName, wproxy.extendedRCode).Inc()
 	queryProcessingTime.WithLabelValues(wproxy.handlerName).Observe(duration.Seconds())
 }
 
@@ -55,6 +56,24 @@ func (w *PrometheusResponseWriter) WriteMsg(msg *dns.Msg) error {
 	} else {
 		w.rcode = dns.RcodeToString[msg.Rcode]
 	}
+
+	w.extendedRCode = ""
+	edns0 := msg.IsEdns0()
+	if edns0 != nil {
+		for _, opt := range edns0.Option {
+			if opt.Option() != dns.EDNS0EDE {
+				continue
+			}
+
+			edeOpt, ok := opt.(*dns.EDNS0_EDE)
+			if !ok {
+				continue
+			}
+			w.extendedRCode = dns.ExtendedErrorCodeToString[edeOpt.InfoCode]
+			break
+		}
+	}
+
 	return w.parent.WriteMsg(msg)
 }
 

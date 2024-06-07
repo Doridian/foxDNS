@@ -22,6 +22,10 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	reply.SetRcode(msg, dns.RcodeNameError)
 	ok, option := util.ApplyEDNS0ReplyEarly(msg, reply, wr, false)
 	if ok {
+		option = append(option, &dns.EDNS0_EDE{
+			InfoCode:  dns.ExtendedErrorCodeFiltered,
+			ExtraText: "blackholed",
+		})
 		util.ApplyEDNS0Reply(msg, reply, option, wr, false)
 	}
 	util.SetHandlerName(wr, r)
