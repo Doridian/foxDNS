@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"net"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/Doridian/foxDNS/generator"
 	"github.com/Doridian/foxDNS/generator/authority"
+	"github.com/Doridian/foxDNS/generator/blackhole"
 	"github.com/Doridian/foxDNS/generator/localizer"
 	"github.com/Doridian/foxDNS/generator/rdns"
 	"github.com/Doridian/foxDNS/generator/resolver"
@@ -226,7 +228,7 @@ func reloadConfig() {
 			for _, ip := range locConfig.Subnets {
 				err := loc.AddRecord(locConfig.Zone, ip, locConfig.Rewrites)
 				if err != nil {
-					log.Printf("Error adding localizer record %s -> %s: %v", locConfig.Zone, ip, err)
+					log.Panicf("Error adding localizer record %s -> %s: %v", locConfig.Zone, ip, err)
 				}
 			}
 
@@ -249,7 +251,7 @@ func reloadConfig() {
 			generators = append(generators, stat)
 			err := stat.LoadZoneFile(statConf.File, statConf.Zone, 3600, false)
 			if err != nil {
-				log.Printf("Error loading static zone %s: %v", statConf.Zone, err)
+				log.Panicf("Error loading static zone %s: %v", statConf.Zone, err)
 			}
 
 			statAuth := simple.New(statConf.Zone)
@@ -260,6 +262,25 @@ func reloadConfig() {
 		}
 
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))
+	}
+
+	if len(config.DomainBlockFiles) > 0 {
+		blackholeGen := blackhole.New()
+		for _, fileName := range config.DomainBlockFiles {
+			file, err := os.Open(fileName)
+			if err != nil {
+				log.Panicf("Error opening domain block file %s: %v", fileName, err)
+			}
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				mux.Handle(scanner.Text(), blackholeGen)
+			}
+			err = scanner.Err()
+			if err != nil {
+				log.Panicf("Error reading domain block file %s: %v", fileName, err)
+			}
+			_ = file.Close()
+		}
 	}
 
 	if config.Global.PrometheusListen != "" {

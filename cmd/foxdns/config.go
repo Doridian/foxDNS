@@ -73,6 +73,8 @@ type Config struct {
 		ResolveExternalCNAMES bool   `yaml:"resolve-external-cnames"`
 		RequireCookie         bool   `yaml:"require-cookie"`
 	} `yaml:"static-zones"`
+
+	DomainBlockFiles []string `yaml:"domain-block-files"`
 }
 
 func LoadConfig(file string) *Config {
