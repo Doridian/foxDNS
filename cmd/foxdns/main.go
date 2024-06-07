@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/Doridian/foxDNS/generator"
 	"github.com/Doridian/foxDNS/generator/authority"
@@ -273,7 +274,16 @@ func reloadConfig() {
 			}
 			scanner := bufio.NewScanner(file)
 			for scanner.Scan() {
-				mux.Handle(scanner.Text(), blackholeGen)
+				line := scanner.Text()
+				idx := strings.IndexRune(line, '#')
+				if idx >= 0 {
+					line = line[:idx]
+				}
+				line = strings.Trim(line, " \r\n\t")
+				if line == "" {
+					continue
+				}
+				mux.Handle(line, blackholeGen)
 			}
 			err = scanner.Err()
 			if err != nil {
