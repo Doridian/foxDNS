@@ -27,7 +27,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build SSL container image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
           push: true
@@ -38,7 +38,7 @@ jobs:
             ghcr.io/doridian/foxdns/foxdns:latest
             ghcr.io/doridian/foxdns/foxdns:ssl
       - name: Build NOssl container image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
           push: true
@@ -49,7 +49,7 @@ jobs:
             ghcr.io/doridian/foxdns/foxdns:nossl
 
       - name: Build SSL-COMPRESSED container image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
           push: true
@@ -60,7 +60,7 @@ jobs:
             ghcr.io/doridian/foxdns/foxdns:compressed
             ghcr.io/doridian/foxdns/foxdns:ssl-compressed
       - name: Build NOssl-COMPRESSED container image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
           push: true
