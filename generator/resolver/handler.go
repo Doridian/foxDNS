@@ -25,12 +25,21 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		return
 	}
 
-	var recursionReplyEdns0 *dns.OPT
+	var upstreamReplyEdns0 *dns.OPT
 
 	defer func() {
 		replyEdns0 := util.ApplyEDNS0Reply(msg, reply, option, wr, r.RequireCookie)
-		if replyEdns0 != nil && recursionReplyEdns0 != nil && recursionReplyEdns0.Version() == 0 {
-			replyEdns0.SetDo(recursionReplyEdns0.Do())
+		if replyEdns0 != nil && upstreamReplyEdns0 != nil && upstreamReplyEdns0.Version() == replyEdns0.Version() {
+			replyEdns0.SetDo(upstreamReplyEdns0.Do())
+
+			for _, upstreamOpt := range upstreamReplyEdns0.Option {
+				if upstreamOpt.Option() != dns.EDNS0EDE {
+					continue
+				}
+
+				replyEdns0.Option = append(replyEdns0.Option, upstreamOpt)
+				break
+			}
 		}
 
 		if replyEdns0 == nil && reply.Rcode > 0xF {
@@ -59,15 +68,15 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 	q.Name = dns.CanonicalName(q.Name)
 
-	cacheResult, matchType, recursionReply, err := r.getOrAddCache(q, false, 1)
+	cacheResult, matchType, upstreamReply, err := r.getOrAddCache(q, false, 1)
 	if err != nil {
 		log.Printf("Error handling DNS request: %v", err)
 		return
 	}
 	cacheResults.WithLabelValues(cacheResult, matchType).Inc()
 
-	reply.Rcode = recursionReply.Rcode
-	reply.Answer = recursionReply.Answer
-	reply.Ns = recursionReply.Ns
-	recursionReplyEdns0 = recursionReply.IsEdns0()
+	reply.Rcode = upstreamReply.Rcode
+	reply.Answer = upstreamReply.Answer
+	reply.Ns = upstreamReply.Ns
+	upstreamReplyEdns0 = upstreamReply.IsEdns0()
 }
