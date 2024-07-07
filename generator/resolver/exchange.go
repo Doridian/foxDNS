@@ -89,10 +89,6 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 		if err != nil {
 			continue
 		}
-		if resp == nil {
-			err = errors.New("nil response")
-			continue
-		}
 
 		cookieMatch := false
 		if serverEDNS0 := resp.IsEdns0(); serverEDNS0 != nil && serverEDNS0.Version() == 0 {
