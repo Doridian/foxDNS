@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"log"
+	"math/rand"
 	"time"
 
 	"github.com/miekg/dns"
@@ -16,43 +18,52 @@ type connInfo struct {
 }
 
 var (
-	openConnections = promauto.NewGauge(prometheus.GaugeOpts{
+	openConnections = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "foxdns_resolver_open_connections_total",
 		Help: "The number of open connections to upstream resolvers",
-	})
+	}, []string{"server"})
 )
 
-func (r *Generator) acquireConn() (info *connInfo, err error) {
-	r.connCond.L.Lock()
+func (r *Generator) acquireConn(currentTry int) (info *connInfo, err error) {
+	var server *ServerConfig
+	switch r.ServerStrategy {
+	case StrategyRoundRobin:
+		server = r.Servers[r.lastServerIdx]
+		nextServerIdx := r.lastServerIdx + 1
+		if nextServerIdx >= len(r.Servers) {
+			nextServerIdx = 0
+		}
+		r.lastServerIdx = nextServerIdx
+	case StrategyRandom:
+		server = r.Servers[rand.Int()%len(r.Servers)]
+	case StrategyFailover:
+		server = r.Servers[(currentTry-1)%len(r.Servers)]
+	}
+
+	server.connCond.L.Lock()
 
 	for {
-		firstElem := r.freeConnections.Front()
+		firstElem := server.freeConnections.Front()
 		if firstElem != nil {
-			info = r.freeConnections.Remove(firstElem).(*connInfo)
-			r.connCond.L.Unlock()
+			info = server.freeConnections.Remove(firstElem).(*connInfo)
+			server.connCond.L.Unlock()
 			return
 		}
 
-		if r.connections < r.MaxConnections {
-			r.connections++
-			openConnections.Set(float64(r.connections))
+		if server.connections < r.MaxConnections {
+			server.connections++
+			openConnections.WithLabelValues(server.Addr).Set(float64(server.connections))
 
-			srv := r.Servers[r.lastServerIdx]
-			r.lastServerIdx++
-			if r.lastServerIdx >= len(r.Servers) {
-				r.lastServerIdx = 0
-			}
-
-			r.connCond.L.Unlock()
+			server.connCond.L.Unlock()
 			info = &connInfo{
-				server:       srv,
+				server:       server,
 				serverCookie: []byte{},
 			}
-			info.conn, err = srv.client.Dial(srv.Addr)
+			info.conn, err = server.client.Dial(server.Addr)
 			return
 		}
 
-		r.connCond.Wait()
+		server.connCond.Wait()
 	}
 }
 
@@ -61,40 +72,43 @@ func (r *Generator) returnConn(info *connInfo, err error) {
 		return
 	}
 
-	r.connCond.L.Lock()
-	defer r.connCond.L.Unlock()
+	server := info.server
+
+	server.connCond.L.Lock()
+	defer server.connCond.L.Unlock()
 
 	if err == nil {
 		info.lastUse = r.CurrentTime()
-		r.freeConnections.PushFront(info)
+		server.freeConnections.PushFront(info)
 	} else {
-		r.connections--
-		openConnections.Set(float64(r.connections))
+		log.Printf("Returning upstream connection to %s with error %v", info.server.Addr, err)
+		server.connections--
+		openConnections.WithLabelValues(server.Addr).Set(float64(server.connections))
 		if info.conn != nil {
 			go info.conn.Close()
 		}
 	}
 
-	r.connCond.Signal()
+	server.connCond.Signal()
 }
 
-func (r *Generator) cleanupConns() {
-	r.connCond.L.Lock()
-	defer r.connCond.L.Unlock()
+func (r *Generator) cleanupServerConns(server *ServerConfig) {
+	server.connCond.L.Lock()
+	defer server.connCond.L.Unlock()
 
 	madeChanges := false
 
 	for {
-		lastElem := r.freeConnections.Back()
+		lastElem := server.freeConnections.Back()
 		if lastElem == nil {
 			break
 		}
 		info := lastElem.Value.(*connInfo)
 
 		if time.Since(info.lastUse) > r.MaxIdleTime {
-			r.freeConnections.Remove(lastElem)
-			r.connections--
-			openConnections.Set(float64(r.connections))
+			server.freeConnections.Remove(lastElem)
+			server.connections--
+			openConnections.WithLabelValues(server.Addr).Set(float64(server.connections))
 			go info.conn.Close()
 			madeChanges = true
 		} else {
@@ -103,6 +117,12 @@ func (r *Generator) cleanupConns() {
 	}
 
 	if madeChanges {
-		r.connCond.Signal()
+		server.connCond.Signal()
+	}
+}
+
+func (r *Generator) cleanupConns() {
+	for _, server := range r.Servers {
+		r.cleanupServerConns(server)
 	}
 }

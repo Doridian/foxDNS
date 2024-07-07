@@ -17,24 +17,34 @@ type ServerConfig struct {
 	ServerName    string
 	RequireCookie bool
 	client        *dns.Client
+
+	freeConnections *list.List
+	connCond        *sync.Cond
+	connections     int
 }
 
-type Generator struct {
-	Servers []*ServerConfig
+type ServerStrategy int
 
+const (
+	StrategyRoundRobin ServerStrategy = iota
+	StrategyRandom
+	StrategyFailover
+)
+
+type Generator struct {
+	ServerStrategy ServerStrategy
+	Servers        []*ServerConfig
+
+	lastServerIdx  int
 	MaxConnections int
 	MaxIdleTime    time.Duration
-	Retries        int
+	Attempts       int
 	RetryWait      time.Duration
 	LogFailures    bool
 	RequireCookie  bool
 
 	AllowOnlyFromPrivate bool
 
-	connCond          *sync.Cond
-	connections       int
-	lastServerIdx     int
-	freeConnections   *list.List
 	connCleanupTicker *time.Ticker
 	shouldPadLen      int
 
@@ -64,10 +74,11 @@ func New(servers []*ServerConfig) *Generator {
 	cache, _ := lru.New[string, *cacheEntry](4096)
 
 	gen := &Generator{
+		ServerStrategy:       StrategyRoundRobin,
 		Servers:              servers,
 		MaxConnections:       10,
 		MaxIdleTime:          time.Second * 15,
-		Retries:              3,
+		Attempts:             3,
 		AllowOnlyFromPrivate: true,
 		RetryWait:            time.Millisecond * 100,
 		LogFailures:          false,
@@ -83,10 +94,7 @@ func New(servers []*ServerConfig) *Generator {
 		RecordMinTTL: 0,
 		RecordMaxTTL: math.MaxUint32,
 
-		shouldPadLen:    0,
-		connCond:        sync.NewCond(&sync.Mutex{}),
-		connections:     0,
-		freeConnections: list.New(),
+		shouldPadLen: 0,
 
 		OpportunisticCacheMinHits:     math.MaxUint64,
 		OpportunisticCacheMaxTimeLeft: 0,
@@ -99,6 +107,9 @@ func New(servers []*ServerConfig) *Generator {
 		srv.client = &dns.Client{
 			Net: srv.Proto,
 		}
+		srv.freeConnections = list.New()
+		srv.connCond = sync.NewCond(&sync.Mutex{})
+		srv.connections = 0
 
 		if srv.Proto == "tcp-tls" {
 			gen.shouldPadLen = 128

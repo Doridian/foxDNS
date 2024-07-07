@@ -22,6 +22,7 @@ resolvers:
   - zone: .
     max-connections: 100
     cache-size: 20480
+    nameserver-strategy: random
     nameservers:
       - proto: tcp-tls
         server-name: dns.google

@@ -42,7 +42,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 	var info *connInfo
 	var keepConn bool = false
 
-	for i := r.Retries; i > 0; i-- {
+	for currentTry := 1; currentTry <= r.Attempts; currentTry++ {
 		if info != nil && !keepConn {
 			r.returnConn(info, err)
 			upstreamQueryErrors.WithLabelValues(info.server.Addr).Inc()
@@ -53,7 +53,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 
 		keepConn = false
 		if info == nil {
-			info, err = r.acquireConn()
+			info, err = r.acquireConn(currentTry)
 		}
 
 		if err != nil {
@@ -128,6 +128,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 
 		if resp.Rcode == dns.RcodeBadCookie {
 			keepConn = true
+			currentTry--
 			continue
 		}
 

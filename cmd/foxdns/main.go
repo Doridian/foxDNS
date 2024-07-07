@@ -157,8 +157,8 @@ func reloadConfig() {
 			resolv.MaxIdleTime = resolvConf.MaxIdleTime
 		}
 
-		if resolvConf.Retries > 0 {
-			resolv.Retries = resolvConf.Retries
+		if resolvConf.Attempts > 0 {
+			resolv.Attempts = resolvConf.Attempts
 		}
 
 		if resolvConf.RetryWait > 0 {
@@ -207,6 +207,19 @@ func reloadConfig() {
 
 		if resolvConf.OpportunisticCacheMaxTimeLef > 0 {
 			resolv.OpportunisticCacheMaxTimeLeft = resolvConf.OpportunisticCacheMaxTimeLef
+		}
+
+		if resolvConf.NameServerStrategy != "" {
+			switch resolvConf.NameServerStrategy {
+			case "round-robin":
+				resolv.ServerStrategy = resolver.StrategyRoundRobin
+			case "random":
+				resolv.ServerStrategy = resolver.StrategyRandom
+			case "failover":
+				resolv.ServerStrategy = resolver.StrategyFailover
+			default:
+				log.Panicf("Unknown nameserver strategy: %s", resolvConf.NameServerStrategy)
+			}
 		}
 
 		resolv.RequireCookie = resolvConf.RequireCookie

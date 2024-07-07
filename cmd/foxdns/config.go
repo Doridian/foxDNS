@@ -34,10 +34,11 @@ type Config struct {
 			ServerName    string `yaml:"server-name"`
 			RequireCookie bool   `yaml:"require-cookie"`
 		} `yaml:"nameservers"`
+		NameServerStrategy string `yaml:"nameserver-strategy"`
 
 		MaxConnections int           `yaml:"max-connections"`
 		MaxIdleTime    time.Duration `yaml:"max-idle-time"`
-		Retries        int           `yaml:"retries"`
+		Attempts       int           `yaml:"attempts"`
 		RetryWait      time.Duration `yaml:"retry-wait"`
 		Timeout        time.Duration `yaml:"timeout"`
 		LogFailures    bool          `yaml:"log-failures"`
