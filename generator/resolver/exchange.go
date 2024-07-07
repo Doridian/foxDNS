@@ -25,7 +25,7 @@ var (
 	}, []string{"server"})
 )
 
-func (r *Generator) exchange(info *connInfo, m *dns.Msg) (resp *dns.Msg, err error) {
+func (r *Generator) exchange(info *querySlotInfo, m *dns.Msg) (resp *dns.Msg, err error) {
 	startTime := r.CurrentTime()
 	resp, _, err = info.server.client.ExchangeWithConn(m, info.conn)
 
@@ -39,12 +39,12 @@ func (r *Generator) exchange(info *connInfo, m *dns.Msg) (resp *dns.Msg, err err
 var ErrCookieMismatch = errors.New("client cookie returned from server invalid")
 
 func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
-	var info *connInfo
+	var info *querySlotInfo
 	var keepConn bool = false
 
 	for currentTry := 1; currentTry <= r.Attempts; currentTry++ {
 		if info != nil && !keepConn {
-			r.returnConn(info, err)
+			r.returnQuerySlot(info, err)
 			upstreamQueryErrors.WithLabelValues(info.server.Addr).Inc()
 			info = nil
 			err = nil
@@ -53,7 +53,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 
 		keepConn = false
 		if info == nil {
-			info, err = r.acquireConn(currentTry)
+			info, err = r.acquireQuerySlot(currentTry)
 		}
 
 		if err != nil {
@@ -128,11 +128,11 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 			continue
 		}
 
-		r.returnConn(info, nil)
+		r.returnQuerySlot(info, nil)
 		return
 	}
 
-	r.returnConn(info, err)
+	r.returnQuerySlot(info, err)
 
 	if r.LogFailures && (err != nil || resp == nil || resp.Rcode == dns.RcodeServerFailure) {
 		rcodeStr := ""

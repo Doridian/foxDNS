@@ -29,20 +29,20 @@ type Config struct {
 	Resolvers []struct {
 		Zone        string `yaml:"zone"`
 		NameServers []struct {
-			Addr          string `yaml:"addr"`
-			Proto         string `yaml:"proto"`
-			ServerName    string `yaml:"server-name"`
-			RequireCookie bool   `yaml:"require-cookie"`
+			Addr               string `yaml:"addr"`
+			Proto              string `yaml:"proto"`
+			ServerName         string `yaml:"server-name"`
+			RequireCookie      bool   `yaml:"require-cookie"`
+			MaxParallelQueries int    `yaml:"max-parallel-queries"`
 		} `yaml:"nameservers"`
 		NameServerStrategy string `yaml:"nameserver-strategy"`
 
-		MaxConnections int           `yaml:"max-connections"`
-		MaxIdleTime    time.Duration `yaml:"max-idle-time"`
-		Attempts       int           `yaml:"attempts"`
-		RetryWait      time.Duration `yaml:"retry-wait"`
-		Timeout        time.Duration `yaml:"timeout"`
-		LogFailures    bool          `yaml:"log-failures"`
-		RequireCookie  bool          `yaml:"require-cookie"`
+		MaxIdleTime   time.Duration `yaml:"max-idle-time"`
+		Attempts      int           `yaml:"attempts"`
+		RetryWait     time.Duration `yaml:"retry-wait"`
+		Timeout       time.Duration `yaml:"timeout"`
+		LogFailures   bool          `yaml:"log-failures"`
+		RequireCookie bool          `yaml:"require-cookie"`
 
 		CacheSize                 int           `yaml:"cache-size"`
 		CacheMaxTime              time.Duration `yaml:"cache-max-time"`

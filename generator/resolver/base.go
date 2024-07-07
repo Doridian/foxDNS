@@ -12,15 +12,16 @@ import (
 )
 
 type ServerConfig struct {
-	Addr          string
-	Proto         string
-	ServerName    string
-	RequireCookie bool
-	client        *dns.Client
+	Addr               string
+	Proto              string
+	ServerName         string
+	RequireCookie      bool
+	MaxParallelQueries int
+	client             *dns.Client
 
-	freeConnections *list.List
-	connCond        *sync.Cond
-	connections     int
+	freeQuerySlots  *list.List
+	querySlotCond   *sync.Cond
+	inFlightQueries int
 }
 
 type ServerStrategy int
@@ -35,13 +36,12 @@ type Generator struct {
 	ServerStrategy ServerStrategy
 	Servers        []*ServerConfig
 
-	lastServerIdx  int
-	MaxConnections int
-	MaxIdleTime    time.Duration
-	Attempts       int
-	RetryWait      time.Duration
-	LogFailures    bool
-	RequireCookie  bool
+	lastServerIdx int
+	MaxIdleTime   time.Duration
+	Attempts      int
+	RetryWait     time.Duration
+	LogFailures   bool
+	RequireCookie bool
 
 	AllowOnlyFromPrivate bool
 
@@ -76,7 +76,6 @@ func New(servers []*ServerConfig) *Generator {
 	gen := &Generator{
 		ServerStrategy:       StrategyRoundRobin,
 		Servers:              servers,
-		MaxConnections:       10,
 		MaxIdleTime:          time.Second * 15,
 		Attempts:             3,
 		AllowOnlyFromPrivate: true,
@@ -107,9 +106,12 @@ func New(servers []*ServerConfig) *Generator {
 		srv.client = &dns.Client{
 			Net: srv.Proto,
 		}
-		srv.freeConnections = list.New()
-		srv.connCond = sync.NewCond(&sync.Mutex{})
-		srv.connections = 0
+		srv.freeQuerySlots = list.New()
+		srv.querySlotCond = sync.NewCond(&sync.Mutex{})
+		srv.inFlightQueries = 0
+		if srv.MaxParallelQueries <= 0 {
+			srv.MaxParallelQueries = 10
+		}
 
 		if srv.Proto == "tcp-tls" {
 			gen.shouldPadLen = 128
@@ -164,7 +166,7 @@ func (r *Generator) Start() error {
 			if !ok {
 				return
 			}
-			r.cleanupConns()
+			r.cleanupAllQuerySlots()
 		}
 	}()
 

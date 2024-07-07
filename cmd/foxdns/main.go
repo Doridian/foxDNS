@@ -136,10 +136,11 @@ func reloadConfig() {
 		nameServers := make([]*resolver.ServerConfig, len(resolvConf.NameServers))
 		for i, ns := range resolvConf.NameServers {
 			nameServers[i] = &resolver.ServerConfig{
-				Addr:          ns.Addr,
-				Proto:         ns.Proto,
-				ServerName:    ns.ServerName,
-				RequireCookie: ns.RequireCookie,
+				Addr:               ns.Addr,
+				Proto:              ns.Proto,
+				ServerName:         ns.ServerName,
+				RequireCookie:      ns.RequireCookie,
+				MaxParallelQueries: ns.MaxParallelQueries,
 			}
 		}
 
@@ -148,10 +149,6 @@ func reloadConfig() {
 
 		resolv.AllowOnlyFromPrivate = resolvConf.AllowOnlyFromPrivate
 		resolv.LogFailures = resolvConf.LogFailures
-
-		if resolvConf.MaxConnections > 0 {
-			resolv.MaxConnections = resolvConf.MaxConnections
-		}
 
 		if resolvConf.MaxIdleTime > 0 {
 			resolv.MaxIdleTime = resolvConf.MaxIdleTime
