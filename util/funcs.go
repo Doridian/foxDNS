@@ -49,5 +49,5 @@ func SetHandlerName(wr dns.ResponseWriter, hdl DNSHandler) {
 }
 
 func IsBadQuery(q *dns.Question) bool {
-	return q.Qclass != dns.ClassINET || q.Qtype == dns.TypeAXFR || q.Qtype == dns.TypeIXFR || q.Qtype == dns.TypeMAILA || q.Qtype == dns.TypeMAILB || q.Qtype == dns.TypeANY
+	return q.Qclass != dns.ClassINET || q.Qtype == dns.TypeIXFR || q.Qtype == dns.TypeAXFR || q.Qtype == dns.TypeMAILA || q.Qtype == dns.TypeMAILB || q.Qtype == dns.TypeANY
 }
