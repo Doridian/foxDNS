@@ -27,10 +27,12 @@ resolvers:
         server-name: dns.google
         addr: "8.8.8.8:853"
         max-parallel-queries: 10
+        timeout: 200ms
       - proto: tcp-tls
         server-name: dns.google
         addr: "8.8.4.4:853"
         max-parallel-queries: 10
+        timeout: 200ms
     allow-only-from-private: true
 
 localizers:

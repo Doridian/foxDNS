@@ -141,6 +141,7 @@ func reloadConfig() {
 				ServerName:         ns.ServerName,
 				RequireCookie:      ns.RequireCookie,
 				MaxParallelQueries: ns.MaxParallelQueries,
+				Timeout:            ns.Timeout,
 			}
 		}
 
@@ -160,10 +161,6 @@ func reloadConfig() {
 
 		if resolvConf.RetryWait > 0 {
 			resolv.RetryWait = resolvConf.RetryWait
-		}
-
-		if resolvConf.Timeout > 0 {
-			resolv.SetTimeout(resolvConf.Timeout)
 		}
 
 		if resolvConf.CacheSize > 0 {

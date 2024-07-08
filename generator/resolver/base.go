@@ -18,6 +18,7 @@ type ServerConfig struct {
 	RequireCookie      bool
 	MaxParallelQueries int
 	client             *dns.Client
+	Timeout            time.Duration
 
 	freeQuerySlots  *list.List
 	querySlotCond   *sync.Cond
@@ -104,7 +105,11 @@ func New(servers []*ServerConfig) *Generator {
 
 	for _, srv := range gen.Servers {
 		srv.client = &dns.Client{
-			Net: srv.Proto,
+			Net:          srv.Proto,
+			Timeout:      srv.Timeout,
+			DialTimeout:  srv.Timeout,
+			ReadTimeout:  srv.Timeout,
+			WriteTimeout: srv.Timeout,
 		}
 		srv.freeQuerySlots = list.New()
 		srv.querySlotCond = sync.NewCond(&sync.Mutex{})
@@ -125,15 +130,6 @@ func New(servers []*ServerConfig) *Generator {
 	}
 
 	return gen
-}
-
-func (r *Generator) SetTimeout(timeout time.Duration) {
-	for _, srv := range r.Servers {
-		srv.client.Timeout = timeout
-		srv.client.DialTimeout = timeout
-		srv.client.ReadTimeout = timeout
-		srv.client.WriteTimeout = timeout
-	}
 }
 
 func (r *Generator) Refresh() error {
