@@ -28,12 +28,14 @@ type AuthConfig struct {
 	DNSSECPrivateZSKFile *string `yaml:"dnssec-private-zsk"`
 	DNSSECPublicKSKFile  *string `yaml:"dnssec-public-ksk"`
 	DNSSECPrivateKSKFile *string `yaml:"dnssec-private-ksk"`
+	DNSSECSignerName     *string `yaml:"dnssec-signer-name"`
 }
 
 type AuthorityHandler struct {
 	soa           []dns.RR
 	ns            []dns.RR
 	zone          string
+	signerName    string
 	zskDNSKEY     *dns.DNSKEY
 	zskPrivateKey crypto.PrivateKey
 	kskDNSKEY     *dns.DNSKEY
@@ -128,6 +130,12 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 		if err != nil {
 			panic(err)
 		}
+	}
+
+	if config.DNSSECSignerName != nil {
+		hdl.signerName = *config.DNSSECSignerName
+	} else {
+		hdl.signerName = zone
 	}
 
 	nsTtl := uint32(config.NSTtl.Seconds())

@@ -87,6 +87,10 @@ func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfi
 		base.DNSSECPrivateKSKFile = config.DNSSECPrivateKSKFile
 	}
 
+	if config.DNSSECSignerName != nil {
+		base.DNSSECSignerName = config.DNSSECSignerName
+	}
+
 	return base
 }
 
