@@ -79,6 +79,14 @@ func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfi
 		base.DNSSECPrivateZSKFile = config.DNSSECPrivateZSKFile
 	}
 
+	if config.DNSSECPublicKSKFile != "" {
+		base.DNSSECPublicKSKFile = config.DNSSECPublicKSKFile
+	}
+
+	if config.DNSSECPrivateKSKFile != "" {
+		base.DNSSECPrivateKSKFile = config.DNSSECPrivateKSKFile
+	}
+
 	return base
 }
 

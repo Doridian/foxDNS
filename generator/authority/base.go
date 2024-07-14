@@ -24,10 +24,10 @@ type AuthConfig struct {
 	Minttl        time.Duration `yaml:"minttl"`
 	RequireCookie bool          `yaml:"require-cookie"`
 
-	DNSSECPublicZSKFile  string `yaml:"dnssec-private-zsk"`
-	DNSSECPrivateZSKFile string `yaml:"dnssec-public-zsk"`
-	DNSSECPublicKSKFile  string `yaml:"dnssec-private-ksk"`
-	DNSSECPrivateKSKFile string `yaml:"dnssec-public-ksk"`
+	DNSSECPublicZSKFile  string `yaml:"dnssec-public-zsk"`
+	DNSSECPrivateZSKFile string `yaml:"dnssec-private-zsk"`
+	DNSSECPublicKSKFile  string `yaml:"dnssec-public-ksk"`
+	DNSSECPrivateKSKFile string `yaml:"dnssec-private-ksk"`
 }
 
 type AuthorityHandler struct {
@@ -80,11 +80,11 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 
 	if config.DNSSECPublicZSKFile != "" {
 		// Load ZSK
-		fh, err := os.Open(config.DNSSECPrivateZSKFile)
+		fh, err := os.Open(config.DNSSECPublicZSKFile)
 		if err != nil {
 			panic(err)
 		}
-		pubkey, err := dns.ReadRR(fh, config.DNSSECPrivateZSKFile)
+		pubkey, err := dns.ReadRR(fh, config.DNSSECPublicZSKFile)
 		_ = fh.Close()
 		if err != nil {
 			panic(err)
@@ -92,22 +92,22 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 
 		hdl.zskDNSKEY = pubkey.(*dns.DNSKEY)
 
-		fh, err = os.Open(config.DNSSECPublicZSKFile)
+		fh, err = os.Open(config.DNSSECPrivateZSKFile)
 		if err != nil {
 			panic(err)
 		}
-		hdl.zskPrivateKey, err = hdl.zskDNSKEY.ReadPrivateKey(fh, config.DNSSECPublicZSKFile)
+		hdl.zskPrivateKey, err = hdl.zskDNSKEY.ReadPrivateKey(fh, config.DNSSECPrivateZSKFile)
 		_ = fh.Close()
 		if err != nil {
 			panic(err)
 		}
 
 		// Load KSK
-		fh, err = os.Open(config.DNSSECPrivateKSKFile)
+		fh, err = os.Open(config.DNSSECPublicKSKFile)
 		if err != nil {
 			panic(err)
 		}
-		pubkey, err = dns.ReadRR(fh, config.DNSSECPrivateKSKFile)
+		pubkey, err = dns.ReadRR(fh, config.DNSSECPublicKSKFile)
 		_ = fh.Close()
 		if err != nil {
 			panic(err)
@@ -115,11 +115,11 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 
 		hdl.kskDNSKEY = pubkey.(*dns.DNSKEY)
 
-		fh, err = os.Open(config.DNSSECPublicKSKFile)
+		fh, err = os.Open(config.DNSSECPrivateKSKFile)
 		if err != nil {
 			panic(err)
 		}
-		hdl.kskPrivateKey, err = hdl.kskDNSKEY.ReadPrivateKey(fh, config.DNSSECPublicKSKFile)
+		hdl.kskPrivateKey, err = hdl.kskDNSKEY.ReadPrivateKey(fh, config.DNSSECPrivateKSKFile)
 		_ = fh.Close()
 		if err != nil {
 			panic(err)
