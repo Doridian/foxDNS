@@ -132,9 +132,11 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 		}
 	}
 
+	hdl.signerName = ""
 	if config.DNSSECSignerName != nil {
 		hdl.signerName = *config.DNSSECSignerName
-	} else {
+	}
+	if hdl.signerName == "" {
 		hdl.signerName = zone
 	}
 
