@@ -14,7 +14,6 @@ import (
 	"github.com/Doridian/foxDNS/generator/localizer"
 	"github.com/Doridian/foxDNS/generator/rdns"
 	"github.com/Doridian/foxDNS/generator/resolver"
-	"github.com/Doridian/foxDNS/generator/simple"
 	"github.com/Doridian/foxDNS/generator/static"
 	"github.com/Doridian/foxDNS/server"
 	"github.com/Doridian/foxDNS/util"
@@ -70,6 +69,14 @@ func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfi
 
 	if config.RequireCookie {
 		base.RequireCookie = true
+	}
+
+	if config.DNSSECPrivateKeyFile != "" {
+		base.DNSSECPrivateKeyFile = config.DNSSECPrivateKeyFile
+	}
+
+	if config.DNSSECPublicKeyFile != "" {
+		base.DNSSECPublicKeyFile = config.DNSSECPublicKeyFile
 	}
 
 	return base
@@ -262,7 +269,8 @@ func reloadConfig() {
 				log.Panicf("Error loading static zone %s: %v", statConf.Zone, err)
 			}
 
-			statAuth := simple.New(statConf.Zone)
+			statAuthorityConfig := mergeAuthorityConfig(statConf.AuthorityConfig, authorityConfig)
+			statAuth := authority.NewAuthorityHandler(statConf.Zone, statAuthorityConfig)
 			statAuth.RequireCookie = statConf.RequireCookie
 			generators = append(generators, statAuth)
 			statAuth.Child = stat

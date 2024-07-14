@@ -30,8 +30,6 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	defer func() {
 		replyEdns0 := util.ApplyEDNS0Reply(msg, reply, option, wr, r.RequireCookie)
 		if replyEdns0 != nil && upstreamReplyEdns0 != nil && upstreamReplyEdns0.Version() == replyEdns0.Version() {
-			replyEdns0.SetDo(upstreamReplyEdns0.Do())
-
 			for _, upstreamOpt := range upstreamReplyEdns0.Option {
 				if upstreamOpt.Option() != dns.EDNS0EDE {
 					continue

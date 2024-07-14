@@ -1,6 +1,10 @@
 package authority
 
 import (
+	"crypto"
+	"crypto/ecdsa"
+	"log"
+	"os"
 	"time"
 
 	"github.com/Doridian/foxDNS/generator/simple"
@@ -19,14 +23,19 @@ type AuthConfig struct {
 	Expire        time.Duration `yaml:"expire"`
 	Minttl        time.Duration `yaml:"minttl"`
 	RequireCookie bool          `yaml:"require-cookie"`
+
+	DNSSECPrivateKeyFile string `yaml:"dnssec-private-key"`
+	DNSSECPublicKeyFile  string `yaml:"dnssec-public-key"`
 }
 
 type AuthorityHandler struct {
-	soa           []dns.RR
-	ns            []dns.RR
-	zone          string
-	RequireCookie bool
-	Child         simple.Handler
+	soa              []dns.RR
+	ns               []dns.RR
+	zone             string
+	dnssecDNSKEY     *dns.DNSKEY
+	dnssecPrivateKey crypto.PrivateKey
+	RequireCookie    bool
+	Child            simple.Handler
 }
 
 func GetDefaultAuthorityConfig() AuthConfig {
@@ -63,6 +72,30 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 			Expire:  uint32(config.Expire.Seconds()),
 			Minttl:  uint32(config.Minttl.Seconds()),
 		}, dns.TypeSOA, zone, uint32(config.SOATtl.Seconds())),
+	}
+
+	if config.DNSSECPrivateKeyFile != "" {
+		fh, err := os.Open(config.DNSSECPublicKeyFile)
+		if err != nil {
+			panic(err)
+		}
+		pubkey, err := dns.ReadRR(fh, config.DNSSECPublicKeyFile)
+		_ = fh.Close()
+		if err != nil {
+			panic(err)
+		}
+
+		hdl.dnssecDNSKEY = pubkey.(*dns.DNSKEY)
+
+		fh, err = os.Open(config.DNSSECPrivateKeyFile)
+		if err != nil {
+			panic(err)
+		}
+		hdl.dnssecPrivateKey, err = hdl.dnssecDNSKEY.ReadPrivateKey(fh, config.DNSSECPrivateKeyFile)
+		_ = fh.Close()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	nsTtl := uint32(config.NSTtl.Seconds())
@@ -109,6 +142,10 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 			reply.Answer = r.soa
 		case dns.TypeNS:
 			reply.Answer = r.ns
+		case dns.TypeDNSKEY:
+			if r.dnssecDNSKEY != nil {
+				reply.Answer = []dns.RR{r.dnssecDNSKEY}
+			}
 		}
 	}
 
@@ -125,6 +162,33 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		}
 	} else {
 		util.SetHandlerName(wr, r)
+	}
+
+	if r.dnssecDNSKEY != nil && len(reply.Answer) > 0 {
+		queryEDNS0 := msg.IsEdns0()
+		dnssecOK := false
+		if queryEDNS0 != nil {
+			dnssecOK = queryEDNS0.Do()
+		}
+		if dnssecOK {
+			signer := &dns.RRSIG{}
+			ttl := reply.Answer[0].Header().Ttl
+			util.FillHeader(signer, r.zone, dns.TypeRRSIG, ttl)
+			signer.TypeCovered = reply.Answer[0].Header().Rrtype
+			signer.Labels = uint8(dns.CountLabel(reply.Answer[0].Header().Name))
+			signer.OrigTtl = ttl
+			signer.Expiration = uint32(time.Now().Add(86400 * time.Second).Unix())
+			signer.Inception = uint32(time.Now().Unix())
+			signer.KeyTag = r.dnssecDNSKEY.KeyTag()
+			signer.SignerName = r.zone
+			signer.Algorithm = r.dnssecDNSKEY.Algorithm
+			err := signer.Sign(r.dnssecPrivateKey.(*ecdsa.PrivateKey), reply.Answer)
+			if err != nil {
+				log.Printf("Error signing record for %s: %v", reply.Answer[0].Header().Name, err)
+			} else {
+				reply.Answer = append(reply.Answer, signer)
+			}
+		}
 	}
 }
 

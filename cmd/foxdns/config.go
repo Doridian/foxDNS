@@ -69,10 +69,11 @@ type Config struct {
 	} `yaml:"localizers"`
 
 	StaticZones []struct {
-		Zone                  string `yaml:"zone"`
-		File                  string `yaml:"file"`
-		ResolveExternalCNAMES bool   `yaml:"resolve-external-cnames"`
-		RequireCookie         bool   `yaml:"require-cookie"`
+		Zone                  string                `yaml:"zone"`
+		File                  string                `yaml:"file"`
+		ResolveExternalCNAMES bool                  `yaml:"resolve-external-cnames"`
+		RequireCookie         bool                  `yaml:"require-cookie"`
+		AuthorityConfig       *authority.AuthConfig `yaml:"authority-config"`
 	} `yaml:"static-zones"`
 
 	DomainBlockFiles []string `yaml:"domain-block-files"`
