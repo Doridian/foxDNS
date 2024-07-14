@@ -24,18 +24,22 @@ type AuthConfig struct {
 	Minttl        time.Duration `yaml:"minttl"`
 	RequireCookie bool          `yaml:"require-cookie"`
 
-	DNSSECPrivateKeyFile string `yaml:"dnssec-private-key"`
-	DNSSECPublicKeyFile  string `yaml:"dnssec-public-key"`
+	DNSSECPublicZSKFile  string `yaml:"dnssec-private-zsk"`
+	DNSSECPrivateZSKFile string `yaml:"dnssec-public-zsk"`
+	DNSSECPublicKSKFile  string `yaml:"dnssec-private-ksk"`
+	DNSSECPrivateKSKFile string `yaml:"dnssec-public-ksk"`
 }
 
 type AuthorityHandler struct {
-	soa              []dns.RR
-	ns               []dns.RR
-	zone             string
-	dnssecDNSKEY     *dns.DNSKEY
-	dnssecPrivateKey crypto.PrivateKey
-	RequireCookie    bool
-	Child            simple.Handler
+	soa           []dns.RR
+	ns            []dns.RR
+	zone          string
+	zskDNSKEY     *dns.DNSKEY
+	zskPrivateKey crypto.PrivateKey
+	kskDNSKEY     *dns.DNSKEY
+	kskPrivateKey crypto.PrivateKey
+	RequireCookie bool
+	Child         simple.Handler
 }
 
 func GetDefaultAuthorityConfig() AuthConfig {
@@ -74,24 +78,48 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 		}, dns.TypeSOA, zone, uint32(config.SOATtl.Seconds())),
 	}
 
-	if config.DNSSECPrivateKeyFile != "" {
-		fh, err := os.Open(config.DNSSECPublicKeyFile)
+	if config.DNSSECPublicZSKFile != "" {
+		// Load ZSK
+		fh, err := os.Open(config.DNSSECPrivateZSKFile)
 		if err != nil {
 			panic(err)
 		}
-		pubkey, err := dns.ReadRR(fh, config.DNSSECPublicKeyFile)
+		pubkey, err := dns.ReadRR(fh, config.DNSSECPrivateZSKFile)
 		_ = fh.Close()
 		if err != nil {
 			panic(err)
 		}
 
-		hdl.dnssecDNSKEY = pubkey.(*dns.DNSKEY)
+		hdl.zskDNSKEY = pubkey.(*dns.DNSKEY)
 
-		fh, err = os.Open(config.DNSSECPrivateKeyFile)
+		fh, err = os.Open(config.DNSSECPublicZSKFile)
 		if err != nil {
 			panic(err)
 		}
-		hdl.dnssecPrivateKey, err = hdl.dnssecDNSKEY.ReadPrivateKey(fh, config.DNSSECPrivateKeyFile)
+		hdl.zskPrivateKey, err = hdl.zskDNSKEY.ReadPrivateKey(fh, config.DNSSECPublicZSKFile)
+		_ = fh.Close()
+		if err != nil {
+			panic(err)
+		}
+
+		// Load KSK
+		fh, err = os.Open(config.DNSSECPrivateKSKFile)
+		if err != nil {
+			panic(err)
+		}
+		pubkey, err = dns.ReadRR(fh, config.DNSSECPrivateKSKFile)
+		_ = fh.Close()
+		if err != nil {
+			panic(err)
+		}
+
+		hdl.kskDNSKEY = pubkey.(*dns.DNSKEY)
+
+		fh, err = os.Open(config.DNSSECPublicKSKFile)
+		if err != nil {
+			panic(err)
+		}
+		hdl.kskPrivateKey, err = hdl.kskDNSKEY.ReadPrivateKey(fh, config.DNSSECPublicKSKFile)
 		_ = fh.Close()
 		if err != nil {
 			panic(err)
@@ -143,8 +171,8 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		case dns.TypeNS:
 			reply.Answer = r.ns
 		case dns.TypeDNSKEY:
-			if r.dnssecDNSKEY != nil {
-				reply.Answer = []dns.RR{r.dnssecDNSKEY}
+			if r.zskDNSKEY != nil {
+				reply.Answer = []dns.RR{r.zskDNSKEY, r.kskDNSKEY}
 			}
 		}
 	}
@@ -164,7 +192,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		util.SetHandlerName(wr, r)
 	}
 
-	if r.dnssecDNSKEY != nil && len(reply.Answer) > 0 {
+	if r.zskDNSKEY != nil && len(reply.Answer) > 0 {
 		queryEDNS0 := msg.IsEdns0()
 		dnssecOK := false
 		if queryEDNS0 != nil {
@@ -179,10 +207,18 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 			signer.OrigTtl = ttl
 			signer.Expiration = uint32(time.Now().Add(86400 * time.Second).Unix())
 			signer.Inception = uint32(time.Now().Unix())
-			signer.KeyTag = r.dnssecDNSKEY.KeyTag()
 			signer.SignerName = r.zone
-			signer.Algorithm = r.dnssecDNSKEY.Algorithm
-			err := signer.Sign(r.dnssecPrivateKey.(*ecdsa.PrivateKey), reply.Answer)
+
+			dnskey := r.zskDNSKEY
+			privkey := r.zskPrivateKey
+			if q.Qtype == dns.TypeDNSKEY {
+				dnskey = r.kskDNSKEY
+				privkey = r.kskPrivateKey
+			}
+
+			signer.KeyTag = dnskey.KeyTag()
+			signer.Algorithm = dnskey.Algorithm
+			err := signer.Sign(privkey.(*ecdsa.PrivateKey), reply.Answer)
 			if err != nil {
 				log.Printf("Error signing record for %s: %v", reply.Answer[0].Header().Name, err)
 			} else {
