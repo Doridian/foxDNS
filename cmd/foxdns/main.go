@@ -71,19 +71,19 @@ func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfi
 		base.RequireCookie = true
 	}
 
-	if config.DNSSECPublicZSKFile != "" {
+	if config.DNSSECPublicZSKFile != nil {
 		base.DNSSECPublicZSKFile = config.DNSSECPublicZSKFile
 	}
 
-	if config.DNSSECPrivateZSKFile != "" {
+	if config.DNSSECPrivateZSKFile != nil {
 		base.DNSSECPrivateZSKFile = config.DNSSECPrivateZSKFile
 	}
 
-	if config.DNSSECPublicKSKFile != "" {
+	if config.DNSSECPublicKSKFile != nil {
 		base.DNSSECPublicKSKFile = config.DNSSECPublicKSKFile
 	}
 
-	if config.DNSSECPrivateKSKFile != "" {
+	if config.DNSSECPrivateKSKFile != nil {
 		base.DNSSECPrivateKSKFile = config.DNSSECPrivateKSKFile
 	}
 
