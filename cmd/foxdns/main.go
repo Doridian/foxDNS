@@ -279,7 +279,10 @@ func reloadConfig() {
 				}
 			}
 
-			locAuth := authority.NewAuthorityHandler(locConfig.Zone, mergeAuthorityConfig(locConfig.AuthorityConfig, authorityConfig))
+			locAuthConfig := mergeAuthorityConfig(locConfig.AuthorityConfig, authorityConfig)
+			boolFalse := false
+			locAuthConfig.DNSSECCacheSignatures = &boolFalse
+			locAuth := authority.NewAuthorityHandler(locConfig.Zone, locAuthConfig)
 			locAuth.Child = loc
 			locAuth.Register(mux)
 		}
