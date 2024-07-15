@@ -49,6 +49,10 @@ func (r *AuthorityHandler) signResponse(q *dns.Question, msg *dns.Msg, answer []
 		privkey = r.kskPrivateKey
 	}
 
+	if dnskey == nil || privkey == nil {
+		return nil, fmt.Errorf("no key to sign with for record %s in zone %s", q.Name, r.zone)
+	}
+
 	signer.KeyTag = dnskey.KeyTag()
 	signer.Algorithm = dnskey.Algorithm
 	err := signer.Sign(privkey.(*ecdsa.PrivateKey), answer)
