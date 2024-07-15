@@ -188,7 +188,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		case dns.TypeNS:
 			reply.Answer = r.ns
 		case dns.TypeDNSKEY:
-			if r.zskDNSKEY != nil {
+			if r.zskDNSKEY != nil && q.Name == r.signerName {
 				reply.Answer = []dns.RR{r.zskDNSKEY, r.kskDNSKEY}
 			}
 		}
