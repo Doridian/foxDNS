@@ -34,9 +34,10 @@ type AuthConfig struct {
 }
 
 type AuthorityHandler struct {
-	soa  []dns.RR
-	ns   []dns.RR
-	zone string
+	soa         []dns.RR
+	ns          []dns.RR
+	zone        string
+	handlerZone string
 
 	enableSignatureCache bool
 	signatureLock        sync.Mutex
@@ -67,31 +68,45 @@ func FillAuthHeader(rr dns.RR, rtype uint16, zone string, ttl uint32) dns.RR {
 	return util.FillHeader(rr, zone, rtype, ttl)
 }
 
-func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
+func NewAuthorityHandler(handlerZone string, config AuthConfig) *AuthorityHandler {
 	hdl := &AuthorityHandler{
 		signatures:           make(map[string]*dns.RRSIG),
 		enableSignatureCache: true,
 	}
 
+	hdl.handlerZone = dns.CanonicalName(handlerZone)
+
 	if config.ZoneName != nil {
-		zone = *config.ZoneName
+		hdl.zone = *config.ZoneName
+	}
+	if hdl.zone == "" {
+		hdl.zone = hdl.handlerZone
+	} else {
+		hdl.zone = dns.CanonicalName(hdl.zone)
 	}
 
-	zone = dns.CanonicalName(zone)
-
-	hdl.zone = zone
 	hdl.RequireCookie = config.RequireCookie
-	hdl.ns = make([]dns.RR, 0, len(config.Nameservers))
-	hdl.soa = []dns.RR{
-		FillAuthHeader(&dns.SOA{
-			Ns:      dns.CanonicalName(config.Nameservers[0]),
-			Mbox:    dns.CanonicalName(config.Mbox),
-			Serial:  config.Serial,
-			Refresh: uint32(config.Refresh.Seconds()),
-			Retry:   uint32(config.Retry.Seconds()),
-			Expire:  uint32(config.Expire.Seconds()),
-			Minttl:  uint32(config.Minttl.Seconds()),
-		}, dns.TypeSOA, zone, uint32(config.SOATtl.Seconds())),
+	hdl.soa = make([]dns.RR, 0)
+	hdl.ns = make([]dns.RR, 0)
+	if hdl.zone == hdl.handlerZone {
+		hdl.soa = []dns.RR{
+			FillAuthHeader(&dns.SOA{
+				Ns:      dns.CanonicalName(config.Nameservers[0]),
+				Mbox:    dns.CanonicalName(config.Mbox),
+				Serial:  config.Serial,
+				Refresh: uint32(config.Refresh.Seconds()),
+				Retry:   uint32(config.Retry.Seconds()),
+				Expire:  uint32(config.Expire.Seconds()),
+				Minttl:  uint32(config.Minttl.Seconds()),
+			}, dns.TypeSOA, hdl.zone, uint32(config.SOATtl.Seconds())),
+		}
+
+		nsTtl := uint32(config.NSTtl.Seconds())
+		for _, ns := range config.Nameservers {
+			hdl.ns = append(hdl.ns, FillAuthHeader(&dns.NS{
+				Ns: dns.CanonicalName(ns),
+			}, dns.TypeNS, hdl.zone, nsTtl))
+		}
 	}
 
 	publicZSKFile := util.StringOrEmpty(config.DNSSECPublicZSKFile)
@@ -158,14 +173,7 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 		}
 	}
 	if hdl.signerName == "" {
-		hdl.signerName = zone
-	}
-
-	nsTtl := uint32(config.NSTtl.Seconds())
-	for _, ns := range config.Nameservers {
-		hdl.ns = append(hdl.ns, FillAuthHeader(&dns.NS{
-			Ns: dns.CanonicalName(ns),
-		}, dns.TypeNS, zone, nsTtl))
+		hdl.signerName = hdl.zone
 	}
 
 	return hdl
