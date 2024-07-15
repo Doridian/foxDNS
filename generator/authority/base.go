@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/Doridian/foxDNS/generator/simple"
@@ -31,14 +32,18 @@ type AuthConfig struct {
 }
 
 type AuthorityHandler struct {
-	soa           []dns.RR
-	ns            []dns.RR
-	zone          string
+	soa  []dns.RR
+	ns   []dns.RR
+	zone string
+
+	signatureLock sync.Mutex
+	signatures    map[string]*dns.RRSIG
 	signerName    string
 	zskDNSKEY     *dns.DNSKEY
 	zskPrivateKey crypto.PrivateKey
 	kskDNSKEY     *dns.DNSKEY
 	kskPrivateKey crypto.PrivateKey
+
 	RequireCookie bool
 	Child         simple.Handler
 }
@@ -60,7 +65,9 @@ func FillAuthHeader(rr dns.RR, rtype uint16, zone string, ttl uint32) dns.RR {
 }
 
 func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
-	hdl := &AuthorityHandler{}
+	hdl := &AuthorityHandler{
+		signatures: make(map[string]*dns.RRSIG),
+	}
 
 	zone = dns.CanonicalName(zone)
 
