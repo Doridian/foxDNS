@@ -2,7 +2,6 @@ package authority
 
 import (
 	"crypto"
-	"crypto/ecdsa"
 	"log"
 	"os"
 	"time"
@@ -209,39 +208,11 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		util.SetHandlerName(wr, r)
 	}
 
-	if r.zskDNSKEY != nil && len(reply.Answer) > 0 {
-		queryEDNS0 := msg.IsEdns0()
-		dnssecOK := false
-		if queryEDNS0 != nil {
-			dnssecOK = queryEDNS0.Do()
-		}
-		if dnssecOK {
-			signer := &dns.RRSIG{}
-			ttl := reply.Answer[0].Header().Ttl
-			util.FillHeader(signer, r.zone, dns.TypeRRSIG, ttl)
-			signer.TypeCovered = reply.Answer[0].Header().Rrtype
-			signer.Labels = uint8(dns.CountLabel(reply.Answer[0].Header().Name))
-			signer.OrigTtl = ttl
-			signer.Expiration = uint32(time.Now().Add(86400 * time.Second).Unix())
-			signer.Inception = uint32(time.Now().Unix())
-			signer.SignerName = r.signerName
-
-			dnskey := r.zskDNSKEY
-			privkey := r.zskPrivateKey
-			if q.Qtype == dns.TypeDNSKEY {
-				dnskey = r.kskDNSKEY
-				privkey = r.kskPrivateKey
-			}
-
-			signer.KeyTag = dnskey.KeyTag()
-			signer.Algorithm = dnskey.Algorithm
-			err := signer.Sign(privkey.(*ecdsa.PrivateKey), reply.Answer)
-			if err != nil {
-				log.Printf("Error signing record for %s: %v", reply.Answer[0].Header().Name, err)
-			} else {
-				reply.Answer = append(reply.Answer, signer)
-			}
-		}
+	signer, err := r.signResponse(q, msg, reply.Answer)
+	if err != nil {
+		log.Printf("Error signing record for %s: %v", reply.Answer[0].Header().Name, err)
+	} else if signer != nil {
+		reply.Answer = append(reply.Answer, signer)
 	}
 }
 
