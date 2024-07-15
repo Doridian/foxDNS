@@ -79,7 +79,8 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	} else {
 		newAnswers := make([]dns.RR, 0, len(upstreamReply.Answer))
 		for _, rr := range upstreamReply.Answer {
-			if rr.Header().Rrtype == dns.TypeRRSIG {
+			rrType := rr.Header().Rrtype
+			if rrType == dns.TypeRRSIG || rrType == dns.TypeNSEC || rrType == dns.TypeNSEC3 {
 				continue
 			}
 			newAnswers = append(newAnswers, rr)
