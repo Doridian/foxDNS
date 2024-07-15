@@ -24,11 +24,12 @@ type AuthConfig struct {
 	Minttl        time.Duration `yaml:"minttl"`
 	RequireCookie bool          `yaml:"require-cookie"`
 
-	DNSSECPublicZSKFile  *string `yaml:"dnssec-public-zsk"`
-	DNSSECPrivateZSKFile *string `yaml:"dnssec-private-zsk"`
-	DNSSECPublicKSKFile  *string `yaml:"dnssec-public-ksk"`
-	DNSSECPrivateKSKFile *string `yaml:"dnssec-private-ksk"`
-	DNSSECSignerName     *string `yaml:"dnssec-signer-name"`
+	DNSSECPublicZSKFile   *string `yaml:"dnssec-public-zsk"`
+	DNSSECPrivateZSKFile  *string `yaml:"dnssec-private-zsk"`
+	DNSSECPublicKSKFile   *string `yaml:"dnssec-public-ksk"`
+	DNSSECPrivateKSKFile  *string `yaml:"dnssec-private-ksk"`
+	DNSSECSignerName      *string `yaml:"dnssec-signer-name"`
+	DNSSECCacheSignatures *bool   `yaml:"dnssec-cache-signatures"`
 }
 
 type AuthorityHandler struct {
@@ -36,13 +37,14 @@ type AuthorityHandler struct {
 	ns   []dns.RR
 	zone string
 
-	signatureLock sync.Mutex
-	signatures    map[string]*dns.RRSIG
-	signerName    string
-	zskDNSKEY     *dns.DNSKEY
-	zskPrivateKey crypto.PrivateKey
-	kskDNSKEY     *dns.DNSKEY
-	kskPrivateKey crypto.PrivateKey
+	enableSignatureCache bool
+	signatureLock        sync.Mutex
+	signatures           map[string]*dns.RRSIG
+	signerName           string
+	zskDNSKEY            *dns.DNSKEY
+	zskPrivateKey        crypto.PrivateKey
+	kskDNSKEY            *dns.DNSKEY
+	kskPrivateKey        crypto.PrivateKey
 
 	RequireCookie bool
 	Child         simple.Handler
@@ -66,7 +68,8 @@ func FillAuthHeader(rr dns.RR, rtype uint16, zone string, ttl uint32) dns.RR {
 
 func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 	hdl := &AuthorityHandler{
-		signatures: make(map[string]*dns.RRSIG),
+		signatures:           make(map[string]*dns.RRSIG),
+		enableSignatureCache: true,
 	}
 
 	zone = dns.CanonicalName(zone)
@@ -136,6 +139,10 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 		if err != nil {
 			panic(err)
 		}
+	}
+
+	if config.DNSSECCacheSignatures != nil {
+		hdl.enableSignatureCache = *config.DNSSECCacheSignatures
 	}
 
 	hdl.signerName = ""

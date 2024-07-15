@@ -22,13 +22,15 @@ func (r *AuthorityHandler) signResponse(q *dns.Question, msg *dns.Msg, answer []
 
 	cacheKey := fmt.Sprintf("%s:%d:%d", q.Name, q.Qclass, q.Qtype)
 
-	r.signatureLock.Lock()
-	defer r.signatureLock.Unlock()
-	oldSigner := r.signatures[cacheKey]
-	if oldSigner != nil && oldSigner.Expiration > uint32(time.Now().Add(time.Second*60).Unix()) {
-		return oldSigner, nil
+	if r.enableSignatureCache {
+		r.signatureLock.Lock()
+		defer r.signatureLock.Unlock()
+		oldSigner := r.signatures[cacheKey]
+		if oldSigner != nil && oldSigner.Expiration > uint32(time.Now().Add(time.Second*60).Unix()) {
+			return oldSigner, nil
+		}
+		delete(r.signatures, cacheKey)
 	}
-	delete(r.signatures, cacheKey)
 
 	signer := &dns.RRSIG{}
 	ttl := answer[0].Header().Ttl
@@ -50,7 +52,7 @@ func (r *AuthorityHandler) signResponse(q *dns.Question, msg *dns.Msg, answer []
 	signer.KeyTag = dnskey.KeyTag()
 	signer.Algorithm = dnskey.Algorithm
 	err := signer.Sign(privkey.(*ecdsa.PrivateKey), answer)
-	if err == nil {
+	if err == nil && r.enableSignatureCache {
 		r.signatures[cacheKey] = signer
 	}
 	return signer, err

@@ -91,6 +91,10 @@ func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfi
 		base.DNSSECSignerName = config.DNSSECSignerName
 	}
 
+	if config.DNSSECCacheSignatures != nil {
+		base.DNSSECCacheSignatures = config.DNSSECCacheSignatures
+	}
+
 	return base
 }
 
