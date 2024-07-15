@@ -95,6 +95,10 @@ func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfi
 		base.DNSSECCacheSignatures = config.DNSSECCacheSignatures
 	}
 
+	if config.ZoneName != nil {
+		base.ZoneName = config.ZoneName
+	}
+
 	return base
 }
 
@@ -144,11 +148,23 @@ func reloadConfig() {
 			rdnsGen.PtrTtl = uint32(rdnsConf.PtrTtl.Seconds())
 		}
 
-		rdnsAuthorityConfig := mergeAuthorityConfig(rdnsConf.AuthorityConfig, authorityConfig)
+		addrAuthConfig := mergeAuthorityConfig(rdnsConf.AddrAuthorityConfig, authorityConfig)
+		addrZone := rdnsGen.GetAddrZone()
+		rdnsAuth := authority.NewAuthorityHandler(addrZone, addrAuthConfig)
+		rdnsAuth.Child = rdnsGen
+		generators = append(generators, rdnsAuth)
+		rdnsAuth.Register(mux)
 
-		rdnsZones := rdnsGen.GetZones()
-		for _, zone := range rdnsZones {
-			rdnsAuth := authority.NewAuthorityHandler(zone, rdnsAuthorityConfig)
+		for zone, ptrAuthConfig := range rdnsConf.PTRAuthorityConfigs {
+			rdnsConf.PTRAuthorityConfigs[dns.CanonicalName(zone)] = ptrAuthConfig
+			rdnsConf.PTRAuthorityConfigs[strings.ToLower(zone)] = ptrAuthConfig
+		}
+
+		ptrAuthorityConfigBase := mergeAuthorityConfig(rdnsConf.PTRAuthorityConfigs["default"], addrAuthConfig)
+		ptrZones := rdnsGen.GetPTRZones()
+		for _, zone := range ptrZones {
+			ptrAuthConfig := mergeAuthorityConfig(rdnsConf.PTRAuthorityConfigs[zone], ptrAuthorityConfigBase)
+			rdnsAuth := authority.NewAuthorityHandler(zone, ptrAuthConfig)
 			rdnsAuth.Child = rdnsGen
 			generators = append(generators, rdnsAuth)
 			rdnsAuth.Register(mux)

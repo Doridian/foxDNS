@@ -129,8 +129,12 @@ func (r *Generator) GetName() string {
 	return "rdns"
 }
 
-func (r *Generator) GetZones() []string {
-	res := []string{r.ptrSuffix}
+func (r *Generator) GetPTRZones() []string {
+	res := []string{}
 	res = r.addPTRZones(r, res)
 	return res
+}
+
+func (r *Generator) GetAddrZone() string {
+	return r.ptrSuffix
 }

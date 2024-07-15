@@ -60,13 +60,13 @@ func TestIPv6GetZones(t *testing.T) {
 		mustParseCIDR("fc00::/7"),
 	}
 
-	zones := handler.GetZones()
+	zones := handler.GetPTRZones()
 	assert.ElementsMatch(t, []string{
 		"0.0.0.0.0.0.0.0.0.0.0.0.0.8.e.f.ip6.arpa.",
 		"c.f.ip6.arpa.",
 		"d.f.ip6.arpa.",
-		"ip6.example.com.",
 	}, zones)
+	assert.Equal(t, "ip6.example.com.", handler.GetAddrZone())
 
 	runRDNSTest(t, handler, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.e.f.ip6.arpa.", dns.TypePTR, &dns.PTR{
 		Ptr: "fe80-0000-0000-0000-0000-0000-0000-0001.ip6.example.com.",

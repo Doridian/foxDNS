@@ -18,12 +18,13 @@ type Config struct {
 	} `yaml:"global"`
 
 	RDNS []struct {
-		IPVersion       int                   `yaml:"ip_version"`
-		Suffix          string                `yaml:"suffix"`
-		Subnets         []string              `yaml:"subnets"`
-		AuthorityConfig *authority.AuthConfig `yaml:"authority-config"`
-		AddressTtl      time.Duration         `yaml:"address-ttl"`
-		PtrTtl          time.Duration         `yaml:"ptr-ttl"`
+		IPVersion           int                              `yaml:"ip_version"`
+		Suffix              string                           `yaml:"suffix"`
+		Subnets             []string                         `yaml:"subnets"`
+		PTRAuthorityConfigs map[string]*authority.AuthConfig `yaml:"ptr-authority-configs"`
+		AddrAuthorityConfig *authority.AuthConfig            `yaml:"addr-authority-config"`
+		AddressTtl          time.Duration                    `yaml:"address-ttl"`
+		PtrTtl              time.Duration                    `yaml:"ptr-ttl"`
 	} `yaml:"rdns"`
 
 	Resolvers []struct {

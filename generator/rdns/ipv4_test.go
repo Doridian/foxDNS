@@ -52,7 +52,7 @@ func TestIPv4GetZones(t *testing.T) {
 		mustParseCIDR("172.16.0.0/12"),
 	}
 
-	zones := handler.GetZones()
+	zones := handler.GetPTRZones()
 	assert.ElementsMatch(t, []string{
 		"10.in-addr.arpa.",
 		"16.172.in-addr.arpa.",
@@ -72,8 +72,8 @@ func TestIPv4GetZones(t *testing.T) {
 		"30.172.in-addr.arpa.",
 		"31.172.in-addr.arpa.",
 		"168.192.in-addr.arpa.",
-		"ip4.example.com.",
 	}, zones)
+	assert.Equal(t, "ip4.example.com.", handler.GetAddrZone())
 
 	runRDNSTest(t, handler, "3.2.1.10.in-addr.arpa.", dns.TypePTR, &dns.PTR{
 		Ptr: "10-1-2-3.ip4.example.com.",

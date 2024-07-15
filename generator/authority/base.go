@@ -23,6 +23,7 @@ type AuthConfig struct {
 	Expire        time.Duration `yaml:"expire"`
 	Minttl        time.Duration `yaml:"minttl"`
 	RequireCookie bool          `yaml:"require-cookie"`
+	ZoneName      *string       `yaml:"zone-name"`
 
 	DNSSECPublicZSKFile   *string `yaml:"dnssec-public-zsk"`
 	DNSSECPrivateZSKFile  *string `yaml:"dnssec-private-zsk"`
@@ -70,6 +71,10 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 	hdl := &AuthorityHandler{
 		signatures:           make(map[string]*dns.RRSIG),
 		enableSignatureCache: true,
+	}
+
+	if config.ZoneName != nil {
+		zone = *config.ZoneName
 	}
 
 	zone = dns.CanonicalName(zone)
