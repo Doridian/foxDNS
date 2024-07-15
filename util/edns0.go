@@ -6,7 +6,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func SetEDNS0(msg *dns.Msg, option []dns.EDNS0, paddingLen int) *dns.OPT {
+func SetEDNS0(msg *dns.Msg, option []dns.EDNS0, paddingLen int, dnssecOk bool) *dns.OPT {
 	if option == nil {
 		option = []dns.EDNS0{}
 	}
@@ -19,6 +19,7 @@ func SetEDNS0(msg *dns.Msg, option []dns.EDNS0, paddingLen int) *dns.OPT {
 		Option: option,
 	}
 	edns0.SetUDPSize(UDPSize)
+	edns0.SetDo(dnssecOk)
 
 	msg.Extra = append(msg.Extra, edns0)
 
@@ -67,7 +68,7 @@ func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr dns.
 	if paddingAllowed && clientRequestedPadding {
 		paddingLen = 468
 	}
-	return SetEDNS0(reply, option, paddingLen)
+	return SetEDNS0(reply, option, paddingLen, queryEdns0.Do())
 }
 
 func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter, requireCookie bool) (bool, []dns.EDNS0) {
@@ -88,7 +89,7 @@ func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter,
 
 	if queryEdns0.Version() != 0 {
 		reply.Rcode = dns.RcodeBadVers
-		SetEDNS0(reply, nil, 0)
+		SetEDNS0(reply, nil, 0, false)
 		return false, nil
 	}
 
@@ -141,7 +142,7 @@ func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter,
 		} else {
 			reply.Rcode = dns.RcodeRefused
 		}
-		SetEDNS0(reply, option, 0)
+		SetEDNS0(reply, option, 0, queryEdns0.Do())
 		return false, option
 	}
 

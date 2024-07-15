@@ -73,8 +73,21 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 	cacheResults.WithLabelValues(cacheResult, matchType).Inc()
 
+	msgEdns0 := msg.IsEdns0()
+	if msgEdns0 != nil && msgEdns0.Do() {
+		reply.Answer = upstreamReply.Answer
+	} else {
+		newAnswers := make([]dns.RR, 0, len(upstreamReply.Answer))
+		for _, rr := range upstreamReply.Answer {
+			if rr.Header().Rrtype == dns.TypeRRSIG {
+				continue
+			}
+			newAnswers = append(newAnswers, rr)
+		}
+		reply.Answer = newAnswers
+	}
+
 	reply.Rcode = upstreamReply.Rcode
-	reply.Answer = upstreamReply.Answer
 	reply.Ns = upstreamReply.Ns
 	upstreamReplyEdns0 = upstreamReply.IsEdns0()
 }

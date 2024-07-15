@@ -83,7 +83,7 @@ func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 				Cookie: hex.EncodeToString(append(clientCookie, info.serverCookie...)),
 			})
 		}
-		util.SetEDNS0(m, edns0Opts, r.shouldPadLen)
+		util.SetEDNS0(m, edns0Opts, r.shouldPadLen, true)
 
 		resp, err = r.exchange(info, m)
 		if err != nil {
