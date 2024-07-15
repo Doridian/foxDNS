@@ -244,7 +244,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 }
 
 func (r *AuthorityHandler) Register(mux *dns.ServeMux) {
-	mux.Handle(r.zone, r)
+	mux.Handle(r.handlerZone, r)
 }
 
 func (r *AuthorityHandler) Refresh() error {
