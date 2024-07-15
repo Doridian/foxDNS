@@ -247,15 +247,24 @@ func (r *AuthorityHandler) Register(mux *dns.ServeMux) {
 	mux.Handle(r.handlerZone, r)
 }
 
+func (r *AuthorityHandler) clearCache() {
+	r.signatureLock.Lock()
+	r.signatures = make(map[string]*dns.RRSIG)
+	r.signatureLock.Unlock()
+}
+
 func (r *AuthorityHandler) Refresh() error {
+	r.clearCache()
 	return nil
 }
 
 func (r *AuthorityHandler) Start() error {
+	r.clearCache()
 	return nil
 }
 
 func (r *AuthorityHandler) Stop() error {
+	r.clearCache()
 	return nil
 }
 
