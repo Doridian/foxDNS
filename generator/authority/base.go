@@ -134,7 +134,10 @@ func NewAuthorityHandler(zone string, config AuthConfig) *AuthorityHandler {
 
 	hdl.signerName = ""
 	if config.DNSSECSignerName != nil {
-		hdl.signerName = *config.DNSSECSignerName
+		signerName := *config.DNSSECSignerName
+		if signerName != "" {
+			hdl.signerName = dns.CanonicalName(signerName)
+		}
 	}
 	if hdl.signerName == "" {
 		hdl.signerName = zone
@@ -221,7 +224,7 @@ func (r *AuthorityHandler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 			signer.OrigTtl = ttl
 			signer.Expiration = uint32(time.Now().Add(86400 * time.Second).Unix())
 			signer.Inception = uint32(time.Now().Unix())
-			signer.SignerName = r.zone
+			signer.SignerName = r.signerName
 
 			dnskey := r.zskDNSKEY
 			privkey := r.zskPrivateKey
