@@ -2,7 +2,7 @@ module github.com/Doridian/foxDNS
 
 go 1.21
 
-toolchain go1.22.6
+toolchain go1.23.0
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0
