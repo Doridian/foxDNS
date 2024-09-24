@@ -160,7 +160,7 @@ func reloadConfig() {
 			rdnsConf.PTRAuthorityConfigs[strings.ToLower(zone)] = ptrAuthConfig
 		}
 
-		ptrAuthorityConfigBase := mergeAuthorityConfig(rdnsConf.PTRAuthorityConfigs["default"], addrAuthConfig)
+		ptrAuthorityConfigBase := mergeAuthorityConfig(rdnsConf.PTRAuthorityConfigs["default"], authorityConfig)
 		ptrZones := rdnsGen.GetPTRZones()
 		for _, zone := range ptrZones {
 			ptrAuthConfig := mergeAuthorityConfig(rdnsConf.PTRAuthorityConfigs[zone], ptrAuthorityConfigBase)
