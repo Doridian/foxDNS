@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.23.2
 
 require (
-	github.com/fsnotify/fsnotify v1.7.0
+	github.com/fsnotify/fsnotify v1.8.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/miekg/dns v1.1.62
 	github.com/prometheus/client_golang v1.20.5
