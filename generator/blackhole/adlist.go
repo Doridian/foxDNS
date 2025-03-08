@@ -67,10 +67,11 @@ func (r *Adlist) Refresh() error {
 
 	bodyStr := string(body)
 	for _, line := range strings.Split(bodyStr, "\n") {
-		line = strings.Trim(line, " \r\n\t")
-		if strings.HasPrefix(line, "#") {
-			continue
+		hashPos := strings.Index(line, "#")
+		if hashPos >= 0 {
+			line = line[:hashPos]
 		}
+		line = strings.Trim(line, " \r\n\t")
 		if line == "" {
 			continue
 		}
