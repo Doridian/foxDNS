@@ -6,10 +6,13 @@ import (
 )
 
 type Generator struct {
+	reason string
 }
 
-func New() *Generator {
-	return &Generator{}
+func New(reason string) *Generator {
+	return &Generator{
+		reason: reason,
+	}
 }
 
 func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
@@ -24,7 +27,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	if ok {
 		option = append(option, &dns.EDNS0_EDE{
 			InfoCode:  dns.ExtendedErrorCodeFiltered,
-			ExtraText: "blackholed",
+			ExtraText: r.reason,
 		})
 		util.ApplyEDNS0Reply(msg, reply, option, wr, false)
 	}

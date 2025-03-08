@@ -2,6 +2,7 @@ package blackhole
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -44,7 +45,7 @@ func NewAdlist(url string, mux *dns.ServeMux, refreshInterval time.Duration) *Ad
 	return &Adlist{
 		url:             url,
 		mux:             mux,
-		handler:         New(),
+		handler:         New(fmt.Sprintf("adlist: %s", url)),
 		managedHosts:    make(map[string]bool),
 		refreshInterval: refreshInterval,
 	}
