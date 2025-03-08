@@ -66,7 +66,11 @@ func (r *Adlist) Refresh() error {
 	newManagedHosts := make(map[string]bool)
 
 	bodyStr := string(body)
+	bodyStr = strings.ReplaceAll(bodyStr, "\r", "\n")
 	for _, line := range strings.Split(bodyStr, "\n") {
+		if line == "" {
+			continue
+		}
 		hashPos := strings.Index(line, "#")
 		if hashPos == 0 {
 			continue
@@ -74,7 +78,7 @@ func (r *Adlist) Refresh() error {
 		if hashPos > 0 {
 			line = line[:hashPos]
 		}
-		line = strings.Trim(line, " \r\n\t")
+		line = strings.Trim(line, " ")
 		if line == "" {
 			continue
 		}
