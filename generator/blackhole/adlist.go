@@ -85,7 +85,8 @@ func (r *Adlist) Refresh() error {
 
 		split := strings.Split(strings.ReplaceAll(line, "\t", " "), " ")
 		for _, host := range split {
-			if host == "" || host == "." {
+			host = strings.Trim(host, ". ")
+			if host == "" {
 				continue
 			}
 			if hardcodeIgnoredAdHosts[host] {
