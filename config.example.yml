@@ -47,6 +47,7 @@ static-zones:
   - zone: static.example.com
     file: static.example.com.db
 
-domain-block-files:
-  - blocklist.txt
-  - blocklist2.txt
+ad-lists:
+  urls:
+  - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+  refresh-interval: 24h

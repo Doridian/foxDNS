@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"log"
 	"net"
 	"net/http"
@@ -315,35 +314,10 @@ func reloadConfig() {
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))
 	}
 
-	if len(config.DomainBlockFiles) > 0 {
-		blackholeGen := blackhole.New()
-		for _, fileName := range config.DomainBlockFiles {
-			file, err := os.Open(fileName)
-			if err != nil {
-				log.Panicf("Error opening domain block file %s: %v", fileName, err)
-			}
-			zoneCount := 0
-			scanner := bufio.NewScanner(file)
-			for scanner.Scan() {
-				line := scanner.Text()
-				idx := strings.IndexRune(line, '#')
-				if idx >= 0 {
-					line = line[:idx]
-				}
-				line = strings.Trim(line, " \r\n\t")
-				if line == "" {
-					continue
-				}
-				mux.Handle(line, blackholeGen)
-				zoneCount++
-			}
-			err = scanner.Err()
-			if err != nil {
-				log.Panicf("Error reading domain block file %s: %v", fileName, err)
-			}
-			_ = file.Close()
-
-			log.Printf("Loaded %d domain blocks from file %s", zoneCount, fileName)
+	if len(config.AdLists.Urls) > 0 {
+		for _, url := range config.AdLists.Urls {
+			adlistGen := blackhole.NewAdlist(url, mux, config.AdLists.RefreshInterval)
+			generators = append(generators, adlistGen)
 		}
 	}
 

@@ -77,7 +77,10 @@ type Config struct {
 		AuthorityConfig       *authority.AuthConfig `yaml:"authority-config"`
 	} `yaml:"static-zones"`
 
-	DomainBlockFiles []string `yaml:"domain-block-files"`
+	AdLists struct {
+		Urls            []string      `yaml:"urls"`
+		RefreshInterval time.Duration `yaml:"refresh-interval"`
+	} `yaml:"ad-lists"`
 }
 
 func LoadConfig(file string) *Config {
