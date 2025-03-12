@@ -78,7 +78,8 @@ type Config struct {
 	} `yaml:"static-zones"`
 
 	AdLists struct {
-		Urls            []string      `yaml:"urls"`
+		AllowLists      []string      `yaml:"allow-lists"`
+		BlockLists      []string      `yaml:"block-lists"`
 		RefreshInterval time.Duration `yaml:"refresh-interval"`
 	} `yaml:"ad-lists"`
 }

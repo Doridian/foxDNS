@@ -314,11 +314,9 @@ func reloadConfig() {
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))
 	}
 
-	if len(config.AdLists.Urls) > 0 {
-		for _, url := range config.AdLists.Urls {
-			adlistGen := blackhole.NewAdlist(url, mux, config.AdLists.RefreshInterval)
-			generators = append(generators, adlistGen)
-		}
+	if len(config.AdLists.BlockLists) > 0 {
+		adlistGen := blackhole.NewAdlist(config.AdLists.BlockLists, config.AdLists.AllowLists, mux, config.AdLists.RefreshInterval)
+		generators = append(generators, adlistGen)
 	}
 
 	if config.Global.PrometheusListen != "" {

@@ -2,11 +2,12 @@ package blackhole
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -14,16 +15,20 @@ import (
 	"github.com/miekg/dns"
 )
 
+type adlistContents = map[string]bool
+type adlistMap = map[string]adlistContents
+
 type Adlist struct {
-	url             string
+	blockLists   adlistMap
+	allowLists   adlistMap
+	managedHosts map[string]bool
+	refreshLock  sync.Mutex
+
 	mux             *dns.ServeMux
 	handler         *Generator
 	refreshInterval time.Duration
 	refreshCtx      context.Context
 	refreshCancel   context.CancelFunc
-
-	managedHosts map[string]bool
-	hostLock     sync.Mutex
 }
 
 var hardcodeIgnoredAdHosts = map[string]bool{
@@ -41,31 +46,59 @@ var hardcodeIgnoredAdHosts = map[string]bool{
 	"ip6-allhosts":          true,
 }
 
-func NewAdlist(url string, mux *dns.ServeMux, refreshInterval time.Duration) *Adlist {
+func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refreshInterval time.Duration) *Adlist {
+	blockListsMap := make(adlistMap)
+	for _, list := range blockLists {
+		blockListsMap[list] = make(adlistContents)
+	}
+	allowListsMap := make(adlistMap)
+	for _, list := range allowLists {
+		allowListsMap[list] = make(adlistContents)
+	}
+
 	return &Adlist{
-		url:             url,
+		blockLists:      blockListsMap,
+		allowLists:      allowListsMap,
 		mux:             mux,
-		handler:         New(fmt.Sprintf("adlist: %s", url)),
+		handler:         New("adlist"),
 		managedHosts:    make(map[string]bool),
 		refreshInterval: refreshInterval,
 	}
 }
 
-func (r *Adlist) Refresh() error {
-	resp, err := http.Get(r.url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+func (r *Adlist) loadList(list string) (error, adlistContents) {
+	var bodyStr string
 
-	body, err := io.ReadAll(resp.Body)
+	parsedUrl, err := url.Parse(list)
 	if err != nil {
-		return err
+		return err, nil
 	}
 
-	newManagedHosts := make(map[string]bool)
+	var dataStream io.ReadCloser
 
-	bodyStr := string(body)
+	switch parsedUrl.Scheme {
+	case "file":
+		dataStream, err = os.Open(parsedUrl.Path)
+	case "http", "https":
+		var resp *http.Response
+		resp, err = http.Get(list)
+		if err == nil {
+			dataStream = resp.Body
+		}
+	}
+	if err != nil {
+		return err, nil
+	}
+	defer dataStream.Close()
+
+	body, err := io.ReadAll(dataStream)
+	if err != nil {
+		return err, nil
+	}
+
+	bodyStr = string(body)
+
+	contents := make(adlistContents)
 	bodyStr = strings.ReplaceAll(bodyStr, "\r", "\n")
 	for _, line := range strings.Split(bodyStr, "\n") {
 		if line == "" {
@@ -95,12 +128,43 @@ func (r *Adlist) Refresh() error {
 			if net.ParseIP(host) != nil {
 				continue
 			}
-			newManagedHosts[host] = true
+			contents[host] = true
 		}
 	}
 
-	r.hostLock.Lock()
-	defer r.hostLock.Unlock()
+	return nil, contents
+}
+
+func (r *Adlist) Refresh() error {
+	r.refreshLock.Lock()
+	defer r.refreshLock.Unlock()
+
+	newManagedHosts := make(map[string]bool)
+
+	for list := range r.blockLists {
+		err, contents := r.loadList(list)
+		if err == nil {
+			r.blockLists[list] = contents
+		} else {
+			log.Printf("Error loading blocklist %s: %v", list, err)
+		}
+
+		for host := range contents {
+			newManagedHosts[host] = true
+		}
+	}
+	for list := range r.allowLists {
+		err, contents := r.loadList(list)
+		if err == nil {
+			r.allowLists[list] = contents
+		} else {
+			log.Printf("Error loading allowlist %s: %v", list, err)
+		}
+
+		for host := range contents {
+			delete(newManagedHosts, host)
+		}
+	}
 
 	removed := 0
 	added := 0
@@ -118,7 +182,7 @@ func (r *Adlist) Refresh() error {
 	}
 	r.managedHosts = newManagedHosts
 
-	log.Printf("Adlist at %s refreshed, %d hosts managed (%d added, %d removed)", r.url, len(r.managedHosts), added, removed)
+	log.Printf("Adlists refreshed, %d hosts managed (%d added, %d removed)", len(r.managedHosts), added, removed)
 
 	return nil
 }

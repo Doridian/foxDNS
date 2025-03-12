@@ -48,6 +48,6 @@ static-zones:
     file: static.example.com.db
 
 ad-lists:
-  urls:
+  block-lists:
   - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
   refresh-interval: 24h
