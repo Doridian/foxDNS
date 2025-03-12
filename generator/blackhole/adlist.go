@@ -66,12 +66,12 @@ func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refr
 	}
 }
 
-func (r *Adlist) loadList(list string) (error, adlistContents) {
+func (r *Adlist) loadList(list string) (adlistContents, error) {
 	var bodyStr string
 
 	parsedUrl, err := url.Parse(list)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	var dataStream io.ReadCloser
@@ -87,13 +87,13 @@ func (r *Adlist) loadList(list string) (error, adlistContents) {
 		}
 	}
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 	defer dataStream.Close()
 
 	body, err := io.ReadAll(dataStream)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	bodyStr = string(body)
@@ -132,7 +132,7 @@ func (r *Adlist) loadList(list string) (error, adlistContents) {
 		}
 	}
 
-	return nil, contents
+	return contents, nil
 }
 
 func (r *Adlist) Refresh() error {
@@ -142,7 +142,7 @@ func (r *Adlist) Refresh() error {
 	newManagedHosts := make(map[string]bool)
 
 	for list := range r.blockLists {
-		err, contents := r.loadList(list)
+		contents, err := r.loadList(list)
 		if err == nil {
 			r.blockLists[list] = contents
 		} else {
@@ -154,7 +154,7 @@ func (r *Adlist) Refresh() error {
 		}
 	}
 	for list := range r.allowLists {
-		err, contents := r.loadList(list)
+		contents, err := r.loadList(list)
 		if err == nil {
 			r.allowLists[list] = contents
 		} else {
