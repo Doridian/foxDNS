@@ -18,12 +18,12 @@ COPY go.mod go.sum /src/
 RUN go mod download
 
 COPY . /src
-RUN go build -ldflags="-s -w -X=github.com/Doridian/foxDNS/util.Version=${GIT_REVISION}" -trimpath -o /foxdns ./cmd/foxdns
+RUN go build -ldflags="-s -w -X=github.com/Doridian/foxDNS/util.Version=${GIT_REVISION}" -trimpath -o /foxDNS ./cmd/foxDNS
 
 FROM alpine AS compressor
 RUN apk add --no-cache upx
-COPY --from=builder /foxdns /foxdns
-RUN upx -9 /foxdns -o /foxdns-compressed
+COPY --from=builder /foxDNS /foxDNS
+RUN upx -9 /foxDNS -o /foxDNS-compressed
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch AS nossl-base
 
@@ -33,13 +33,13 @@ ENV PGID=1000
 WORKDIR /config
 VOLUME /config
 
-ENTRYPOINT [ "/foxdns" ]
+ENTRYPOINT [ "/foxDNS" ]
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl-base AS nossl
-COPY --from=builder /foxdns /foxdns
+COPY --from=builder /foxDNS /foxDNS
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl-base AS nossl-compressed
-COPY --from=compressor /foxdns-compressed /foxdns
+COPY --from=compressor /foxDNS-compressed /foxDNS
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} nossl AS default
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
