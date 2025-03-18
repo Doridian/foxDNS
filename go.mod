@@ -7,7 +7,7 @@ toolchain go1.24.1
 require (
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/miekg/dns v1.1.63
+	github.com/miekg/dns v1.1.64
 	github.com/prometheus/client_golang v1.21.1
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
