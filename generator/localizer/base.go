@@ -234,15 +234,16 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 
 		for _, v4v6Rewrite := range r.v4V6s {
 			remoteBase := v4v6Rewrite.v6
-			recordBase := v4v6Rewrite.v6
-			if recordIsV4 {
-				recordBase = v4v6Rewrite.v4
-			}
 			if remoteIPIsV4 {
 				remoteBase = v4v6Rewrite.v4
 			}
 
 			if remoteBase.Contains(remoteIP) {
+				recordBase := v4v6Rewrite.v6
+				if recordIsV4 {
+					recordBase = v4v6Rewrite.v4
+				}
+
 				remoteIP = IPNetAdd(recordBase, remoteIPBase, recordBase.IP)
 				foundLocalIP = true
 				break
