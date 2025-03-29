@@ -126,7 +126,6 @@ func (r *LocalizedRecordGenerator) AddRewrites(rewrites []LocalizerRewrite) erro
 }
 
 func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string) error {
-
 	hostStr = dns.CanonicalName(hostStr)
 
 	ip, subnet, err := net.ParseCIDR(subnetStr)
@@ -184,13 +183,16 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 	var makeRecFunc func(net.IP) dns.RR
 	var recsMap localizerRecordMap
 	var rewrites []localizerRewriteParsed
+	var recordIsV4 bool
 
 	switch q.Qtype {
 	case dns.TypeA:
+		recordIsV4 = true
 		recsMap = r.aRecords
 		makeRecFunc = makeRecV4
 		rewrites = r.v4rewrites
 	case dns.TypeAAAA:
+		recordIsV4 = false
 		recsMap = r.aaaaRecords
 		makeRecFunc = makeRecV6
 		rewrites = r.v6rewrites
@@ -220,18 +222,21 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 	resp := make([]dns.RR, 0, len(recs))
 	for _, rec := range recs {
 		foundLocalIP := false
-		if ipIsV4 && q.Qtype == dns.TypeAAAA {
-			for _, v4v6Rewrite := range r.v4V6s {
-				if v4v6Rewrite.v4.Contains(remoteIP) {
-					remoteIP = IPNetAdd(v4v6Rewrite.v6, remoteIP.To16(), v4v6Rewrite.v6.IP)
-					foundLocalIP = true
-					break
-				}
+		if ipIsV4 != recordIsV4 {
+			remoteIPBase := remoteIP
+			if recordIsV4 {
+				remoteIPBase = remoteIP[len(remoteIP)-net.IPv4len:]
+			} else {
+				remoteIPBase = remoteIP.To16()
 			}
-		} else if !ipIsV4 && q.Qtype == dns.TypeA {
+
 			for _, v4v6Rewrite := range r.v4V6s {
 				if v4v6Rewrite.v6.Contains(remoteIP) {
-					remoteIP = IPNetAdd(v4v6Rewrite.v4, remoteIP[len(remoteIP)-net.IPv4len:], v4v6Rewrite.v4.IP)
+					rewriteBase := v4v6Rewrite.v6
+					if recordIsV4 {
+						rewriteBase = v4v6Rewrite.v4
+					}
+					remoteIP = IPNetAdd(rewriteBase, remoteIPBase, rewriteBase.IP)
 					foundLocalIP = true
 					break
 				}
