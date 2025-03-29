@@ -67,6 +67,7 @@ type Config struct {
 		Ttl             time.Duration                `yaml:"ttl"`
 		AuthorityConfig *authority.AuthConfig        `yaml:"authority-config"`
 		Rewrites        []localizer.LocalizerRewrite `yaml:"rewrites"`
+		V4V6s           []localizer.V4V6Rewrite      `yaml:"v4v6s"`
 	} `yaml:"localizers"`
 
 	StaticZones []struct {
