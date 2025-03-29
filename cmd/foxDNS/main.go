@@ -261,21 +261,30 @@ func reloadConfig() {
 		log.Printf("Resolver enabled for zone %s (only private clients: %v)", resolvConf.Zone, resolv.AllowOnlyFromPrivate)
 	}
 
-	if len(config.Localizers) > 0 {
-		for _, locConfig := range config.Localizers {
+	if len(config.Localizers.Zones) > 0 {
+		for _, locConfig := range config.Localizers.Zones {
 			loc := localizer.New()
 
 			if locConfig.Ttl > 0 {
 				loc.Ttl = uint32(locConfig.Ttl.Seconds())
 			}
 
-			err := loc.AddRewrites(locConfig.Rewrites)
+			err := loc.AddRewrites(config.Localizers.Rewrites)
 			if err != nil {
-				log.Panicf("Error adding localizer rewrites: %v", err)
+				log.Panicf("Error adding global localizer rewrites: %v", err)
+			}
+			err = loc.AddV4V6s(config.Localizers.V4V6s)
+			if err != nil {
+				log.Panicf("Error adding global localizer v4v6s: %v", err)
+			}
+
+			err = loc.AddRewrites(locConfig.Rewrites)
+			if err != nil {
+				log.Panicf("Error adding zonal localizer rewrites: %v", err)
 			}
 			err = loc.AddV4V6s(locConfig.V4V6s)
 			if err != nil {
-				log.Panicf("Error adding localizer v4v6s: %v", err)
+				log.Panicf("Error adding zonal localizer v4v6s: %v", err)
 			}
 
 			generators = append(generators, loc)
@@ -295,7 +304,7 @@ func reloadConfig() {
 			locAuth.Register(mux)
 		}
 
-		log.Printf("Localizer enabled for %d zones", len(config.Localizers))
+		log.Printf("Localizer enabled for %d zones", len(config.Localizers.Zones))
 	}
 
 	if len(config.StaticZones) > 0 {

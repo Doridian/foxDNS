@@ -36,6 +36,7 @@ resolvers:
     allow-only-from-private: true
 
 localizers:
+  zones:
   - zone: x.example.com
     subnets:
       - 0.0.0.123/16

@@ -61,13 +61,17 @@ type Config struct {
 		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
 	} `yaml:"resolvers"`
 
-	Localizers []struct {
-		Zone            string                       `yaml:"zone"`
-		Subnets         []string                     `yaml:"subnets"`
-		Ttl             time.Duration                `yaml:"ttl"`
-		AuthorityConfig *authority.AuthConfig        `yaml:"authority-config"`
-		Rewrites        []localizer.LocalizerRewrite `yaml:"rewrites"`
-		V4V6s           []localizer.V4V6Rewrite      `yaml:"v4v6s"`
+	Localizers struct {
+		Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
+		V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
+		Zones    []struct {
+			Zone            string                       `yaml:"zone"`
+			Subnets         []string                     `yaml:"subnets"`
+			Ttl             time.Duration                `yaml:"ttl"`
+			AuthorityConfig *authority.AuthConfig        `yaml:"authority-config"`
+			Rewrites        []localizer.LocalizerRewrite `yaml:"rewrites"`
+			V4V6s           []localizer.V4V6Rewrite      `yaml:"v4v6s"`
+		} `yaml:"zones"`
 	} `yaml:"localizers"`
 
 	StaticZones []struct {
