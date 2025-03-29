@@ -52,7 +52,7 @@ func TestAFromIPv4WithRewrite(t *testing.T) {
 	runLocalizerTest(t, "example.com.", dns.TypeA, net.IPv4(10, 100, 3, 4).To4(), []localizer.LocalizerRewrite{
 		{
 			From: "10.100.0.0/16",
-			To:   "10.99.0.0",
+			To:   "10.99.0.0/16",
 		},
 	}, &dns.A{
 		A: net.IPv4(10, 99, 1, 2).To4(),
@@ -62,7 +62,7 @@ func TestAFromIPv4WithRewrite(t *testing.T) {
 	runLocalizerTest(t, "example.com.", dns.TypeA, net.IPv4(10, 101, 3, 4).To4(), []localizer.LocalizerRewrite{
 		{
 			From: "10.100.0.0/16",
-			To:   "10.99.0.0",
+			To:   "10.99.0.0/16",
 		},
 	}, &dns.A{
 		A: net.IPv4(10, 101, 1, 2).To4(),
@@ -88,7 +88,7 @@ func TestAAAAFromIPv6WithRewrite(t *testing.T) {
 	runLocalizerTest(t, "example.com.", dns.TypeAAAA, net.ParseIP("fe00:abcd::1234:1"), []localizer.LocalizerRewrite{
 		{
 			From: "fe00::/8",
-			To:   "fd00::",
+			To:   "fd00::/8",
 		},
 	}, &dns.AAAA{
 		AAAA: net.ParseIP("fd00:abcd::1"),
@@ -98,7 +98,7 @@ func TestAAAAFromIPv6WithRewrite(t *testing.T) {
 	runLocalizerTest(t, "example.com.", dns.TypeAAAA, net.ParseIP("fc00:abcd::1234:1"), []localizer.LocalizerRewrite{
 		{
 			From: "fe00::/8",
-			To:   "fd00::",
+			To:   "fd00::/8",
 		},
 	}, &dns.AAAA{
 		AAAA: net.ParseIP("fc00:abcd::1"),
