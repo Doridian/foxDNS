@@ -182,7 +182,6 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 
 	var makeRecFunc func(net.IP) dns.RR
 	var recsMap localizerRecordMap
-	var rewrites []localizerRewriteParsed
 	var recordIsV4 bool
 
 	switch q.Qtype {
@@ -190,12 +189,10 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 		recordIsV4 = true
 		recsMap = r.aRecords
 		makeRecFunc = makeRecV4
-		rewrites = r.v4rewrites
 	case dns.TypeAAAA:
 		recordIsV4 = false
 		recsMap = r.aaaaRecords
 		makeRecFunc = makeRecV6
-		rewrites = r.v6rewrites
 	}
 
 	if recsMap == nil {
@@ -203,7 +200,7 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 	}
 
 	recs := recsMap[q.Name]
-	if recs == nil {
+	if len(recs) < 1 {
 		return []dns.RR{}, false
 	}
 
@@ -214,48 +211,50 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 	}
 
 	remoteIPv4 := remoteIP.To4()
-	ipIsV4 := remoteIPv4 != nil
-	if ipIsV4 {
+	rewrites := r.v6rewrites
+	remoteIPIsV4 := remoteIPv4 != nil
+	if remoteIPIsV4 {
 		remoteIP = remoteIPv4
+		rewrites = r.v4rewrites
+	}
+
+	for _, rewrite := range rewrites {
+		if rewrite.fromSubnet.Contains(remoteIP) {
+			remoteIP = IPNetAdd(rewrite.toSubnet, remoteIP, rewrite.toIP)
+			break
+		}
+	}
+
+	foundLocalIP := remoteIPIsV4 == recordIsV4
+	if !foundLocalIP {
+		remoteIPBase := remoteIP.To16()
+		if recordIsV4 {
+			remoteIPBase = remoteIP[len(remoteIP)-net.IPv4len:]
+		}
+
+		for _, v4v6Rewrite := range r.v4V6s {
+			rewriteBase := v4v6Rewrite.v6
+			if recordIsV4 {
+				rewriteBase = v4v6Rewrite.v4
+			}
+
+			if rewriteBase.Contains(remoteIP) {
+				remoteIP = IPNetAdd(rewriteBase, remoteIPBase, rewriteBase.IP)
+				foundLocalIP = true
+				break
+			}
+		}
+
+		if !foundLocalIP {
+			return []dns.RR{}, false
+		}
 	}
 
 	resp := make([]dns.RR, 0, len(recs))
 	for _, rec := range recs {
-		foundLocalIP := ipIsV4 == recordIsV4
-		if !foundLocalIP {
-			remoteIPBase := remoteIP.To16()
-			if recordIsV4 {
-				remoteIPBase = remoteIP[len(remoteIP)-net.IPv4len:]
-			}
-
-			for _, v4v6Rewrite := range r.v4V6s {
-				rewriteBase := v4v6Rewrite.v6
-				if recordIsV4 {
-					rewriteBase = v4v6Rewrite.v4
-				}
-
-				if rewriteBase.Contains(remoteIP) {
-					remoteIP = IPNetAdd(rewriteBase, remoteIPBase, rewriteBase.IP)
-					foundLocalIP = true
-					break
-				}
-			}
-		}
-
-		if !foundLocalIP {
-			continue
-		}
-
 		ipRec := IPNetAdd(rec.subnet, rec.ip, remoteIP)
 		if ipRec == nil {
 			continue
-		}
-
-		for _, rewrite := range rewrites {
-			if rewrite.fromSubnet.Contains(ipRec) {
-				ipRec = IPNetAdd(rewrite.toSubnet, ipRec, rewrite.toIP)
-				break
-			}
 		}
 
 		ipResRec := makeRecFunc(ipRec)
