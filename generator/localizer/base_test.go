@@ -13,10 +13,11 @@ import (
 
 func runLocalizerTest(t *testing.T, host string, qtype uint16, remoteIP net.IP, rewrites []localizer.LocalizerRewrite, expected dns.RR) {
 	handler := localizer.New()
-	assert.NoError(t, handler.AddRecord("example.com", "0.0.1.2/16", rewrites, nil))
-	assert.NoError(t, handler.AddRecord("example.com", "fe80::1/64", rewrites, nil))
-	assert.NoError(t, handler.AddRecord("v4.example.com", "0.0.1.2/16", rewrites, nil))
-	assert.NoError(t, handler.AddRecord("v6.example.com", "fe80::1/64", rewrites, nil))
+	assert.NoError(t, handler.AddRewrites(rewrites))
+	assert.NoError(t, handler.AddRecord("example.com", "0.0.1.2/16"))
+	assert.NoError(t, handler.AddRecord("example.com", "fe80::1/64"))
+	assert.NoError(t, handler.AddRecord("v4.example.com", "0.0.1.2/16"))
+	assert.NoError(t, handler.AddRecord("v6.example.com", "fe80::1/64"))
 
 	wr := &generator.TestResponseWriter{
 		RemoteAddrVal: &net.TCPAddr{

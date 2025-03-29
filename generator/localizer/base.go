@@ -8,7 +8,8 @@ import (
 	"github.com/miekg/dns"
 )
 
-type LocalizerRecordMap = map[string][]*LocalizerRecord
+type localizerRecordMap = map[string][]*localizerRecord
+
 type LocalizerRewrite struct {
 	From string `yaml:"from"`
 	To   string `yaml:"to"`
@@ -20,44 +21,111 @@ type V4V6Rewrite struct {
 }
 
 type v4v6RewriteParsed struct {
-	V4 *net.IPNet
-	V6 *net.IPNet
+	v4 *net.IPNet
+	v6 *net.IPNet
 }
 
 type localizerRewriteParsed struct {
-	FromSubnet *net.IPNet
-	FromIP     net.IP
-	ToSubnet   *net.IPNet
-	ToIP       net.IP
+	fromSubnet *net.IPNet
+	fromIP     net.IP
+	toSubnet   *net.IPNet
+	toIP       net.IP
 }
 
-type LocalizerRecord struct {
-	Subnet   *net.IPNet
-	IP       net.IP
-	Rewrites []localizerRewriteParsed
-	V4V6s    []v4v6RewriteParsed
+type localizerRecord struct {
+	subnet *net.IPNet
+	ip     net.IP
 }
 
 type LocalizedRecordGenerator struct {
-	aRecords    LocalizerRecordMap
-	aaaaRecords LocalizerRecordMap
-	knownHosts  map[string]bool
-	Ttl         uint32
+	aRecords   localizerRecordMap
+	v4rewrites []localizerRewriteParsed
+
+	aaaaRecords localizerRecordMap
+	v6rewrites  []localizerRewriteParsed
+
+	v4V6s []v4v6RewriteParsed
+
+	knownHosts map[string]bool
+	Ttl        uint32
 }
 
 func New() *LocalizedRecordGenerator {
 	return &LocalizedRecordGenerator{
-		aRecords:    make(LocalizerRecordMap),
-		aaaaRecords: make(LocalizerRecordMap),
-		knownHosts:  make(map[string]bool),
-		Ttl:         60,
+		aRecords:   make(localizerRecordMap),
+		v4rewrites: make([]localizerRewriteParsed, 0),
+
+		aaaaRecords: make(localizerRecordMap),
+		v6rewrites:  make([]localizerRewriteParsed, 0),
+
+		v4V6s: make([]v4v6RewriteParsed, 0),
+
+		knownHosts: make(map[string]bool),
+		Ttl:        60,
 	}
 }
 
-func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string, rewrites []LocalizerRewrite, v4v6s []V4V6Rewrite) error {
-	if rewrites == nil {
-		rewrites = make([]LocalizerRewrite, 0)
+func (r *LocalizedRecordGenerator) AddV4V6s(v4v6s []V4V6Rewrite) error {
+	for _, v4v6 := range v4v6s {
+		_, v4, err := net.ParseCIDR(v4v6.V4)
+		if err != nil || v4.IP.To4() == nil {
+			return fmt.Errorf("invalid v4 CIDR: %s (%v)", v4v6.V4, err)
+		}
+		_, v6, err := net.ParseCIDR(v4v6.V6)
+		if v6 == nil || v6.IP.To4() != nil {
+			return fmt.Errorf("invalid v6 CIDR: %s (%v)", v4v6.V4, err)
+		}
+		r.v4V6s = append(r.v4V6s, v4v6RewriteParsed{
+			v4: v4,
+			v6: v6,
+		})
 	}
+	return nil
+}
+
+func (r *LocalizedRecordGenerator) AddRewrites(rewrites []LocalizerRewrite) error {
+	for _, rewrite := range rewrites {
+		fromIP, fromSubnet, err := net.ParseCIDR(rewrite.From)
+		if err != nil {
+			return err
+		}
+		fromIPv4 := fromIP.To4()
+		fromIsIPv4 := fromIPv4 != nil
+		if fromIsIPv4 {
+			fromIP = fromIPv4
+		}
+		toIP, toSubnet, err := net.ParseCIDR(rewrite.To)
+		if err != nil {
+			return err
+		}
+		toIPv4 := toIP.To4()
+		toIsIPv4 := toIPv4 != nil
+		if toIsIPv4 {
+			toIP = toIPv4
+		}
+
+		if toIsIPv4 != fromIsIPv4 {
+			return fmt.Errorf("rewrite from %s to %s has mismatched IP versions", rewrite.From, rewrite.To)
+		}
+
+		parsed := localizerRewriteParsed{
+			fromSubnet: fromSubnet,
+			fromIP:     fromIP,
+			toSubnet:   toSubnet,
+			toIP:       toIP,
+		}
+
+		if fromIsIPv4 {
+			r.v4rewrites = append(r.v4rewrites, parsed)
+		} else {
+			r.v6rewrites = append(r.v6rewrites, parsed)
+		}
+	}
+
+	return nil
+}
+
+func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string) error {
 
 	hostStr = dns.CanonicalName(hostStr)
 
@@ -71,50 +139,12 @@ func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string, r
 		ip = ipv4
 	}
 
-	rec := &LocalizerRecord{
-		Subnet:   subnet,
-		IP:       ip,
-		Rewrites: make([]localizerRewriteParsed, 0, len(rewrites)),
-		V4V6s:    make([]v4v6RewriteParsed, 0, len(v4v6s)),
+	rec := &localizerRecord{
+		subnet: subnet,
+		ip:     ip,
 	}
 
-	for _, rewrite := range rewrites {
-		fromIP, fromSubnet, err := net.ParseCIDR(rewrite.From)
-		if err != nil {
-			return err
-		}
-		toIP, toSubnet, err := net.ParseCIDR(rewrite.To)
-		if err != nil {
-			return err
-		}
-		toIPv4 := toIP.To4()
-		if toIPv4 != nil {
-			toIP = toIPv4
-		}
-		rec.Rewrites = append(rec.Rewrites, localizerRewriteParsed{
-			FromSubnet: fromSubnet,
-			FromIP:     fromIP,
-			ToSubnet:   toSubnet,
-			ToIP:       toIP,
-		})
-	}
-
-	for _, v4v6 := range v4v6s {
-		_, v4, err := net.ParseCIDR(v4v6.V4)
-		if err != nil || v4.IP.To4() == nil {
-			return fmt.Errorf("invalid v4 CIDR: %s (%v)", v4v6.V4, err)
-		}
-		_, v6, err := net.ParseCIDR(v4v6.V6)
-		if v6 == nil || v6.IP.To4() != nil {
-			return fmt.Errorf("invalid v6 CIDR: %s (%v)", v4v6.V4, err)
-		}
-		rec.V4V6s = append(rec.V4V6s, v4v6RewriteParsed{
-			V4: v4,
-			V6: v6,
-		})
-	}
-
-	var recMap LocalizerRecordMap
+	var recMap localizerRecordMap
 	switch len(ip) {
 	case net.IPv4len:
 		recMap = r.aRecords
@@ -124,7 +154,7 @@ func (r *LocalizedRecordGenerator) AddRecord(hostStr string, subnetStr string, r
 
 	recArr := recMap[hostStr]
 	if recArr == nil {
-		recArr = make([]*LocalizerRecord, 0)
+		recArr = make([]*localizerRecord, 0)
 	}
 	recArr = append(recArr, rec)
 	recMap[hostStr] = recArr
@@ -152,15 +182,18 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 	}
 
 	var makeRecFunc func(net.IP) dns.RR
-	var recsMap LocalizerRecordMap
+	var recsMap localizerRecordMap
+	var rewrites []localizerRewriteParsed
 
 	switch q.Qtype {
 	case dns.TypeA:
 		recsMap = r.aRecords
 		makeRecFunc = makeRecV4
+		rewrites = r.v4rewrites
 	case dns.TypeAAAA:
 		recsMap = r.aaaaRecords
 		makeRecFunc = makeRecV6
+		rewrites = r.v6rewrites
 	}
 
 	if recsMap == nil {
@@ -188,17 +221,17 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 	for _, rec := range recs {
 		foundLocalIP := false
 		if ipIsV4 && q.Qtype == dns.TypeAAAA {
-			for _, v4v6Rewrite := range rec.V4V6s {
-				if v4v6Rewrite.V4.Contains(remoteIP) {
-					remoteIP = IPNetAdd(v4v6Rewrite.V6, remoteIP.To16(), v4v6Rewrite.V6.IP)
+			for _, v4v6Rewrite := range r.v4V6s {
+				if v4v6Rewrite.v4.Contains(remoteIP) {
+					remoteIP = IPNetAdd(v4v6Rewrite.v6, remoteIP.To16(), v4v6Rewrite.v6.IP)
 					foundLocalIP = true
 					break
 				}
 			}
 		} else if !ipIsV4 && q.Qtype == dns.TypeA {
-			for _, v4v6Rewrite := range rec.V4V6s {
-				if v4v6Rewrite.V6.Contains(remoteIP) {
-					remoteIP = IPNetAdd(v4v6Rewrite.V4, remoteIP[len(remoteIP)-net.IPv4len:], v4v6Rewrite.V4.IP)
+			for _, v4v6Rewrite := range r.v4V6s {
+				if v4v6Rewrite.v6.Contains(remoteIP) {
+					remoteIP = IPNetAdd(v4v6Rewrite.v4, remoteIP[len(remoteIP)-net.IPv4len:], v4v6Rewrite.v4.IP)
 					foundLocalIP = true
 					break
 				}
@@ -211,14 +244,14 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 			continue
 		}
 
-		ipRec := IPNetAdd(rec.Subnet, rec.IP, remoteIP)
+		ipRec := IPNetAdd(rec.subnet, rec.ip, remoteIP)
 		if ipRec == nil {
 			continue
 		}
 
-		for _, rewrite := range rec.Rewrites {
-			if rewrite.FromSubnet.Contains(ipRec) {
-				ipRec = IPNetAdd(rewrite.ToSubnet, ipRec, rewrite.ToIP)
+		for _, rewrite := range rewrites {
+			if rewrite.fromSubnet.Contains(ipRec) {
+				ipRec = IPNetAdd(rewrite.toSubnet, ipRec, rewrite.toIP)
 				break
 			}
 		}

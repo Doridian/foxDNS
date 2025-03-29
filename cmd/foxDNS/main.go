@@ -269,10 +269,19 @@ func reloadConfig() {
 				loc.Ttl = uint32(locConfig.Ttl.Seconds())
 			}
 
+			err := loc.AddRewrites(locConfig.Rewrites)
+			if err != nil {
+				log.Panicf("Error adding localizer rewrites: %v", err)
+			}
+			err = loc.AddV4V6s(locConfig.V4V6s)
+			if err != nil {
+				log.Panicf("Error adding localizer v4v6s: %v", err)
+			}
+
 			generators = append(generators, loc)
 
 			for _, ip := range locConfig.Subnets {
-				err := loc.AddRecord(locConfig.Zone, ip, locConfig.Rewrites, locConfig.V4V6s)
+				err := loc.AddRecord(locConfig.Zone, ip)
 				if err != nil {
 					log.Panicf("Error adding localizer record %s -> %s: %v", locConfig.Zone, ip, err)
 				}
