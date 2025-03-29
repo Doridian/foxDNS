@@ -188,7 +188,7 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 		if ipIsV4 && q.Qtype == dns.TypeAAAA {
 			for _, v4v6Rewrite := range rec.V4V6s {
 				if v4v6Rewrite.V4.Contains(remoteIP) {
-					remoteIP = v4v6Rewrite.V6.IP.To16()
+					remoteIP = IPNetAdd(v4v6Rewrite.V6, remoteIP.To16(), v4v6Rewrite.V6.IP)
 					foundLocalIP = true
 					break
 				}
@@ -196,7 +196,7 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 		} else if !ipIsV4 && q.Qtype == dns.TypeA {
 			for _, v4v6Rewrite := range rec.V4V6s {
 				if v4v6Rewrite.V6.Contains(remoteIP) {
-					remoteIP = v4v6Rewrite.V4.IP.To4()
+					remoteIP = IPNetAdd(v4v6Rewrite.V4, remoteIP[len(remoteIP)-net.IPv4len:], v4v6Rewrite.V4.IP)
 					foundLocalIP = true
 					break
 				}
