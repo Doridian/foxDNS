@@ -10,8 +10,9 @@ import (
 
 type LocalizerRecordMap = map[string][]*LocalizerRecord
 type LocalizerRewrite struct {
-	From string `yaml:"from"`
-	To   string `yaml:"to"`
+	From  string `yaml:"from"`
+	Match string `yaml:"match"`
+	To    string `yaml:"to"`
 }
 
 type V4V6Rewrite struct {
@@ -25,9 +26,10 @@ type v4v6RewriteParsed struct {
 }
 
 type localizerRewriteParsed struct {
-	FromSubnet *net.IPNet
-	FromIP     net.IP
-	To         net.IP
+	FromSubnet  *net.IPNet
+	MatchSubnet *net.IPNet
+	FromIP      net.IP
+	To          net.IP
 }
 
 type LocalizerRecord struct {
@@ -215,7 +217,7 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 		}
 
 		for _, rewrite := range rec.Rewrites {
-			if rewrite.FromSubnet.Contains(ipRec) {
+			if rewrite.MatchSubnet.Contains(ipRec) {
 				ipRec = IPNetAdd(rewrite.FromSubnet, ipRec, rewrite.To)
 				break
 			}
