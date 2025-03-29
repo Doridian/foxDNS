@@ -221,13 +221,11 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 
 	resp := make([]dns.RR, 0, len(recs))
 	for _, rec := range recs {
-		foundLocalIP := false
-		if ipIsV4 != recordIsV4 {
-			remoteIPBase := remoteIP
+		foundLocalIP := ipIsV4 == recordIsV4
+		if !foundLocalIP {
+			remoteIPBase := remoteIP.To16()
 			if recordIsV4 {
 				remoteIPBase = remoteIP[len(remoteIP)-net.IPv4len:]
-			} else {
-				remoteIPBase = remoteIP.To16()
 			}
 
 			for _, v4v6Rewrite := range r.v4V6s {
@@ -242,8 +240,6 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 					break
 				}
 			}
-		} else {
-			foundLocalIP = true
 		}
 
 		if !foundLocalIP {
