@@ -269,22 +269,22 @@ func reloadConfig() {
 				loc.Ttl = uint32(locConfig.Ttl.Seconds())
 			}
 
-			err := loc.AddRewrites(config.Localizers.Rewrites)
-			if err != nil {
-				log.Panicf("Error adding global localizer rewrites: %v", err)
+			rewrites := config.Localizers.Rewrites
+			if locConfig.Rewrites != nil {
+				rewrites = locConfig.Rewrites
 			}
-			err = loc.AddV4V6s(config.Localizers.V4V6s)
+			err := loc.AddRewrites(rewrites)
 			if err != nil {
-				log.Panicf("Error adding global localizer v4v6s: %v", err)
+				log.Panicf("Error adding localizer rewrites: %v", err)
 			}
 
-			err = loc.AddRewrites(locConfig.Rewrites)
-			if err != nil {
-				log.Panicf("Error adding zonal localizer rewrites: %v", err)
+			v4v6s := config.Localizers.V4V6s
+			if locConfig.V4V6s != nil {
+				v4v6s = locConfig.V4V6s
 			}
-			err = loc.AddV4V6s(locConfig.V4V6s)
+			err = loc.AddV4V6s(v4v6s)
 			if err != nil {
-				log.Panicf("Error adding zonal localizer v4v6s: %v", err)
+				log.Panicf("Error adding localizer v4v6s: %v", err)
 			}
 
 			generators = append(generators, loc)
