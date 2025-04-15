@@ -256,9 +256,11 @@ func reloadConfig() {
 
 		resolv.RequireCookie = resolvConf.RequireCookie
 
-		mux.Handle(resolvConf.Zone, resolv)
+		for _, zone := range resolvConf.Zones {
+			mux.Handle(zone, resolv)
+		}
 
-		log.Printf("Resolver enabled for zone %s (only private clients: %v)", resolvConf.Zone, resolv.AllowOnlyFromPrivate)
+		log.Printf("Resolver enabled for zones %v (only private clients: %v)", resolvConf.Zones, resolv.AllowOnlyFromPrivate)
 	}
 
 	if len(config.Localizers.Zones) > 0 {

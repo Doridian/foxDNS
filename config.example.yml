@@ -19,7 +19,8 @@ rdns:
       - 192.168.0.0/16
 
 resolvers:
-  - zone: .
+  - zones:
+    - .
     cache-size: 20480
     nameserver-strategy: random
     nameservers:
