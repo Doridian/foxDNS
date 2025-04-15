@@ -28,7 +28,7 @@ type Config struct {
 	} `yaml:"rdns"`
 
 	Resolvers []struct {
-		Zone        string `yaml:"zone"`
+		Zones       []string `yaml:"zones"`
 		NameServers []struct {
 			Addr               string        `yaml:"addr"`
 			Proto              string        `yaml:"proto"`
