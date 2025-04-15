@@ -89,7 +89,9 @@ func (r *Adlist) loadList(list string) (adlistContents, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer dataStream.Close()
+	defer func() {
+		_ = dataStream.Close()
+	}()
 
 	body, err := io.ReadAll(dataStream)
 	if err != nil {

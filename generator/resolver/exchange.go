@@ -40,7 +40,7 @@ var ErrCookieMismatch = errors.New("client cookie returned from server invalid")
 
 func (r *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
 	var info *querySlotInfo
-	var keepConn bool = false
+	keepConn := false
 
 	for currentTry := 1; currentTry <= r.Attempts; currentTry++ {
 		if info != nil && !keepConn {

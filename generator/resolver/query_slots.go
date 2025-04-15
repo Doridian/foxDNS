@@ -17,6 +17,13 @@ type querySlotInfo struct {
 	lastUse      time.Time
 }
 
+func (s *querySlotInfo) close() {
+	if s.conn == nil {
+		return
+	}
+	_ = s.conn.Close()
+}
+
 var (
 	openConnections = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "foxdns_resolver_open_connections_total",
@@ -85,7 +92,7 @@ func (r *Generator) returnQuerySlot(info *querySlotInfo, err error) {
 		server.inFlightQueries--
 		openConnections.WithLabelValues(server.Addr).Set(float64(server.inFlightQueries))
 		if info.conn != nil {
-			go info.conn.Close()
+			go info.close()
 		}
 	}
 
@@ -109,7 +116,7 @@ func (r *Generator) cleanupServerQuerySlots(server *ServerConfig) {
 			server.freeQuerySlots.Remove(lastElem)
 			server.inFlightQueries--
 			openConnections.WithLabelValues(server.Addr).Set(float64(server.inFlightQueries))
-			go info.conn.Close()
+			go info.close()
 			madeChanges = true
 		} else {
 			break
