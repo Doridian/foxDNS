@@ -161,7 +161,11 @@ func (r *Adlist) Refresh() error {
 		}
 
 		for host := range contents {
-			newManagedHosts[host] = list
+			if _, ok := newManagedHosts[host]; !ok {
+				newManagedHosts[host] = list
+			} else {
+				newManagedHosts[host] += " & " + list
+			}
 		}
 	}
 	for list := range r.allowLists {
