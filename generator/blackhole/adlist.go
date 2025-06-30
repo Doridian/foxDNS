@@ -77,7 +77,7 @@ func (r *Adlist) loadList(list string) (adlistContents, error) {
 	var dataStream io.ReadCloser
 
 	switch parsedUrl.Scheme {
-	case "file":
+	case "file", "":
 		dataStream, err = os.Open(parsedUrl.Path)
 	case "http", "https":
 		var resp *http.Response
