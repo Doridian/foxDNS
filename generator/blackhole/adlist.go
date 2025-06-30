@@ -33,18 +33,19 @@ type Adlist struct {
 }
 
 var hardcodeIgnoredAdHosts = map[string]bool{
-	"localhost":             true,
-	"localhost.localdomain": true,
-	"local":                 true,
-	"localdomain":           true,
-	"broadcasthost":         true,
-	"ip6-localhost":         true,
-	"ip6-loopback":          true,
-	"ip6-localnet":          true,
-	"ip6-mcastprefix":       true,
-	"ip6-allnodes":          true,
-	"ip6-allrouters":        true,
-	"ip6-allhosts":          true,
+	"localhost.":             true,
+	"localhost.localdomain.": true,
+	"local.":                 true,
+	"localdomain.":           true,
+	"broadcasthost.":         true,
+	"ip6-localhost.":         true,
+	"ip6-loopback.":          true,
+	"ip6-localnet.":          true,
+	"ip6-mcastprefix.":       true,
+	"ip6-allnodes.":          true,
+	"ip6-allrouters.":        true,
+	"ip6-allhosts.":          true,
+	".":                      true,
 }
 
 func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refreshInterval time.Duration) *Adlist {
@@ -127,10 +128,12 @@ func (r *Adlist) loadList(list string) (adlistContents, error) {
 			if host == "" {
 				continue
 			}
-			if hardcodeIgnoredAdHosts[host] {
+			if net.ParseIP(host) != nil {
 				continue
 			}
-			if net.ParseIP(host) != nil {
+
+			host = dns.CanonicalName(host)
+			if hardcodeIgnoredAdHosts[host] {
 				continue
 			}
 			contents[host] = true
