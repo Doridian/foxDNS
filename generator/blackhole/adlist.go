@@ -21,11 +21,11 @@ type adlistMap = map[string]adlistContents
 type Adlist struct {
 	blockLists   adlistMap
 	allowLists   adlistMap
-	managedHosts map[string]bool
+	managedHosts map[string]string
 	refreshLock  sync.Mutex
 
 	mux             *dns.ServeMux
-	handler         *Generator
+	handlerMap      map[string]*Generator
 	refreshInterval time.Duration
 	refreshCtx      context.Context
 	refreshCancel   context.CancelFunc
@@ -60,8 +60,8 @@ func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refr
 		blockLists:      blockListsMap,
 		allowLists:      allowListsMap,
 		mux:             mux,
-		handler:         New("adlist"),
-		managedHosts:    make(map[string]bool),
+		handlerMap:      make(map[string]*Generator),
+		managedHosts:    make(map[string]string),
 		refreshInterval: refreshInterval,
 	}
 }
@@ -137,11 +137,20 @@ func (r *Adlist) loadList(list string) (adlistContents, error) {
 	return contents, nil
 }
 
+func (r *Adlist) getHandler(list string) *Generator {
+	handler, ok := r.handlerMap[list]
+	if !ok {
+		handler = New("adlist: " + list)
+		r.handlerMap[list] = handler
+	}
+	return handler
+}
+
 func (r *Adlist) Refresh() error {
 	r.refreshLock.Lock()
 	defer r.refreshLock.Unlock()
 
-	newManagedHosts := make(map[string]bool)
+	newManagedHosts := make(map[string]string)
 
 	for list := range r.blockLists {
 		contents, err := r.loadList(list)
@@ -152,7 +161,7 @@ func (r *Adlist) Refresh() error {
 		}
 
 		for host := range contents {
-			newManagedHosts[host] = true
+			newManagedHosts[host] = list
 		}
 	}
 	for list := range r.allowLists {
@@ -168,23 +177,37 @@ func (r *Adlist) Refresh() error {
 		}
 	}
 
+	usedHandlers := make(map[string]bool)
 	removed := 0
 	added := 0
 	for host := range r.managedHosts {
-		if !newManagedHosts[host] {
+		if _, ok := newManagedHosts[host]; !ok {
 			r.mux.HandleRemove(host)
 			removed++
 		}
 	}
-	for host := range newManagedHosts {
-		if !r.managedHosts[host] {
-			r.mux.Handle(host, r.handler)
+	for host, list := range newManagedHosts {
+		usedHandlers[list] = true
+		if _, ok := r.managedHosts[host]; !ok {
+			r.mux.Handle(host, r.getHandler(list))
 			added++
 		}
 	}
 	r.managedHosts = newManagedHosts
 
-	log.Printf("Adlists refreshed, %d hosts managed (%d added, %d removed)", len(r.managedHosts), added, removed)
+	for list := range r.handlerMap {
+		if !usedHandlers[list] {
+			delete(r.handlerMap, list)
+		}
+	}
+
+	log.Printf(
+		"Adlists refreshed, %d hosts managed with %d handlers (%d added, %d removed)",
+		len(r.managedHosts),
+		len(r.handlerMap),
+		added,
+		removed,
+	)
 
 	return nil
 }
