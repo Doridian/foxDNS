@@ -44,8 +44,6 @@ type Generator struct {
 	LogFailures   bool
 	RequireCookie bool
 
-	AllowOnlyFromPrivate bool
-
 	connCleanupTicker *time.Ticker
 	shouldPadLen      int
 
@@ -75,13 +73,12 @@ func New(servers []*ServerConfig) *Generator {
 	cache, _ := lru.New[string, *cacheEntry](4096)
 
 	gen := &Generator{
-		ServerStrategy:       StrategyRoundRobin,
-		Servers:              servers,
-		MaxIdleTime:          time.Second * 15,
-		Attempts:             3,
-		AllowOnlyFromPrivate: true,
-		RetryWait:            time.Millisecond * 100,
-		LogFailures:          false,
+		ServerStrategy: StrategyRoundRobin,
+		Servers:        servers,
+		MaxIdleTime:    time.Second * 15,
+		Attempts:       3,
+		RetryWait:      time.Millisecond * 100,
+		LogFailures:    false,
 
 		CacheMaxTTL:               3600,
 		CacheMinTTL:               0,

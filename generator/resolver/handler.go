@@ -48,15 +48,6 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		_ = wr.WriteMsg(reply)
 	}()
 
-	if r.AllowOnlyFromPrivate {
-		ip := util.ExtractIP(wr.RemoteAddr())
-		if !util.IPIsPrivateOrLocal(ip) {
-			reply.RecursionAvailable = false
-			reply.Rcode = dns.RcodeRefused
-			return
-		}
-	}
-
 	reply.RecursionAvailable = true
 
 	q := &msg.Question[0]

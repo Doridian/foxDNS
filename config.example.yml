@@ -34,7 +34,6 @@ resolvers:
         addr: "8.8.4.4:853"
         max-parallel-queries: 10
         timeout: 200ms
-    allow-only-from-private: true
 
 localizers:
   zones:

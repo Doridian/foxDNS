@@ -37,7 +37,6 @@ func initTests() {
 	if dummyServer != nil {
 		dummyServer.SetHandler(simpleHandler)
 		resolverGenerator.FlushCache()
-		resolverGenerator.AllowOnlyFromPrivate = false
 		resolverGenerator.CurrentTime = time.Now
 		return
 	}

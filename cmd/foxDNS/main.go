@@ -186,7 +186,6 @@ func reloadConfig() {
 		resolv := resolver.New(nameServers)
 		generators = append(generators, resolv)
 
-		resolv.AllowOnlyFromPrivate = resolvConf.AllowOnlyFromPrivate
 		resolv.LogFailures = resolvConf.LogFailures
 
 		if resolvConf.MaxIdleTime > 0 {
@@ -260,7 +259,7 @@ func reloadConfig() {
 			mux.Handle(zone, resolv)
 		}
 
-		log.Printf("Resolver enabled for zones %v (only private clients: %v)", resolvConf.Zones, resolv.AllowOnlyFromPrivate)
+		log.Printf("Resolver enabled for zones %v", resolvConf.Zones)
 	}
 
 	if len(config.Localizers.Zones) > 0 {

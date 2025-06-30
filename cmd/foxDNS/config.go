@@ -57,8 +57,6 @@ type Config struct {
 
 		RecordMinTTL time.Duration `yaml:"record-min-ttl"`
 		RecordMaxTTL time.Duration `yaml:"record-max-ttl"`
-
-		AllowOnlyFromPrivate bool `yaml:"allow-only-from-private"`
 	} `yaml:"resolvers"`
 
 	Localizers struct {
