@@ -2,6 +2,7 @@ package blackhole
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -85,6 +86,8 @@ func (r *Adlist) loadList(list string) (adlistContents, error) {
 		if err == nil {
 			dataStream = resp.Body
 		}
+	default:
+		return nil, fmt.Errorf("unsupported scheme: %s", parsedUrl.Scheme)
 	}
 	if err != nil {
 		return nil, err
