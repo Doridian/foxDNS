@@ -51,11 +51,11 @@ var hardcodeIgnoredAdHosts = map[string]bool{
 func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refreshInterval time.Duration) *Adlist {
 	blockListsMap := make(adlistMap)
 	for _, list := range blockLists {
-		blockListsMap[list] = make(adlistContents)
+		blockListsMap[list] = nil
 	}
 	allowListsMap := make(adlistMap)
 	for _, list := range allowLists {
-		allowListsMap[list] = make(adlistContents)
+		allowListsMap[list] = nil
 	}
 
 	return &Adlist{
@@ -158,10 +158,11 @@ func (r *Adlist) Refresh() error {
 
 	newManagedHosts := make(map[string]string)
 
-	for list := range r.blockLists {
-		contents, err := r.loadList(list)
+	for list, contents := range r.blockLists {
+		newContents, err := r.loadList(list)
 		if err == nil {
-			r.blockLists[list] = contents
+			r.blockLists[list] = newContents
+			contents = newContents
 		} else {
 			log.Printf("Error loading blocklist %s: %v", list, err)
 		}
