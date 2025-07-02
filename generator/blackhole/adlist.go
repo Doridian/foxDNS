@@ -175,10 +175,11 @@ func (r *Adlist) Refresh() error {
 			}
 		}
 	}
-	for list := range r.allowLists {
-		contents, err := r.loadList(list)
+	for list, contents := range r.allowLists {
+		newContents, err := r.loadList(list)
 		if err == nil {
-			r.allowLists[list] = contents
+			r.allowLists[list] = newContents
+			contents = newContents
 		} else {
 			log.Printf("Error loading allowlist %s: %v", list, err)
 		}
