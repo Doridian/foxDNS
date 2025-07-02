@@ -1,8 +1,14 @@
 name: Publish Docker image
+
 on:
   push:
     branches:
       - main
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     uses: ./.github/workflows/check.yml
