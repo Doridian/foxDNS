@@ -89,6 +89,10 @@ func (w *PrometheusResponseWriter) Hijack() {
 	w.parent.Hijack()
 }
 
+func (w *PrometheusResponseWriter) Network() string {
+	return w.parent.Network()
+}
+
 func (w *PrometheusResponseWriter) LocalAddr() net.Addr {
 	return w.parent.LocalAddr()
 }

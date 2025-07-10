@@ -12,6 +12,8 @@ type SimpleDNSResponseWriter interface {
 	LocalAddr() net.Addr
 	// RemoteAddr returns the net.Addr of the client that sent the current request.
 	RemoteAddr() net.Addr
+	// Network returns the network type (e.g., "udp", "tcp") of the connection.
+	Network() string
 }
 
 type DNSResponseWriter struct {
@@ -33,6 +35,10 @@ func (*DNSResponseWriter) Close() error {
 
 func (*DNSResponseWriter) Hijack() {
 	panic("unimplemented")
+}
+
+func (r *DNSResponseWriter) Network() string {
+	return r.parent.Network()
 }
 
 func (r *DNSResponseWriter) LocalAddr() net.Addr {
