@@ -7,7 +7,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/Doridian/foxDNS/util"
 	"github.com/fsnotify/fsnotify"
 	"github.com/miekg/dns"
 )
@@ -22,27 +21,35 @@ type zoneConfig struct {
 type Generator struct {
 	configs        []zoneConfig
 	records        map[string]map[uint16][]dns.RR
+	soa            []dns.RR
 	recordsLock    sync.RWMutex
 	watcher        *fsnotify.Watcher
 	enableFSNotify bool
-	cnameResolver  dns.Handler
 }
 
-func New(enableFSNotify bool, cnameResolver dns.Handler) *Generator {
+func New(enableFSNotify bool) *Generator {
 	return &Generator{
 		configs:        make([]zoneConfig, 0),
 		records:        make(map[string]map[uint16][]dns.RR),
 		watcher:        nil,
 		enableFSNotify: enableFSNotify,
-		cnameResolver:  cnameResolver,
 	}
 }
 
 func (r *Generator) LoadZoneFile(file string, origin string, defaultTTL uint32, includeAllowed bool) error {
 	r.recordsLock.Lock()
 	defer r.recordsLock.Unlock()
+	return r.loadZoneFile(file, origin, defaultTTL, includeAllowed)
+}
 
-	err := r.loadZoneFile(file, origin, defaultTTL, includeAllowed)
+func (r *Generator) LoadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) error {
+	r.recordsLock.Lock()
+	defer r.recordsLock.Unlock()
+	return r.loadZone(rd, file, origin, defaultTTL, includeAllowed)
+}
+
+func (r *Generator) loadZoneFile(file string, origin string, defaultTTL uint32, includeAllowed bool) error {
+	fh, err := os.Open(file)
 	if err != nil {
 		return err
 	}
@@ -61,24 +68,12 @@ func (r *Generator) LoadZoneFile(file string, origin string, defaultTTL uint32, 
 		}
 	}
 
-	return nil
+	return r.LoadZone(fh, file, origin, defaultTTL, includeAllowed)
 }
 
-func (r *Generator) loadZoneFile(file string, origin string, defaultTTL uint32, includeAllowed bool) error {
-	fh, err := os.Open(file)
-	if err != nil {
-		return err
-	}
-	return r.loadZone(fh, file, origin, defaultTTL, includeAllowed)
-}
+func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) (err error) {
+	origin = dns.CanonicalName(origin)
 
-func (r *Generator) LoadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) error {
-	r.recordsLock.Lock()
-	defer r.recordsLock.Unlock()
-	return r.loadZone(rd, file, origin, defaultTTL, includeAllowed)
-}
-
-func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) error {
 	parser := dns.NewZoneParser(rd, origin, file)
 	parser.SetDefaultTTL(defaultTTL)
 	parser.SetIncludeAllowed(includeAllowed)
@@ -86,9 +81,15 @@ func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTT
 	for {
 		rr, ok := parser.Next()
 		if !ok || rr == nil {
-			return parser.Err()
+			err = parser.Err()
+			return
 		}
 		r.addRecord(rr)
+
+		hdr := rr.Header()
+		if hdr.Rrtype == dns.TypeSOA && hdr.Class == dns.ClassINET && hdr.Name == origin {
+			r.soa = []dns.RR{rr}
+		}
 	}
 }
 
@@ -119,68 +120,21 @@ func (r *Generator) addRecord(rr dns.RR) {
 	nameRecs[hdr.Rrtype] = append([]dns.RR{rr}, typeRecs...)
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
+func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	r.recordsLock.RLock()
 
 	nameRecs := r.records[q.Name]
 	if nameRecs == nil {
 		r.recordsLock.RUnlock()
-		return []dns.RR{}, true
+		return nil, r.soa, nil, dns.RcodeNameError
 	}
 
 	typedRecs := nameRecs[q.Qtype]
-	if typedRecs != nil || q.Qtype == dns.TypeCNAME {
-		r.recordsLock.RUnlock()
-		if typedRecs == nil {
-			return []dns.RR{}, false
-		}
-		return typedRecs, false
-	}
-
-	// Handle CNAMEs
-	cnameRecs := nameRecs[dns.TypeCNAME]
-	if cnameRecs == nil || len(cnameRecs) != 1 {
-		r.recordsLock.RUnlock()
-		return []dns.RR{}, false
-	}
-
-	cname := cnameRecs[0].(*dns.CNAME)
 	r.recordsLock.RUnlock()
-
-	var subRes []dns.RR
-	if r.cnameResolver != nil {
-		subWR := util.NewResponseWriter(wr, &net.TCPAddr{
-			IP:   net.IP([]byte{127, 0, 0, 1}),
-			Port: 53,
-		})
-		r.cnameResolver.ServeDNS(subWR, &dns.Msg{
-			Question: []dns.Question{
-				{
-					Name:   cname.Target,
-					Qtype:  q.Qtype,
-					Qclass: q.Qclass,
-				},
-			},
-		})
-		if subWR.Result != nil && subWR.Result.Rcode == dns.RcodeSuccess {
-			subRes = subWR.Result.Answer
-		}
-	} else {
-		subRes, _ = r.HandleQuestion(&dns.Question{
-			Name:   cname.Target,
-			Qtype:  q.Qtype,
-			Qclass: q.Qclass,
-		}, wr)
+	if typedRecs == nil {
+		return nil, r.soa, nil, dns.RcodeSuccess
 	}
-
-	if subRes == nil {
-		return []dns.RR{cname}, false
-	}
-
-	resultRecs := make([]dns.RR, len(subRes)+1)
-	resultRecs[0] = cname
-	copy(resultRecs[1:], subRes)
-	return resultRecs, false
+	return typedRecs, nil, nil, dns.RcodeSuccess
 }
 
 func (r *Generator) Refresh() error {

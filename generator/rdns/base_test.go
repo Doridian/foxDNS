@@ -4,7 +4,6 @@ import (
 	"net"
 	"testing"
 
-	"github.com/Doridian/foxDNS/generator"
 	"github.com/Doridian/foxDNS/generator/rdns"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
@@ -12,14 +11,12 @@ import (
 )
 
 func runRDNSTest(t *testing.T, handler *rdns.Generator, host string, qtype uint16, expected dns.RR) {
-	wr := &generator.TestResponseWriter{}
-	rr, nxdomain := handler.HandleQuestion(&dns.Question{
+	rr, _, _, rcode := handler.HandleQuestion(&dns.Question{
 		Name:   host,
 		Qtype:  qtype,
 		Qclass: dns.ClassINET,
-	}, wr)
-	assert.False(t, wr.HadWrites)
-	assert.False(t, nxdomain)
+	}, net.IPv4(127, 0, 0, 1))
+	assert.Equal(t, dns.RcodeSuccess, rcode)
 
 	if expected == nil {
 		assert.Empty(t, rr)

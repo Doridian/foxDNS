@@ -4,27 +4,27 @@ import (
 	"os"
 	"time"
 
-	"github.com/Doridian/foxDNS/generator/authority"
+	"github.com/Doridian/foxDNS/generator/handler"
 	"github.com/Doridian/foxDNS/generator/localizer"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
 	Global struct {
-		Listen           []string              `yaml:"listen"`
-		PrometheusListen string                `yaml:"prometheus-listen"`
-		AuthorityConfig  *authority.AuthConfig `yaml:"authority-config"`
-		UDPSize          int                   `yaml:"udp-size"`
+		Listen           []string        `yaml:"listen"`
+		PrometheusListen string          `yaml:"prometheus-listen"`
+		HandlerConfig    *handler.Config `yaml:"handler-config"`
+		UDPSize          int             `yaml:"udp-size"`
 	} `yaml:"global"`
 
 	RDNS []struct {
-		IPVersion           int                              `yaml:"ip_version"`
-		Suffix              string                           `yaml:"suffix"`
-		Subnets             []string                         `yaml:"subnets"`
-		PTRAuthorityConfigs map[string]*authority.AuthConfig `yaml:"ptr-authority-configs"`
-		AddrAuthorityConfig *authority.AuthConfig            `yaml:"addr-authority-config"`
-		AddressTtl          time.Duration                    `yaml:"address-ttl"`
-		PtrTtl              time.Duration                    `yaml:"ptr-ttl"`
+		IPVersion         int                        `yaml:"ip_version"`
+		Suffix            string                     `yaml:"suffix"`
+		Subnets           []string                   `yaml:"subnets"`
+		PTRHandlerConfigs map[string]*handler.Config `yaml:"ptr-handler-configs"`
+		AddrHandlerConfig *handler.Config            `yaml:"addr-handler-config"`
+		AddressTtl        time.Duration              `yaml:"address-ttl"`
+		PtrTtl            time.Duration              `yaml:"ptr-ttl"`
 	} `yaml:"rdns"`
 
 	Resolvers []struct {
@@ -33,17 +33,18 @@ type Config struct {
 			Addr               string        `yaml:"addr"`
 			Proto              string        `yaml:"proto"`
 			ServerName         string        `yaml:"server-name"`
-			RequireCookie      bool          `yaml:"require-cookie"`
+			RequireCookie      *bool         `yaml:"require-cookie"`
 			MaxParallelQueries int           `yaml:"max-parallel-queries"`
 			Timeout            time.Duration `yaml:"timeout"`
 		} `yaml:"nameservers"`
 		NameServerStrategy string `yaml:"nameserver-strategy"`
 
-		MaxIdleTime   time.Duration `yaml:"max-idle-time"`
-		Attempts      int           `yaml:"attempts"`
-		RetryWait     time.Duration `yaml:"retry-wait"`
-		LogFailures   bool          `yaml:"log-failures"`
-		RequireCookie bool          `yaml:"require-cookie"`
+		MaxIdleTime time.Duration `yaml:"max-idle-time"`
+		Attempts    int           `yaml:"attempts"`
+		RetryWait   time.Duration `yaml:"retry-wait"`
+		LogFailures bool          `yaml:"log-failures"`
+
+		HandlerConfig *handler.Config `yaml:"handler-config"`
 
 		CacheSize                 int           `yaml:"cache-size"`
 		CacheMaxTime              time.Duration `yaml:"cache-max-time"`
@@ -63,27 +64,26 @@ type Config struct {
 		Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
 		V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
 		Zones    []struct {
-			Zone            string                       `yaml:"zone"`
-			Subnets         []string                     `yaml:"subnets"`
-			Ttl             time.Duration                `yaml:"ttl"`
-			AuthorityConfig *authority.AuthConfig        `yaml:"authority-config"`
-			Rewrites        []localizer.LocalizerRewrite `yaml:"rewrites"`
-			V4V6s           []localizer.V4V6Rewrite      `yaml:"v4v6s"`
+			Zone          string                       `yaml:"zone"`
+			Subnets       []string                     `yaml:"subnets"`
+			Ttl           time.Duration                `yaml:"ttl"`
+			HandlerConfig *handler.Config              `yaml:"handler-config"`
+			Rewrites      []localizer.LocalizerRewrite `yaml:"rewrites"`
+			V4V6s         []localizer.V4V6Rewrite      `yaml:"v4v6s"`
 		} `yaml:"zones"`
 	} `yaml:"localizers"`
 
 	StaticZones []struct {
-		Zone                  string                `yaml:"zone"`
-		File                  string                `yaml:"file"`
-		ResolveExternalCNAMES bool                  `yaml:"resolve-external-cnames"`
-		RequireCookie         bool                  `yaml:"require-cookie"`
-		AuthorityConfig       *authority.AuthConfig `yaml:"authority-config"`
+		Zone          string          `yaml:"zone"`
+		File          string          `yaml:"file"`
+		HandlerConfig *handler.Config `yaml:"handler-config"`
 	} `yaml:"static-zones"`
 
 	AdLists struct {
-		AllowLists      []string      `yaml:"allow-lists"`
-		BlockLists      []string      `yaml:"block-lists"`
-		RefreshInterval time.Duration `yaml:"refresh-interval"`
+		AllowLists      []string        `yaml:"allow-lists"`
+		BlockLists      []string        `yaml:"block-lists"`
+		RefreshInterval time.Duration   `yaml:"refresh-interval"`
+		HandlerConfig   *handler.Config `yaml:"handler-config"`
 	} `yaml:"ad-lists"`
 }
 

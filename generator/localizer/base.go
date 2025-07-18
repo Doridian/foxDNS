@@ -175,9 +175,9 @@ func makeRecV6(ip net.IP) dns.RR {
 	}
 }
 
-func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
+func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, remoteIP net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	if !r.knownHosts[q.Name] {
-		return []dns.RR{}, true
+		return nil, nil, nil, dns.RcodeNameError
 	}
 
 	var makeRecFunc func(net.IP) dns.RR
@@ -196,18 +196,16 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 	}
 
 	if recsMap == nil {
-		return []dns.RR{}, false
+		return nil, nil, nil, dns.RcodeSuccess
 	}
 
 	recs := recsMap[q.Name]
 	if len(recs) < 1 {
-		return []dns.RR{}, false
+		return nil, nil, nil, dns.RcodeSuccess
 	}
 
-	remoteIP := util.ExtractIP(wr.RemoteAddr())
-
 	if remoteIP == nil {
-		return []dns.RR{}, false
+		return nil, nil, nil, dns.RcodeSuccess
 	}
 
 	remoteIPv4 := remoteIP.To4()
@@ -251,7 +249,7 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 		}
 
 		if !foundLocalIP {
-			return []dns.RR{}, false
+			return nil, nil, nil, dns.RcodeSuccess
 		}
 	}
 
@@ -266,7 +264,7 @@ func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, wr util.Simpl
 		util.FillHeader(ipResRec, q.Name, q.Qtype, r.Ttl)
 		resp = append(resp, ipResRec)
 	}
-	return resp, false
+	return resp, nil, nil, dns.RcodeSuccess
 }
 
 func (r *LocalizedRecordGenerator) Refresh() error {

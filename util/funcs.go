@@ -40,21 +40,6 @@ func FillHeader(rr dns.RR, name string, rtype uint16, ttl uint32) dns.RR {
 	return rr
 }
 
-type DNSHandler interface {
-	GetName() string
-}
-
-type DNSHandlerWrapper interface {
-	SetHandlerName(name string)
-}
-
-func SetHandlerName(wr dns.ResponseWriter, hdl DNSHandler) {
-	wrappedHandler, ok := wr.(DNSHandlerWrapper)
-	if ok {
-		wrappedHandler.SetHandlerName(hdl.GetName())
-	}
-}
-
 func IsBadQuery(q *dns.Question) bool {
 	return q.Qclass != dns.ClassINET || q.Qtype == dns.TypeIXFR || q.Qtype == dns.TypeAXFR || q.Qtype == dns.TypeMAILA || q.Qtype == dns.TypeMAILB || q.Qtype == dns.TypeANY
 }

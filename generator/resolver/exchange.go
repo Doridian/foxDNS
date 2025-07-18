@@ -27,6 +27,7 @@ var (
 
 func (r *Generator) exchange(info *querySlotInfo, m *dns.Msg) (resp *dns.Msg, err error) {
 	startTime := r.CurrentTime()
+	m.Id = dns.Id()
 	resp, _, err = info.server.client.ExchangeWithConn(m, info.conn)
 
 	if err == nil {

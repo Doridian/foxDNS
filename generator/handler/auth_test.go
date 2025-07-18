@@ -1,37 +1,53 @@
-package authority_test
+package handler_test
 
 import (
+	"net"
 	"testing"
 	"time"
 
 	"github.com/Doridian/foxDNS/generator"
-	"github.com/Doridian/foxDNS/generator/authority"
+	"github.com/Doridian/foxDNS/generator/handler"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 )
 
 type TestHandler struct {
-	q        *dns.Question
-	recs     []dns.RR
-	nxdomain bool
+	q     *dns.Question
+	recs  []dns.RR
+	rcode int
 }
 
 func (*TestHandler) GetName() string {
 	return "test"
 }
 
-func (t *TestHandler) HandleQuestion(q *dns.Question, wr util.SimpleDNSResponseWriter) (recs []dns.RR, nxdomain bool) {
-	t.q = q
-	return t.recs, t.nxdomain
+func (t *TestHandler) Start() error {
+	return nil
 }
 
-func testQuestion(t *testing.T, handler *authority.AuthorityHandler, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool, edns0 bool) {
+func (t *TestHandler) Stop() error {
+	return nil
+}
+
+func (t *TestHandler) Refresh() error {
+	return nil
+}
+
+func (t *TestHandler) HandleQuestion(q *dns.Question, _ net.IP) (recs []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int) {
+	t.q = q
+	return t.recs, nil, nil, t.rcode
+}
+
+func testQuestion(t *testing.T, zone string, config handler.Config, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool, edns0 bool) {
 	wr := &generator.TestResponseWriter{}
 
 	testHandler := &TestHandler{
-		recs:     []dns.RR{},
-		nxdomain: nxdomain,
+		recs:  []dns.RR{},
+		rcode: dns.RcodeSuccess,
+	}
+	if nxdomain {
+		testHandler.rcode = dns.RcodeNameError
 	}
 
 	qmsg := &dns.Msg{
@@ -40,8 +56,8 @@ func testQuestion(t *testing.T, handler *authority.AuthorityHandler, q dns.Quest
 	if edns0 {
 		qmsg.SetEdns0(util.UDPSize, false)
 	}
-	handler.Child = testHandler
-	handler.ServeDNS(wr, qmsg)
+	hdl := handler.New(testHandler, zone, config)
+	hdl.ServeDNS(wr, qmsg)
 
 	if edns0 {
 		assert.NotNil(t, wr.LastMsg.IsEdns0())
@@ -66,21 +82,23 @@ func testQuestion(t *testing.T, handler *authority.AuthorityHandler, q dns.Quest
 }
 
 func TestBasics(t *testing.T) {
-	soaConfig := authority.AuthConfig{
-		SOATtl:      300 * time.Second,
-		NSTtl:       300 * time.Second,
-		Mbox:        "hostmaster.example.com",
-		Serial:      2022010169,
-		Refresh:     43200 * time.Second,
-		Retry:       3600 * time.Second,
-		Expire:      86400 * time.Second,
-		Minttl:      300 * time.Second,
-		Nameservers: []string{"ns1.example.com", "ns2.example.com"},
+	boolTrue := true
+	soaConfig := handler.Config{
+		Authoritative: &boolTrue,
+		SOATtl:        300 * time.Second,
+		NSTtl:         300 * time.Second,
+		Mbox:          "hostmaster.example.com",
+		Serial:        2022010169,
+		Refresh:       43200 * time.Second,
+		Retry:         3600 * time.Second,
+		Expire:        86400 * time.Second,
+		Minttl:        300 * time.Second,
+		Nameservers:   []string{"ns1.example.com", "ns2.example.com"},
 	}
-	handler := authority.NewAuthorityHandler("example.com", soaConfig)
+	zone := "example.com."
 
 	soaRecs := []dns.RR{
-		authority.FillAuthHeader(&dns.SOA{
+		handler.FillAuthHeader(&dns.SOA{
 			Ns:      "ns1.example.com.",
 			Mbox:    "hostmaster.example.com.",
 			Serial:  2022010169,
@@ -88,42 +106,42 @@ func TestBasics(t *testing.T) {
 			Retry:   3600,
 			Expire:  86400,
 			Minttl:  300,
-		}, dns.TypeSOA, "example.com.", 300),
+		}, dns.TypeSOA, zone, 300),
 	}
 
 	nsRecs := []dns.RR{
-		authority.FillAuthHeader(&dns.NS{
+		handler.FillAuthHeader(&dns.NS{
 			Ns: "ns1.example.com.",
-		}, dns.TypeNS, "example.com.", 300),
-		authority.FillAuthHeader(&dns.NS{
+		}, dns.TypeNS, zone, 300),
+		handler.FillAuthHeader(&dns.NS{
 			Ns: "ns2.example.com.",
-		}, dns.TypeNS, "example.com.", 300),
+		}, dns.TypeNS, zone, 300),
 	}
 
 	// We expect the SOA record to be returned
-	testQuestion(t, handler, dns.Question{
-		Name:   "example.com.",
+	testQuestion(t, zone, soaConfig, dns.Question{
+		Name:   zone,
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
 	}, []dns.RR{}, soaRecs, false, false)
 
 	// We expect the SOA record to be returned and also EDNS0
-	testQuestion(t, handler, dns.Question{
-		Name:   "example.com.",
+	testQuestion(t, zone, soaConfig, dns.Question{
+		Name:   zone,
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
 	}, []dns.RR{}, soaRecs, false, true)
 
 	// Ask explicitly for SOA, expect it to be returned
-	testQuestion(t, handler, dns.Question{
-		Name:   "example.com.",
+	testQuestion(t, zone, soaConfig, dns.Question{
+		Name:   zone,
 		Qtype:  dns.TypeSOA,
 		Qclass: dns.ClassINET,
 	}, soaRecs, soaRecs, false, false)
 
 	// We expect the NS record to be returned
-	testQuestion(t, handler, dns.Question{
-		Name:   "example.com.",
+	testQuestion(t, zone, soaConfig, dns.Question{
+		Name:   zone,
 		Qtype:  dns.TypeNS,
 		Qclass: dns.ClassINET,
 	}, nsRecs, soaRecs, false, false)

@@ -39,7 +39,9 @@ func ipv4Encode(ip net.IP) string {
 	return fmt.Sprintf("%d-%d-%d-%d", ip[0], ip[1], ip[2], ip[3])
 }
 
-func ipv4AddPTRZones(r *Generator, zones []string) []string {
+func ipv4AddPTRZones(r *Generator) []string {
+	zones := make([]string, 0, len(r.AllowedSubnets))
+
 	for _, subnet := range r.AllowedSubnets {
 		subnetIP := subnet.IP.To4()
 		ones, _ := subnet.Mask.Size()
@@ -69,6 +71,7 @@ func ipv4AddPTRZones(r *Generator, zones []string) []string {
 			zones = append(zones, fmt.Sprintf("%d.%s", i+int(subnetIP[fullPieces]), fullZoneName))
 		}
 	}
+
 	return zones
 }
 
@@ -85,6 +88,6 @@ func NewIPv4() *Generator {
 		decodeIpSegments: ipv4Decode,
 		encodeIp:         ipv4Encode,
 		makeRec:          ipv4MakeRec,
-		addPTRZones:      ipv4AddPTRZones,
+		getPTRZones:      ipv4AddPTRZones,
 	}
 }

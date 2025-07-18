@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Doridian/foxDNS/generator"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/miekg/dns"
 )
@@ -42,7 +43,6 @@ type Generator struct {
 	Attempts      int
 	RetryWait     time.Duration
 	LogFailures   bool
-	RequireCookie bool
 
 	connCleanupTicker *time.Ticker
 	shouldPadLen      int
@@ -67,7 +67,7 @@ type Generator struct {
 	cacheCleanupTicker *time.Ticker
 }
 
-var _ dns.Handler = &Generator{}
+var _ generator.Generator = &Generator{}
 
 func New(servers []*ServerConfig) *Generator {
 	cache, _ := lru.New[string, *cacheEntry](4096)

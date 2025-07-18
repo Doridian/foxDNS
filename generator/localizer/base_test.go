@@ -4,7 +4,6 @@ import (
 	"net"
 	"testing"
 
-	"github.com/Doridian/foxDNS/generator"
 	"github.com/Doridian/foxDNS/generator/localizer"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
@@ -19,19 +18,12 @@ func runLocalizerTest(t *testing.T, host string, qtype uint16, remoteIP net.IP, 
 	assert.NoError(t, handler.AddRecord("v4.example.com", "0.0.1.2/16"))
 	assert.NoError(t, handler.AddRecord("v6.example.com", "fe80::1/64"))
 
-	wr := &generator.TestResponseWriter{
-		RemoteAddrVal: &net.TCPAddr{
-			IP:   remoteIP,
-			Port: 5053,
-		},
-	}
-	rr, nxdomain := handler.HandleQuestion(&dns.Question{
+	rr, _, _, rcode := handler.HandleQuestion(&dns.Question{
 		Name:   host,
 		Qtype:  qtype,
 		Qclass: dns.ClassINET,
-	}, wr)
-	assert.False(t, wr.HadWrites)
-	assert.False(t, nxdomain)
+	}, remoteIP)
+	assert.Equal(t, dns.RcodeSuccess, rcode)
 
 	if expected == nil {
 		assert.Empty(t, rr)

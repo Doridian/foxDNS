@@ -1,7 +1,8 @@
 package blackhole
 
 import (
-	"github.com/Doridian/foxDNS/util"
+	"net"
+
 	"github.com/miekg/dns"
 )
 
@@ -15,26 +16,25 @@ func New(reason string) *Generator {
 	}
 }
 
-func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
-	reply := &dns.Msg{
-		Compress: true,
-		MsgHdr: dns.MsgHdr{
-			Authoritative: true,
-		},
-	}
-	reply.SetRcode(msg, dns.RcodeNameError)
-	ok, option := util.ApplyEDNS0ReplyEarly(msg, reply, wr, false)
-	if ok {
-		option = append(option, &dns.EDNS0_EDE{
-			InfoCode:  dns.ExtendedErrorCodeFiltered,
-			ExtraText: r.reason,
-		})
-		util.ApplyEDNS0Reply(msg, reply, option, wr, false)
-	}
-	util.SetHandlerName(wr, r)
-	_ = wr.WriteMsg(reply)
+func (r *Generator) HandleQuestion(q *dns.Question, remoteIP net.IP) (recs []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int) {
+	return nil, nil, []dns.EDNS0{&dns.EDNS0_EDE{
+		InfoCode:  dns.ExtendedErrorCodeFiltered,
+		ExtraText: r.reason,
+	}}, dns.RcodeNameError
 }
 
 func (r *Generator) GetName() string {
 	return "blackhole"
+}
+
+func (r *Generator) Refresh() error {
+	return nil
+}
+
+func (r *Generator) Start() error {
+	return nil
+}
+
+func (r *Generator) Stop() error {
+	return nil
 }

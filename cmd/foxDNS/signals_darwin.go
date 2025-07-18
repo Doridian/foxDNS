@@ -13,10 +13,10 @@ func handleRefresh() {
 	for {
 		<-sigs
 		log.Printf("Got refreshing signal, refreshing...")
-		for _, g := range generators {
-			err := g.Refresh()
+		for _, l := range loaders {
+			err := l.Refresh()
 			if err != nil {
-				log.Printf("Error refreshing generator: %v", err)
+				log.Printf("Error refreshing loader: %v", err)
 			}
 		}
 	}

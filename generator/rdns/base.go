@@ -25,7 +25,7 @@ type Generator struct {
 	encodeIp         func(ip net.IP) string
 	makeRec          func(net.IP) dns.RR
 
-	addPTRZones func(r *Generator, zones []string) []string
+	getPTRZones func(r *Generator) []string
 }
 
 func (r *Generator) SetPTRSuffix(ptrSuffix string) {
@@ -91,7 +91,7 @@ func (r *Generator) isAllowed(ip net.IP) bool {
 	return false
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, _ util.SimpleDNSResponseWriter) ([]dns.RR, bool) {
+func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	var resp dns.RR
 	var ttl uint32
 
@@ -105,12 +105,12 @@ func (r *Generator) HandleQuestion(q *dns.Question, _ util.SimpleDNSResponseWrit
 	}
 
 	if resp == nil {
-		return []dns.RR{}, false
+		return nil, nil, nil, dns.RcodeSuccess
 	}
 
 	util.FillHeader(resp, q.Name, q.Qtype, ttl)
 
-	return []dns.RR{resp}, false
+	return []dns.RR{resp}, nil, nil, dns.RcodeSuccess
 }
 
 func (r *Generator) Refresh() error {
@@ -130,9 +130,7 @@ func (r *Generator) GetName() string {
 }
 
 func (r *Generator) GetPTRZones() []string {
-	res := []string{}
-	res = r.addPTRZones(r, res)
-	return res
+	return r.getPTRZones(r)
 }
 
 func (r *Generator) GetAddrZone() string {

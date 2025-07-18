@@ -23,11 +23,6 @@ func (w *TestResponseWriter) WriteMsg(msg *dns.Msg) error {
 	return nil
 }
 
-func (w *TestResponseWriter) SetHandlerName(name string) {
-	w.HadWrites = true
-	w.LastHandlerName = name
-}
-
 func (w *TestResponseWriter) Close() error {
 	w.HadWrites = true
 	return nil

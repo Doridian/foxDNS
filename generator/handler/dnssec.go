@@ -1,4 +1,4 @@
-package authority
+package handler
 
 import (
 	"crypto/ecdsa"
@@ -9,9 +9,15 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (r *AuthorityHandler) signResponse(q *dns.Question, msg *dns.Msg, answer []dns.RR) (dns.RR, error) {
-	queryEDNS0 := msg.IsEdns0()
-	if queryEDNS0 == nil || !queryEDNS0.Do() {
+func (h *Handler) signResponse(q *dns.Question, answer []dns.RR) (dns.RR, error) {
+	dnskey := h.zskDNSKEY
+	privkey := h.zskPrivateKey
+	if q.Qtype == dns.TypeDNSKEY {
+		dnskey = h.kskDNSKEY
+		privkey = h.kskPrivateKey
+	}
+
+	if dnskey == nil || privkey == nil {
 		return nil, nil
 	}
 
@@ -22,42 +28,31 @@ func (r *AuthorityHandler) signResponse(q *dns.Question, msg *dns.Msg, answer []
 
 	cacheKey := fmt.Sprintf("%s:%d:%d", q.Name, q.Qclass, q.Qtype)
 
-	if r.enableSignatureCache {
-		r.signatureLock.Lock()
-		defer r.signatureLock.Unlock()
-		oldSigner := r.signatures[cacheKey]
+	if h.enableSignatureCache {
+		h.signatureLock.Lock()
+		defer h.signatureLock.Unlock()
+		oldSigner := h.signatures[cacheKey]
 		if oldSigner != nil && oldSigner.Expiration > uint32(time.Now().Add(time.Second*60).Unix()) {
 			return oldSigner, nil
 		}
-		delete(r.signatures, cacheKey)
+		delete(h.signatures, cacheKey)
 	}
 
 	signer := &dns.RRSIG{}
 	ttl := answer[0].Header().Ttl
-	util.FillHeader(signer, r.zone, dns.TypeRRSIG, ttl)
+	util.FillHeader(signer, h.zone, dns.TypeRRSIG, ttl)
 	signer.TypeCovered = answer[0].Header().Rrtype
 	signer.Labels = uint8(dns.CountLabel(answer[0].Header().Name))
 	signer.OrigTtl = ttl
 	signer.Expiration = uint32(time.Now().Add(3600 * time.Second).Unix())
 	signer.Inception = uint32(time.Now().Unix())
-	signer.SignerName = r.signerName
-
-	dnskey := r.zskDNSKEY
-	privkey := r.zskPrivateKey
-	if q.Qtype == dns.TypeDNSKEY {
-		dnskey = r.kskDNSKEY
-		privkey = r.kskPrivateKey
-	}
-
-	if dnskey == nil || privkey == nil {
-		return nil, fmt.Errorf("no key to sign with for record %s in zone %s", q.Name, r.zone)
-	}
+	signer.SignerName = h.signerName
 
 	signer.KeyTag = dnskey.KeyTag()
 	signer.Algorithm = dnskey.Algorithm
 	err := signer.Sign(privkey.(*ecdsa.PrivateKey), answer)
-	if err == nil && r.enableSignatureCache {
-		r.signatures[cacheKey] = signer
+	if err == nil && h.enableSignatureCache {
+		h.signatures[cacheKey] = signer
 	}
 	return signer, err
 }

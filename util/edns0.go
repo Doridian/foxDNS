@@ -50,6 +50,10 @@ func IsSecureProtocol(proto string) bool {
 func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr dns.ResponseWriter, requireCookie bool) *dns.OPT {
 	queryEdns0 := query.IsEdns0()
 	if queryEdns0 == nil {
+		if reply.Rcode > 0xF {
+			// Unset extended RCODE if client doesn't speak EDNS0
+			reply.Rcode = dns.RcodeServerFailure
+		}
 		return nil
 	}
 

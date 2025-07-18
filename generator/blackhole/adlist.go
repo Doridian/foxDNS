@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Doridian/foxDNS/generator/handler"
 	"github.com/miekg/dns"
 )
 
@@ -25,8 +26,10 @@ type Adlist struct {
 	managedHosts map[string]string
 	refreshLock  sync.Mutex
 
+	config handler.Config
+
 	mux             *dns.ServeMux
-	handlerMap      map[string]*Generator
+	handlerMap      map[string]dns.Handler
 	refreshInterval time.Duration
 	refreshCtx      context.Context
 	refreshCancel   context.CancelFunc
@@ -48,7 +51,7 @@ var hardcodeIgnoredAdHosts = map[string]bool{
 	".":                      true,
 }
 
-func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refreshInterval time.Duration) *Adlist {
+func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refreshInterval time.Duration, config handler.Config) *Adlist {
 	blockListsMap := make(adlistMap)
 	for _, list := range blockLists {
 		blockListsMap[list] = nil
@@ -62,7 +65,8 @@ func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refr
 		blockLists:      blockListsMap,
 		allowLists:      allowListsMap,
 		mux:             mux,
-		handlerMap:      make(map[string]*Generator),
+		config:          config,
+		handlerMap:      make(map[string]dns.Handler),
 		managedHosts:    make(map[string]string),
 		refreshInterval: refreshInterval,
 	}
@@ -143,13 +147,14 @@ func (r *Adlist) loadList(list string) (adlistContents, error) {
 	return contents, nil
 }
 
-func (r *Adlist) getHandler(list string) *Generator {
-	handler, ok := r.handlerMap[list]
+func (r *Adlist) getHandler(list string) dns.Handler {
+	hdl, ok := r.handlerMap[list]
 	if !ok {
-		handler = New("adlist: " + list)
-		r.handlerMap[list] = handler
+		gen := New("adlist: " + list)
+		hdl = handler.New(gen, "", r.config)
+		r.handlerMap[list] = hdl
 	}
-	return handler
+	return hdl
 }
 
 func (r *Adlist) Refresh() error {

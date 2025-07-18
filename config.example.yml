@@ -1,8 +1,10 @@
 global:
-  authority-config:
+  handler-config:
     nameservers:
       - nameserver.example.com
     mailbox: email.example.com
+    recursion-available: true
+    authoritative: true
   listen:
     - :8053
   prometheus-listen: :9001
@@ -23,6 +25,8 @@ resolvers:
     - .
     cache-size: 20480
     nameserver-strategy: random
+    handler-config:
+      authoritative: false
     nameservers:
       - proto: tcp-tls
         server-name: dns.google
