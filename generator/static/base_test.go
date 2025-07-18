@@ -90,4 +90,13 @@ func TestBasicZone(t *testing.T) {
 	})
 	assert.Equal(t, dns.RcodeSuccess, rcode)
 	assert.ElementsMatch(t, []dns.RR{recA2_1, recA2_2}, rr)
+
+	// Resolves local CNAMEs
+	rr, _, _, rcode = runStaticTest(handler, &dns.Question{
+		Name:   "cname.example.com.",
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	})
+	assert.Equal(t, dns.RcodeSuccess, rcode)
+	assert.ElementsMatch(t, []dns.RR{recCNAME, recA}, rr)
 }
