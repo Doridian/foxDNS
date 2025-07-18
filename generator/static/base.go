@@ -68,7 +68,7 @@ func (r *Generator) loadZoneFile(file string, origin string, defaultTTL uint32, 
 		}
 	}
 
-	return r.LoadZone(fh, file, origin, defaultTTL, includeAllowed)
+	return r.loadZone(fh, file, origin, defaultTTL, includeAllowed)
 }
 
 func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTTL uint32, includeAllowed bool) (err error) {
@@ -122,18 +122,39 @@ func (r *Generator) addRecord(rr dns.RR) {
 
 func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	r.recordsLock.RLock()
+	defer r.recordsLock.RUnlock()
 
 	nameRecs := r.records[q.Name]
-	if nameRecs == nil {
-		r.recordsLock.RUnlock()
+	if len(nameRecs) == 0 {
 		return nil, r.soa, nil, dns.RcodeNameError
 	}
 
 	typedRecs := nameRecs[q.Qtype]
-	r.recordsLock.RUnlock()
-	if typedRecs == nil {
+	if len(typedRecs) > 0 {
+		return typedRecs, nil, nil, dns.RcodeSuccess
+	}
+
+	if q.Qtype == dns.TypeCNAME {
 		return nil, r.soa, nil, dns.RcodeSuccess
 	}
+
+	typedRecs = nameRecs[dns.TypeCNAME]
+	if len(typedRecs) == 0 {
+		return nil, r.soa, nil, dns.RcodeSuccess
+	}
+
+	cname := typedRecs[0].(*dns.CNAME)
+
+	localResolvedRecs, _, _, _ := r.HandleQuestion(&dns.Question{
+		Name:   cname.Target,
+		Qtype:  q.Qtype,
+		Qclass: q.Qclass,
+	}, nil)
+
+	if localResolvedRecs != nil {
+		typedRecs = append(typedRecs, localResolvedRecs...)
+	}
+
 	return typedRecs, nil, nil, dns.RcodeSuccess
 }
 
