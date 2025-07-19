@@ -73,7 +73,7 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		}
 	}
 
-	if msg.RecursionDesired {
+	if msg.RecursionDesired && h.recursionAvailable {
 		h.resolveIfCNAME(reply, q, wr)
 	}
 
