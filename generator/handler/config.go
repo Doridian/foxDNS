@@ -53,7 +53,7 @@ func GetDefaultConfig() Config {
 
 func (h *Handler) loadConfig(config Config) {
 	h.soa = nil
-	h.ns = make([]dns.RR, 0)
+	h.ns = nil
 	h.recursionAvailable = config.RecursionAvailable != nil && *config.RecursionAvailable
 	h.authoritative = config.Authoritative != nil && *config.Authoritative
 
@@ -73,6 +73,7 @@ func (h *Handler) loadConfig(config Config) {
 			}, dns.TypeSOA, h.zone, uint32(config.SOATtl.Seconds())),
 		}
 
+		h.ns = make([]dns.RR, 0, len(config.Nameservers))
 		nsTtl := uint32(config.NSTtl.Seconds())
 		for _, ns := range config.Nameservers {
 			h.ns = append(h.ns, FillAuthHeader(&dns.NS{

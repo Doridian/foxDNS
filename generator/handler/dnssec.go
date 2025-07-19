@@ -40,7 +40,7 @@ func (h *Handler) signResponse(q *dns.Question, answer []dns.RR) (dns.RR, error)
 
 	signer := &dns.RRSIG{}
 	ttl := answer[0].Header().Ttl
-	util.FillHeader(signer, h.zone, dns.TypeRRSIG, ttl)
+	util.FillHeader(signer, h.signerName, dns.TypeRRSIG, ttl)
 	signer.TypeCovered = answer[0].Header().Rrtype
 	signer.Labels = uint8(dns.CountLabel(answer[0].Header().Name))
 	signer.OrigTtl = ttl
