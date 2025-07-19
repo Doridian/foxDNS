@@ -10,6 +10,9 @@ import (
 )
 
 type Config struct {
+	// Free form field for YAML inheritance usage
+	Templates interface{} `yaml:"templates"`
+
 	Global struct {
 		Listen           []string          `yaml:"listen"`
 		PrometheusListen string            `yaml:"prometheus-listen"`
