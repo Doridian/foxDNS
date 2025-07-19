@@ -155,6 +155,8 @@ func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.R
 		typedRecs = append(typedRecs, localResolvedRecs...)
 	}
 
+	// TODO: Resolve NS redirects (go up the chain to see if we can find a NS record)
+
 	return typedRecs, nil, nil, dns.RcodeSuccess
 }
 
