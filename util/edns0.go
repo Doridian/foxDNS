@@ -57,7 +57,7 @@ func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr Addr
 		return nil
 	}
 
-	paddingAllowed := requireCookie || IsSecureProtocol(wr.LocalAddr().Network())
+	paddingAllowed := requireCookie || IsSecureProtocol(wr.Network())
 	clientRequestedPadding := false
 
 	for _, opt := range queryEdns0.Option {
@@ -78,7 +78,7 @@ func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr Addr
 func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr Addressable, requireCookie bool) (bool, []dns.EDNS0) {
 	queryEdns0 := query.IsEdns0()
 
-	if IsSecureProtocol(wr.LocalAddr().Network()) {
+	if IsSecureProtocol(wr.Network()) {
 		requireCookie = false
 	}
 
