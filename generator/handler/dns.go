@@ -75,6 +75,7 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	if msg.RecursionDesired && h.recursionAvailable {
 		h.resolveIfCNAME(reply, q, wr)
+		// TODO: Resolve NS redirects
 	}
 
 	if reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError {
