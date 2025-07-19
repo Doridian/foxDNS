@@ -1,8 +1,10 @@
 global:
-  authority-config:
+  config:
     nameservers:
       - nameserver.example.com
     mailbox: email.example.com
+    recursion-available: true
+    authoritative: true
   listen:
     - :8053
   prometheus-listen: :9001

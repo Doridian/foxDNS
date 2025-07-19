@@ -6,6 +6,12 @@ import (
 	"github.com/miekg/dns"
 )
 
+type Addressable interface {
+	LocalAddr() net.Addr
+	RemoteAddr() net.Addr
+	Network() string
+}
+
 func ExtractIP(addr net.Addr) net.IP {
 	switch convAddr := addr.(type) {
 	case *net.TCPAddr:
@@ -38,21 +44,6 @@ func FillHeader(rr dns.RR, name string, rtype uint16, ttl uint32) dns.RR {
 	hdr.Name = name
 	hdr.Rdlength = 0
 	return rr
-}
-
-type DNSHandler interface {
-	GetName() string
-}
-
-type DNSHandlerWrapper interface {
-	SetHandlerName(name string)
-}
-
-func SetHandlerName(wr dns.ResponseWriter, hdl DNSHandler) {
-	wrappedHandler, ok := wr.(DNSHandlerWrapper)
-	if ok {
-		wrappedHandler.SetHandlerName(hdl.GetName())
-	}
 }
 
 func IsBadQuery(q *dns.Question) bool {

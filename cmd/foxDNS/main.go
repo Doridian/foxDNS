@@ -7,25 +7,24 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Doridian/foxDNS/generator"
-	"github.com/Doridian/foxDNS/generator/authority"
-	"github.com/Doridian/foxDNS/generator/blackhole"
-	"github.com/Doridian/foxDNS/generator/localizer"
-	"github.com/Doridian/foxDNS/generator/rdns"
-	"github.com/Doridian/foxDNS/generator/resolver"
-	"github.com/Doridian/foxDNS/generator/static"
+	"github.com/Doridian/foxDNS/handler/generator"
+	"github.com/Doridian/foxDNS/handler/generator/blackhole"
+	"github.com/Doridian/foxDNS/handler/generator/localizer"
+	"github.com/Doridian/foxDNS/handler/generator/rdns"
+	"github.com/Doridian/foxDNS/handler/generator/static"
+	"github.com/Doridian/foxDNS/handler/resolver"
 	"github.com/Doridian/foxDNS/server"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var generators = make([]generator.Generator, 0)
+var loaders = make([]generator.Loadable, 0)
 var configFile string
 var srv *server.Server
 var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
-func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfig) authority.AuthConfig {
+func mergeHandlerConfig(config *generator.Config, base generator.Config) generator.Config {
 	if config == nil {
 		return base
 	}
@@ -66,10 +65,6 @@ func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfi
 		base.Minttl = config.Minttl
 	}
 
-	if config.RequireCookie {
-		base.RequireCookie = true
-	}
-
 	if config.DNSSECPublicZSKFile != nil {
 		base.DNSSECPublicZSKFile = config.DNSSECPublicZSKFile
 	}
@@ -94,15 +89,26 @@ func mergeAuthorityConfig(config *authority.AuthConfig, base authority.AuthConfi
 		base.DNSSECCacheSignatures = config.DNSSECCacheSignatures
 	}
 
-	if config.ZoneName != nil {
-		base.ZoneName = config.ZoneName
+	if config.RequireCookie != nil {
+		base.RequireCookie = config.RequireCookie
+	}
+
+	if config.RecursionAvailable != nil {
+		base.RecursionAvailable = config.RecursionAvailable
 	}
 
 	return base
 }
 
+func registerGenerator(mux *dns.ServeMux, gen generator.Generator, zone string, config generator.Config) *generator.Handler {
+	hdl := generator.New(mux, gen, zone, config)
+	loaders = append(loaders, gen, hdl)
+	mux.Handle(zone, hdl)
+	return hdl
+}
+
 func reloadConfig() {
-	for _, gen := range generators {
+	for _, gen := range loaders {
 		err := gen.Stop()
 		if err != nil {
 			log.Panicf("Error stopping generator: %v", err)
@@ -115,14 +121,13 @@ func reloadConfig() {
 		util.UDPSize = uint16(config.Global.UDPSize)
 	}
 
-	authorityConfig := mergeAuthorityConfig(config.Global.AuthorityConfig, authority.GetDefaultAuthorityConfig())
+	globalHandlerConfig := mergeHandlerConfig(config.Global.Config, generator.GetDefaultConfig())
 
-	generators = make([]generator.Generator, 0)
+	loaders = make([]generator.Loadable, 0)
 	mux := dns.NewServeMux()
 
 	for _, rdnsConf := range config.RDNS {
 		rdnsGen := rdns.NewRDNSGenerator(rdnsConf.IPVersion)
-		generators = append(generators, rdnsGen)
 
 		if rdnsGen == nil {
 			log.Panicf("Unknown IP version: %d", rdnsConf.IPVersion)
@@ -147,26 +152,18 @@ func reloadConfig() {
 			rdnsGen.PtrTtl = uint32(rdnsConf.PtrTtl.Seconds())
 		}
 
-		addrAuthConfig := mergeAuthorityConfig(rdnsConf.AddrAuthorityConfig, authorityConfig)
-		addrZone := rdnsGen.GetAddrZone()
-		rdnsAuth := authority.NewAuthorityHandler(addrZone, addrAuthConfig)
-		rdnsAuth.Child = rdnsGen
-		generators = append(generators, rdnsAuth)
-		rdnsAuth.Register(mux)
+		registerGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), mergeHandlerConfig(rdnsConf.AddrConfig, globalHandlerConfig))
 
-		for zone, ptrAuthConfig := range rdnsConf.PTRAuthorityConfigs {
-			rdnsConf.PTRAuthorityConfigs[dns.CanonicalName(zone)] = ptrAuthConfig
-			rdnsConf.PTRAuthorityConfigs[strings.ToLower(zone)] = ptrAuthConfig
+		for zone, ptrAuthConfig := range rdnsConf.PTRConfigs {
+			rdnsConf.PTRConfigs[dns.CanonicalName(zone)] = ptrAuthConfig
+			rdnsConf.PTRConfigs[strings.ToLower(zone)] = ptrAuthConfig
+			rdnsConf.PTRConfigs[strings.ToLower(dns.CanonicalName(zone))] = ptrAuthConfig
 		}
 
-		ptrAuthorityConfigBase := mergeAuthorityConfig(rdnsConf.PTRAuthorityConfigs["default"], authorityConfig)
+		ptrAuthorityConfigBase := mergeHandlerConfig(rdnsConf.PTRConfigs["__default__"], globalHandlerConfig)
 		ptrZones := rdnsGen.GetPTRZones()
 		for _, zone := range ptrZones {
-			ptrAuthConfig := mergeAuthorityConfig(rdnsConf.PTRAuthorityConfigs[zone], ptrAuthorityConfigBase)
-			rdnsAuth := authority.NewAuthorityHandler(zone, ptrAuthConfig)
-			rdnsAuth.Child = rdnsGen
-			generators = append(generators, rdnsAuth)
-			rdnsAuth.Register(mux)
+			registerGenerator(mux, rdnsGen, zone, mergeHandlerConfig(rdnsConf.PTRConfigs[zone], ptrAuthorityConfigBase))
 		}
 	}
 
@@ -177,14 +174,14 @@ func reloadConfig() {
 				Addr:               ns.Addr,
 				Proto:              ns.Proto,
 				ServerName:         ns.ServerName,
-				RequireCookie:      ns.RequireCookie,
+				RequireCookie:      ns.RequireCookie != nil && *ns.RequireCookie,
 				MaxParallelQueries: ns.MaxParallelQueries,
 				Timeout:            ns.Timeout,
 			}
 		}
 
 		resolv := resolver.New(nameServers)
-		generators = append(generators, resolv)
+		loaders = append(loaders, resolv)
 
 		resolv.LogFailures = resolvConf.LogFailures
 
@@ -253,8 +250,7 @@ func reloadConfig() {
 			}
 		}
 
-		resolv.RequireCookie = resolvConf.RequireCookie
-
+		loaders = append(loaders, resolv)
 		for _, zone := range resolvConf.Zones {
 			mux.Handle(zone, resolv)
 		}
@@ -288,7 +284,7 @@ func reloadConfig() {
 				log.Panicf("Error adding localizer v4v6s: %v", err)
 			}
 
-			generators = append(generators, loc)
+			loaders = append(loaders, loc)
 
 			for _, ip := range locConfig.Subnets {
 				err := loc.AddRecord(locConfig.Zone, ip)
@@ -297,12 +293,10 @@ func reloadConfig() {
 				}
 			}
 
-			locAuthConfig := mergeAuthorityConfig(locConfig.AuthorityConfig, authorityConfig)
 			boolFalse := false
+			locAuthConfig := mergeHandlerConfig(locConfig.Config, globalHandlerConfig)
 			locAuthConfig.DNSSECCacheSignatures = &boolFalse
-			locAuth := authority.NewAuthorityHandler(locConfig.Zone, locAuthConfig)
-			locAuth.Child = loc
-			locAuth.Register(mux)
+			registerGenerator(mux, loc, locConfig.Zone, locAuthConfig)
 		}
 
 		log.Printf("Localizer enabled for %d zones", len(config.Localizers.Zones))
@@ -310,42 +304,25 @@ func reloadConfig() {
 
 	if len(config.StaticZones) > 0 {
 		for _, statConf := range config.StaticZones {
-			var stat *static.Generator
-			if statConf.ResolveExternalCNAMES {
-				stat = static.New(enableFSNotify, mux)
-			} else {
-				stat = static.New(enableFSNotify, nil)
-			}
-			generators = append(generators, stat)
+			stat := static.New(enableFSNotify)
 			err := stat.LoadZoneFile(statConf.File, statConf.Zone, 3600, false)
 			if err != nil {
-				log.Panicf("Error loading static zone %s: %v", statConf.Zone, err)
+				log.Panicf("Error loading static zone file %s: %v", statConf.File, err)
 			}
-
-			statAuthorityConfig := mergeAuthorityConfig(statConf.AuthorityConfig, authorityConfig)
-			statAuth := authority.NewAuthorityHandler(statConf.Zone, statAuthorityConfig)
-			statAuth.RequireCookie = statConf.RequireCookie
-			generators = append(generators, statAuth)
-			statAuth.Child = stat
-			statAuth.Register(mux)
+			registerGenerator(mux, stat, statConf.Zone, mergeHandlerConfig(statConf.Config, globalHandlerConfig))
 		}
 
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))
 	}
 
 	if len(config.AdLists.BlockLists) > 0 {
-		adlistGen := blackhole.NewAdlist(config.AdLists.BlockLists, config.AdLists.AllowLists, mux, config.AdLists.RefreshInterval)
-		generators = append(generators, adlistGen)
+		adlistGen := blackhole.NewAdlist(config.AdLists.BlockLists, config.AdLists.AllowLists, mux, config.AdLists.RefreshInterval, mergeHandlerConfig(config.AdLists.Config, globalHandlerConfig))
+		loaders = append(loaders, adlistGen)
 	}
 
-	if config.Global.PrometheusListen != "" {
-		promMux := server.NewPrometheusDNSHandler(mux)
-		srv.SetHandler(promMux)
-	} else {
-		srv.SetHandler(mux)
-	}
+	srv.SetHandler(mux)
 
-	for _, gen := range generators {
+	for _, gen := range loaders {
 		err := gen.Start()
 		if err != nil {
 			log.Panicf("Error starting generator: %v", err)

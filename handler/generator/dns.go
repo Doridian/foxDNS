@@ -1,0 +1,95 @@
+package generator
+
+import (
+	"log"
+	"time"
+
+	"github.com/Doridian/foxDNS/handler"
+	"github.com/Doridian/foxDNS/util"
+	"github.com/miekg/dns"
+)
+
+func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
+	startTime := time.Now()
+
+	reply := &dns.Msg{
+		Compress: true,
+		MsgHdr: dns.MsgHdr{
+			Authoritative:      h.authoritative,
+			RecursionAvailable: h.recursionAvailable,
+		},
+	}
+	reply.SetRcode(msg, dns.RcodeSuccess)
+
+	ok, edns0Options := util.ApplyEDNS0ReplyEarly(msg, reply, wr, h.RequireCookie)
+	if !ok {
+		_ = wr.WriteMsg(reply)
+		return
+	}
+
+	defer func() {
+		util.ApplyEDNS0Reply(msg, reply, edns0Options, wr, h.RequireCookie)
+		_ = wr.WriteMsg(reply)
+	}()
+
+	if len(msg.Question) != 1 {
+		reply.Rcode = dns.RcodeFormatError
+		return
+	}
+
+	q := &msg.Question[0]
+	if util.IsBadQuery(q) {
+		reply.Rcode = dns.RcodeRefused
+		return
+	}
+
+	defer handler.MeasureQuery(startTime, reply, h.child.GetName())
+
+	q.Name = dns.CanonicalName(q.Name)
+	remoteIP := util.ExtractIP(wr.RemoteAddr())
+
+	reply.Answer = nil
+	if h.authoritative && q.Name == h.zone {
+		switch q.Qtype {
+		case dns.TypeSOA:
+			reply.Answer = h.soa
+		case dns.TypeNS:
+			reply.Answer = h.ns
+		case dns.TypeDNSKEY:
+			reply.Answer = []dns.RR{}
+			if h.zskDNSKEY != nil {
+				reply.Answer = append(reply.Answer, h.zskDNSKEY)
+			}
+			if h.kskDNSKEY != nil {
+				reply.Answer = append(reply.Answer, h.kskDNSKEY)
+			}
+		}
+	}
+	if len(reply.Answer) == 0 {
+		var childEdns0 []dns.EDNS0
+		reply.Answer, reply.Ns, childEdns0, reply.Rcode = h.child.HandleQuestion(q, remoteIP)
+		if (reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError) && len(reply.Answer) == 0 && len(reply.Ns) == 0 {
+			reply.Ns = h.soa
+		}
+		if childEdns0 != nil {
+			edns0Options = append(edns0Options, childEdns0...)
+		}
+	}
+
+	if msg.RecursionDesired && h.recursionAvailable {
+		h.resolveIfCNAME(reply, q, wr)
+		// TODO: Resolve NS referrals
+	}
+
+	if reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError {
+		msgEdns0 := msg.IsEdns0()
+		if msgEdns0 != nil && msgEdns0.Do() {
+			signer, err := h.signResponse(q, reply.Answer)
+			if err != nil {
+				log.Printf("Error signing record for %s: %v", reply.Answer[0].Header().Name, err)
+			} else if signer != nil {
+				reply.Answer = append(reply.Answer, signer)
+			}
+		}
+	}
+}
