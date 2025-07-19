@@ -21,7 +21,6 @@ type zoneConfig struct {
 type Generator struct {
 	configs        []zoneConfig
 	records        map[string]map[uint16][]dns.RR
-	soa            []dns.RR
 	recordsLock    sync.RWMutex
 	watcher        *fsnotify.Watcher
 	enableFSNotify bool
@@ -85,11 +84,6 @@ func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTT
 			return
 		}
 		r.addRecord(rr)
-
-		hdr := rr.Header()
-		if hdr.Rrtype == dns.TypeSOA && hdr.Class == dns.ClassINET && hdr.Name == origin {
-			r.soa = []dns.RR{rr}
-		}
 	}
 }
 
@@ -120,13 +114,36 @@ func (r *Generator) addRecord(rr dns.RR) {
 	nameRecs[hdr.Rrtype] = append([]dns.RR{rr}, typeRecs...)
 }
 
+func (r *Generator) findAuthorityRecords(q *dns.Question, rcodeNameError int) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+	for off, end := 0, false; !end; off, end = dns.NextLabel(q.Name, off) {
+		name := q.Name[off:]
+
+		nameRecs := r.records[name]
+		if nameRecs == nil {
+			continue
+		}
+
+		typedRecs := nameRecs[dns.TypeSOA]
+		if len(typedRecs) > 0 {
+			return nil, typedRecs, nil, rcodeNameError
+		}
+
+		typedRecs = nameRecs[dns.TypeNS]
+		if len(typedRecs) > 0 {
+			return nil, typedRecs, nil, dns.RcodeSuccess
+		}
+	}
+
+	return nil, nil, nil, rcodeNameError
+}
+
 func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	r.recordsLock.RLock()
 	defer r.recordsLock.RUnlock()
 
 	nameRecs := r.records[q.Name]
 	if len(nameRecs) == 0 {
-		return nil, r.soa, nil, dns.RcodeNameError
+		return r.findAuthorityRecords(q, dns.RcodeNameError)
 	}
 
 	typedRecs := nameRecs[q.Qtype]
@@ -135,12 +152,12 @@ func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.R
 	}
 
 	if q.Qtype == dns.TypeCNAME {
-		return nil, r.soa, nil, dns.RcodeSuccess
+		return r.findAuthorityRecords(q, dns.RcodeSuccess)
 	}
 
 	typedRecs = nameRecs[dns.TypeCNAME]
 	if len(typedRecs) == 0 {
-		return nil, r.soa, nil, dns.RcodeSuccess
+		return r.findAuthorityRecords(q, dns.RcodeSuccess)
 	}
 
 	cname := typedRecs[0].(*dns.CNAME)
@@ -154,8 +171,6 @@ func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.R
 	if localResolvedRecs != nil {
 		typedRecs = append(typedRecs, localResolvedRecs...)
 	}
-
-	// TODO: Resolve NS redirects (go up the chain to see if we can find a NS record)
 
 	return typedRecs, nil, nil, dns.RcodeSuccess
 }
