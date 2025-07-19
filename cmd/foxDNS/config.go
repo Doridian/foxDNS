@@ -4,27 +4,27 @@ import (
 	"os"
 	"time"
 
-	"github.com/Doridian/foxDNS/generator/localizer"
-	"github.com/Doridian/foxDNS/handler"
+	"github.com/Doridian/foxDNS/handler/generator"
+	"github.com/Doridian/foxDNS/handler/generator/localizer"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
 	Global struct {
-		Listen           []string        `yaml:"listen"`
-		PrometheusListen string          `yaml:"prometheus-listen"`
-		HandlerConfig    *handler.Config `yaml:"handler-config"`
-		UDPSize          int             `yaml:"udp-size"`
+		Listen           []string          `yaml:"listen"`
+		PrometheusListen string            `yaml:"prometheus-listen"`
+		Config           *generator.Config `yaml:"config"`
+		UDPSize          int               `yaml:"udp-size"`
 	} `yaml:"global"`
 
 	RDNS []struct {
-		IPVersion         int                        `yaml:"ip_version"`
-		Suffix            string                     `yaml:"suffix"`
-		Subnets           []string                   `yaml:"subnets"`
-		PTRHandlerConfigs map[string]*handler.Config `yaml:"ptr-handler-configs"`
-		AddrHandlerConfig *handler.Config            `yaml:"addr-handler-config"`
-		AddressTtl        time.Duration              `yaml:"address-ttl"`
-		PtrTtl            time.Duration              `yaml:"ptr-ttl"`
+		IPVersion  int                          `yaml:"ip_version"`
+		Suffix     string                       `yaml:"suffix"`
+		Subnets    []string                     `yaml:"subnets"`
+		PTRConfigs map[string]*generator.Config `yaml:"ptr-configs"`
+		AddrConfig *generator.Config            `yaml:"addr-config"`
+		AddressTtl time.Duration                `yaml:"address-ttl"`
+		PtrTtl     time.Duration                `yaml:"ptr-ttl"`
 	} `yaml:"rdns"`
 
 	Resolvers []struct {
@@ -44,8 +44,6 @@ type Config struct {
 		RetryWait   time.Duration `yaml:"retry-wait"`
 		LogFailures bool          `yaml:"log-failures"`
 
-		HandlerConfig *handler.Config `yaml:"handler-config"`
-
 		CacheSize                 int           `yaml:"cache-size"`
 		CacheMaxTime              time.Duration `yaml:"cache-max-time"`
 		CacheMinTime              time.Duration `yaml:"cache-min-time"`
@@ -64,26 +62,26 @@ type Config struct {
 		Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
 		V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
 		Zones    []struct {
-			Zone          string                       `yaml:"zone"`
-			Subnets       []string                     `yaml:"subnets"`
-			Ttl           time.Duration                `yaml:"ttl"`
-			HandlerConfig *handler.Config              `yaml:"handler-config"`
-			Rewrites      []localizer.LocalizerRewrite `yaml:"rewrites"`
-			V4V6s         []localizer.V4V6Rewrite      `yaml:"v4v6s"`
+			Zone     string                       `yaml:"zone"`
+			Subnets  []string                     `yaml:"subnets"`
+			Ttl      time.Duration                `yaml:"ttl"`
+			Config   *generator.Config            `yaml:"config"`
+			Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
+			V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
 		} `yaml:"zones"`
 	} `yaml:"localizers"`
 
 	StaticZones []struct {
-		Zone          string          `yaml:"zone"`
-		File          string          `yaml:"file"`
-		HandlerConfig *handler.Config `yaml:"handler-config"`
+		Zone   string            `yaml:"zone"`
+		File   string            `yaml:"file"`
+		Config *generator.Config `yaml:"config"`
 	} `yaml:"static-zones"`
 
 	AdLists struct {
-		AllowLists      []string        `yaml:"allow-lists"`
-		BlockLists      []string        `yaml:"block-lists"`
-		RefreshInterval time.Duration   `yaml:"refresh-interval"`
-		HandlerConfig   *handler.Config `yaml:"handler-config"`
+		AllowLists      []string          `yaml:"allow-lists"`
+		BlockLists      []string          `yaml:"block-lists"`
+		RefreshInterval time.Duration     `yaml:"refresh-interval"`
+		Config          *generator.Config `yaml:"config"`
 	} `yaml:"ad-lists"`
 }
 

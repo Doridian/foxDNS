@@ -5,10 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Doridian/foxDNS/generator"
-	"github.com/Doridian/foxDNS/generator/resolver"
-	"github.com/Doridian/foxDNS/generator/static"
-	"github.com/Doridian/foxDNS/handler"
+	"github.com/Doridian/foxDNS/handler/generator"
+	"github.com/Doridian/foxDNS/handler/generator/static"
+	"github.com/Doridian/foxDNS/handler/resolver"
 	"github.com/Doridian/foxDNS/server"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +17,7 @@ const dummyZone = "$TTL 5\n@ IN SOA ns1.example.com. hostmaster.example.com. 1 3
 const emptyZone = "$TTL 5\n@ IN SOA ns1.example.com. hostmaster.example.com. 1 3600 900 604800 300\n@ IN NS ns1.example.com.\n@ IN NS ns2.example.com."
 
 var dummyServer *server.Server
-var resolverGenerator *resolver.Generator
+var resolverGenerator *resolver.Handler
 var simpleHandler dns.Handler
 
 func loadSimpleZone(zone string) dns.Handler {
@@ -29,7 +28,7 @@ func loadSimpleZone(zone string) dns.Handler {
 	}
 
 	boolFalse := false
-	return handler.New(nil, staticHandler, "example.com.", handler.Config{
+	return generator.New(nil, staticHandler, "example.com.", generator.Config{
 		Authoritative: &boolFalse,
 	})
 }

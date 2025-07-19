@@ -1,12 +1,11 @@
-package handler_test
+package generator_test
 
 import (
 	"net"
 	"testing"
 	"time"
 
-	"github.com/Doridian/foxDNS/generator"
-	"github.com/Doridian/foxDNS/handler"
+	"github.com/Doridian/foxDNS/handler/generator"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +38,7 @@ func (t *TestHandler) HandleQuestion(q *dns.Question, _ net.IP) (recs []dns.RR, 
 	return t.recs, nil, nil, t.rcode
 }
 
-func testQuestion(t *testing.T, zone string, config handler.Config, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool, edns0 bool) {
+func testQuestion(t *testing.T, zone string, config generator.Config, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool, edns0 bool) {
 	wr := &generator.TestResponseWriter{}
 
 	testHandler := &TestHandler{
@@ -56,7 +55,7 @@ func testQuestion(t *testing.T, zone string, config handler.Config, q dns.Questi
 	if edns0 {
 		qmsg.SetEdns0(util.UDPSize, false)
 	}
-	hdl := handler.New(nil, testHandler, zone, config)
+	hdl := generator.New(nil, testHandler, zone, config)
 	hdl.ServeDNS(wr, qmsg)
 
 	if edns0 {
@@ -83,7 +82,7 @@ func testQuestion(t *testing.T, zone string, config handler.Config, q dns.Questi
 
 func TestBasics(t *testing.T) {
 	boolTrue := true
-	soaConfig := handler.Config{
+	soaConfig := generator.Config{
 		Authoritative: &boolTrue,
 		SOATtl:        300 * time.Second,
 		NSTtl:         300 * time.Second,
@@ -98,7 +97,7 @@ func TestBasics(t *testing.T) {
 	zone := "example.com."
 
 	soaRecs := []dns.RR{
-		handler.FillAuthHeader(&dns.SOA{
+		generator.FillAuthHeader(&dns.SOA{
 			Ns:      "ns1.example.com.",
 			Mbox:    "hostmaster.example.com.",
 			Serial:  2022010169,
@@ -110,10 +109,10 @@ func TestBasics(t *testing.T) {
 	}
 
 	nsRecs := []dns.RR{
-		handler.FillAuthHeader(&dns.NS{
+		generator.FillAuthHeader(&dns.NS{
 			Ns: "ns1.example.com.",
 		}, dns.TypeNS, zone, 300),
-		handler.FillAuthHeader(&dns.NS{
+		generator.FillAuthHeader(&dns.NS{
 			Ns: "ns2.example.com.",
 		}, dns.TypeNS, zone, 300),
 	}

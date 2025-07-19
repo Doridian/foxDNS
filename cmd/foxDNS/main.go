@@ -7,13 +7,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Doridian/foxDNS/generator"
-	"github.com/Doridian/foxDNS/generator/blackhole"
-	"github.com/Doridian/foxDNS/generator/localizer"
-	"github.com/Doridian/foxDNS/generator/rdns"
-	"github.com/Doridian/foxDNS/generator/resolver"
-	"github.com/Doridian/foxDNS/generator/static"
-	"github.com/Doridian/foxDNS/handler"
+	"github.com/Doridian/foxDNS/handler/generator"
+	"github.com/Doridian/foxDNS/handler/generator/blackhole"
+	"github.com/Doridian/foxDNS/handler/generator/localizer"
+	"github.com/Doridian/foxDNS/handler/generator/rdns"
+	"github.com/Doridian/foxDNS/handler/generator/static"
+	"github.com/Doridian/foxDNS/handler/resolver"
 	"github.com/Doridian/foxDNS/server"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
@@ -25,7 +24,7 @@ var configFile string
 var srv *server.Server
 var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
-func mergeHandlerConfig(config *handler.Config, base handler.Config) handler.Config {
+func mergeHandlerConfig(config *generator.Config, base generator.Config) generator.Config {
 	if config == nil {
 		return base
 	}
@@ -101,16 +100,10 @@ func mergeHandlerConfig(config *handler.Config, base handler.Config) handler.Con
 	return base
 }
 
-func registerGenerator(mux *dns.ServeMux, gen generator.Generator, zone string, config handler.Config) *handler.Handler {
-	return registerGeneratorMulti(mux, gen, zone, []string{zone}, config)
-}
-
-func registerGeneratorMulti(mux *dns.ServeMux, gen generator.Generator, handlerZone string, zones []string, config handler.Config) *handler.Handler {
-	hdl := handler.New(mux, gen, handlerZone, config)
+func registerGenerator(mux *dns.ServeMux, gen generator.Generator, zone string, config generator.Config) *generator.Handler {
+	hdl := generator.New(mux, gen, zone, config)
 	loaders = append(loaders, gen, hdl)
-	for _, z := range zones {
-		mux.Handle(z, hdl)
-	}
+	mux.Handle(zone, hdl)
 	return hdl
 }
 
@@ -128,7 +121,7 @@ func reloadConfig() {
 		util.UDPSize = uint16(config.Global.UDPSize)
 	}
 
-	globalHandlerConfig := mergeHandlerConfig(config.Global.HandlerConfig, handler.GetDefaultConfig())
+	globalHandlerConfig := mergeHandlerConfig(config.Global.Config, generator.GetDefaultConfig())
 
 	loaders = make([]generator.Loadable, 0)
 	mux := dns.NewServeMux()
@@ -159,18 +152,18 @@ func reloadConfig() {
 			rdnsGen.PtrTtl = uint32(rdnsConf.PtrTtl.Seconds())
 		}
 
-		registerGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), mergeHandlerConfig(rdnsConf.AddrHandlerConfig, globalHandlerConfig))
+		registerGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), mergeHandlerConfig(rdnsConf.AddrConfig, globalHandlerConfig))
 
-		for zone, ptrAuthConfig := range rdnsConf.PTRHandlerConfigs {
-			rdnsConf.PTRHandlerConfigs[dns.CanonicalName(zone)] = ptrAuthConfig
-			rdnsConf.PTRHandlerConfigs[strings.ToLower(zone)] = ptrAuthConfig
-			rdnsConf.PTRHandlerConfigs[strings.ToLower(dns.CanonicalName(zone))] = ptrAuthConfig
+		for zone, ptrAuthConfig := range rdnsConf.PTRConfigs {
+			rdnsConf.PTRConfigs[dns.CanonicalName(zone)] = ptrAuthConfig
+			rdnsConf.PTRConfigs[strings.ToLower(zone)] = ptrAuthConfig
+			rdnsConf.PTRConfigs[strings.ToLower(dns.CanonicalName(zone))] = ptrAuthConfig
 		}
 
-		ptrAuthorityConfigBase := mergeHandlerConfig(rdnsConf.PTRHandlerConfigs["__default__"], globalHandlerConfig)
+		ptrAuthorityConfigBase := mergeHandlerConfig(rdnsConf.PTRConfigs["__default__"], globalHandlerConfig)
 		ptrZones := rdnsGen.GetPTRZones()
 		for _, zone := range ptrZones {
-			registerGenerator(mux, rdnsGen, zone, mergeHandlerConfig(rdnsConf.PTRHandlerConfigs[zone], ptrAuthorityConfigBase))
+			registerGenerator(mux, rdnsGen, zone, mergeHandlerConfig(rdnsConf.PTRConfigs[zone], ptrAuthorityConfigBase))
 		}
 	}
 
@@ -257,7 +250,10 @@ func reloadConfig() {
 			}
 		}
 
-		registerGeneratorMulti(mux, resolv, "", resolvConf.Zones, mergeHandlerConfig(resolvConf.HandlerConfig, globalHandlerConfig))
+		loaders = append(loaders, resolv)
+		for _, zone := range resolvConf.Zones {
+			mux.Handle(zone, resolv)
+		}
 
 		log.Printf("Resolver enabled for zones %v", resolvConf.Zones)
 	}
@@ -298,7 +294,7 @@ func reloadConfig() {
 			}
 
 			boolFalse := false
-			locAuthConfig := mergeHandlerConfig(locConfig.HandlerConfig, globalHandlerConfig)
+			locAuthConfig := mergeHandlerConfig(locConfig.Config, globalHandlerConfig)
 			locAuthConfig.DNSSECCacheSignatures = &boolFalse
 			registerGenerator(mux, loc, locConfig.Zone, locAuthConfig)
 		}
@@ -313,14 +309,14 @@ func reloadConfig() {
 			if err != nil {
 				log.Panicf("Error loading static zone file %s: %v", statConf.File, err)
 			}
-			registerGenerator(mux, stat, statConf.Zone, mergeHandlerConfig(statConf.HandlerConfig, globalHandlerConfig))
+			registerGenerator(mux, stat, statConf.Zone, mergeHandlerConfig(statConf.Config, globalHandlerConfig))
 		}
 
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))
 	}
 
 	if len(config.AdLists.BlockLists) > 0 {
-		adlistGen := blackhole.NewAdlist(config.AdLists.BlockLists, config.AdLists.AllowLists, mux, config.AdLists.RefreshInterval, mergeHandlerConfig(config.AdLists.HandlerConfig, globalHandlerConfig))
+		adlistGen := blackhole.NewAdlist(config.AdLists.BlockLists, config.AdLists.AllowLists, mux, config.AdLists.RefreshInterval, mergeHandlerConfig(config.AdLists.Config, globalHandlerConfig))
 		loaders = append(loaders, adlistGen)
 	}
 

@@ -1,14 +1,17 @@
-package handler
+package generator
 
 import (
 	"log"
 	"time"
 
+	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
 
 func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
+	startTime := time.Now()
+
 	reply := &dns.Msg{
 		Compress: true,
 		MsgHdr: dns.MsgHdr{
@@ -40,10 +43,10 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		return
 	}
 
+	defer handler.MeasureQuery(startTime, reply, h.child.GetName())
+
 	q.Name = dns.CanonicalName(q.Name)
 	remoteIP := util.ExtractIP(wr.RemoteAddr())
-
-	startTime := time.Now()
 
 	reply.Answer = nil
 	if h.authoritative && q.Name == h.zone {
@@ -87,43 +90,6 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 			} else if signer != nil {
 				reply.Answer = append(reply.Answer, signer)
 			}
-		} else {
-			newAnswers := make([]dns.RR, 0, len(reply.Answer))
-			for _, rr := range reply.Answer {
-				rrType := rr.Header().Rrtype
-				if rrType == dns.TypeRRSIG || rrType == dns.TypeNSEC || rrType == dns.TypeNSEC3 {
-					continue
-				}
-				newAnswers = append(newAnswers, rr)
-			}
-			reply.Answer = newAnswers
 		}
 	}
-
-	duration := time.Since(startTime)
-
-	rcode := dns.RcodeToString[msg.Rcode]
-	if reply.Rcode == dns.RcodeSuccess && len(reply.Answer) == 0 {
-		rcode = "NXRECORD"
-	}
-
-	extendedRCode := ""
-	replyEdns0 := reply.IsEdns0()
-	if replyEdns0 != nil {
-		for _, opt := range replyEdns0.Option {
-			if opt.Option() != dns.EDNS0EDE {
-				continue
-			}
-
-			edeOpt, ok := opt.(*dns.EDNS0_EDE)
-			if !ok {
-				continue
-			}
-			extendedRCode = dns.ExtendedErrorCodeToString[edeOpt.InfoCode]
-			break
-		}
-	}
-
-	queriesProcessed.WithLabelValues(dns.TypeToString[q.Qtype], rcode, h.child.GetName(), extendedRCode).Inc()
-	queryProcessingTime.WithLabelValues(h.child.GetName()).Observe(duration.Seconds())
 }

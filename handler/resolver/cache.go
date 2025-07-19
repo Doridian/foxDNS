@@ -61,12 +61,12 @@ var (
 	})
 )
 
-func (r *Generator) SetCacheSize(size int) {
-	r.cache.Resize(size)
+func (h *Handler) SetCacheSize(size int) {
+	h.cache.Resize(size)
 }
 
-func (r *Generator) FlushCache() {
-	r.cache.Purge()
+func (h *Handler) FlushCache() {
+	h.cache.Purge()
 }
 
 func cacheKey(q *dns.Question) string {
@@ -77,12 +77,12 @@ func cacheKeyDomain(q *dns.Question) string {
 	return fmt.Sprintf("%s:ANY", q.Name)
 }
 
-func (r *Generator) getOrAddCache(q *dns.Question, isCacheRefresh bool, incrementHits uint64) (string, string, *dns.Msg, error) {
+func (h *Handler) getOrAddCache(q *dns.Question, isCacheRefresh bool, incrementHits uint64) (string, string, *dns.Msg, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
 	if !isCacheRefresh {
-		msg, matchType := r.getFromCache(key, keyDomain, q, incrementHits)
+		msg, matchType := h.getFromCache(key, keyDomain, q, incrementHits)
 		if msg != nil {
 			return "hit", matchType, msg, nil
 		}
@@ -91,7 +91,7 @@ func (r *Generator) getOrAddCache(q *dns.Question, isCacheRefresh bool, incremen
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	defer wg.Done()
-	cacheLock, loaded := r.cacheLock.LoadOrStore(key, wg)
+	cacheLock, loaded := h.cacheLock.LoadOrStore(key, wg)
 	cacheLockWG := cacheLock.(*sync.WaitGroup)
 
 	if loaded {
@@ -101,29 +101,29 @@ func (r *Generator) getOrAddCache(q *dns.Question, isCacheRefresh bool, incremen
 
 		cacheLockWG.Wait()
 
-		msg, matchType := r.getFromCache(key, keyDomain, q, incrementHits)
+		msg, matchType := h.getFromCache(key, keyDomain, q, incrementHits)
 		if msg != nil {
 			return "wait", matchType, msg, nil
 		}
 	} else {
-		defer r.cacheLock.Delete(key)
+		defer h.cacheLock.Delete(key)
 	}
 
-	msg, err := r.exchangeWithRetry(q)
+	msg, err := h.exchangeWithRetry(q)
 	if err != nil {
 		return "", "", nil, err
 	}
 
-	matchType := r.processAndWriteToCache(key, keyDomain, q, msg, incrementHits)
+	matchType := h.processAndWriteToCache(key, keyDomain, q, msg, incrementHits)
 	return "miss", matchType, msg, nil
 }
 
-func (r *Generator) cleanupCache() {
-	minTime := r.CurrentTime().Add(-r.CacheStaleEntryKeepPeriod)
+func (h *Handler) cleanupCache() {
+	minTime := h.CurrentTime().Add(-h.CacheStaleEntryKeepPeriod)
 
 	toRemove := make([]string, 0)
-	for _, key := range r.cache.Keys() {
-		entry, ok := r.cache.Peek(key)
+	for _, key := range h.cache.Keys() {
+		entry, ok := h.cache.Peek(key)
 		if ok && entry.expiry.Before(minTime) {
 			toRemove = append(toRemove, key)
 		}
@@ -133,20 +133,20 @@ func (r *Generator) cleanupCache() {
 		return
 	}
 
-	r.cacheWriteLock.Lock()
+	h.cacheWriteLock.Lock()
 	for _, key := range toRemove {
-		entry, ok := r.cache.Peek(key)
+		entry, ok := h.cache.Peek(key)
 		if ok && entry.expiry.Before(minTime) {
-			r.cache.Remove(key)
+			h.cache.Remove(key)
 			cacheHitsAtAgeOutHistogram.Observe(float64(entry.hits.Load()))
 		}
 	}
-	r.cacheWriteLock.Unlock()
+	h.cacheWriteLock.Unlock()
 
-	cacheSize.Set(float64(r.cache.Len()))
+	cacheSize.Set(float64(h.cache.Len()))
 }
 
-func (r *Generator) countdownRecordTTL(rr dns.RR, ttlAdjust uint32) {
+func (h *Handler) countdownRecordTTL(rr dns.RR, ttlAdjust uint32) {
 	rrHdr := rr.Header()
 
 	if rrHdr.Ttl <= ttlAdjust {
@@ -156,24 +156,24 @@ func (r *Generator) countdownRecordTTL(rr dns.RR, ttlAdjust uint32) {
 	}
 }
 
-func (r *Generator) adjustRecordTTL(rr dns.RR) (*dns.RR_Header, int) {
+func (h *Handler) adjustRecordTTL(rr dns.RR) (*dns.RR_Header, int) {
 	rrHdr := rr.Header()
 	origTtl := rrHdr.Ttl
 
-	if rrHdr.Ttl < r.RecordMinTTL {
-		rrHdr.Ttl = r.RecordMinTTL
-	} else if rrHdr.Ttl > r.RecordMaxTTL {
-		rrHdr.Ttl = r.RecordMaxTTL
+	if rrHdr.Ttl < h.RecordMinTTL {
+		rrHdr.Ttl = h.RecordMinTTL
+	} else if rrHdr.Ttl > h.RecordMaxTTL {
+		rrHdr.Ttl = h.RecordMaxTTL
 	}
 
 	return rrHdr, int(origTtl)
 }
 
-func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question, incrementHits uint64) (*dns.Msg, string) {
-	entry, ok := r.cache.Get(key)
+func (h *Handler) getFromCache(key string, keyDomain string, q *dns.Question, incrementHits uint64) (*dns.Msg, string) {
+	entry, ok := h.cache.Get(key)
 	matchType := "exact"
 	if !ok {
-		entry, ok = r.cache.Get(keyDomain)
+		entry, ok = h.cache.Get(keyDomain)
 		if !ok {
 			return nil, ""
 		}
@@ -182,10 +182,10 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question, 
 		}
 	}
 
-	now := r.CurrentTime()
+	now := h.CurrentTime()
 	entryExpiresIn := entry.expiry.Sub(now)
-	if entryExpiresIn <= -r.CacheReturnStalePeriod {
-		timeSinceMiss := entryExpiresIn + r.CacheReturnStalePeriod
+	if entryExpiresIn <= -h.CacheReturnStalePeriod {
+		timeSinceMiss := entryExpiresIn + h.CacheReturnStalePeriod
 		cacheStaleMisses.Observe(float64(-timeSinceMiss.Seconds()))
 		return nil, ""
 	}
@@ -196,10 +196,10 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question, 
 
 	entryHits := entry.hits.Add(incrementHits)
 
-	if (entryExpiresIn <= 0 || (entryHits >= r.OpportunisticCacheMinHits && entryExpiresIn <= r.OpportunisticCacheMaxTimeLeft)) && !entry.refreshTriggered {
+	if (entryExpiresIn <= 0 || (entryHits >= h.OpportunisticCacheMinHits && entryExpiresIn <= h.OpportunisticCacheMaxTimeLeft)) && !entry.refreshTriggered {
 		entry.refreshTriggered = true
 		go func() {
-			_, _, _, _ = r.getOrAddCache(q, true, 0)
+			_, _, _, _ = h.getOrAddCache(q, true, 0)
 		}()
 	}
 
@@ -209,30 +209,30 @@ func (r *Generator) getFromCache(key string, keyDomain string, q *dns.Question, 
 
 	if ttlAdjust > 0 {
 		for _, rr := range msg.Answer {
-			r.countdownRecordTTL(rr, ttlAdjust)
+			h.countdownRecordTTL(rr, ttlAdjust)
 		}
 		for _, rr := range msg.Ns {
-			r.countdownRecordTTL(rr, ttlAdjust)
+			h.countdownRecordTTL(rr, ttlAdjust)
 		}
 	}
 
 	return msg, matchType
 }
 
-func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg, incrementHits uint64) string {
+func (h *Handler) processAndWriteToCache(key string, keyDomain string, q *dns.Question, m *dns.Msg, incrementHits uint64) string {
 	minTTL := -1
 	cacheTTL := -1
 	authTTL := -1
 
 	for _, rr := range m.Answer {
-		_, ttl := r.adjustRecordTTL(rr)
+		_, ttl := h.adjustRecordTTL(rr)
 		if cacheTTL < 0 || ttl < cacheTTL {
 			cacheTTL = ttl
 		}
 	}
 
 	for _, rr := range m.Ns {
-		rrHdr, ttl := r.adjustRecordTTL(rr)
+		rrHdr, ttl := h.adjustRecordTTL(rr)
 
 		if rrHdr.Rrtype == dns.TypeSOA {
 			minTTL = int(rr.(*dns.SOA).Minttl)
@@ -253,7 +253,7 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 		} else if minTTL >= 0 {
 			cacheTTL = minTTL
 		} else {
-			cacheTTL = r.CacheNoReplyTTL
+			cacheTTL = h.CacheNoReplyTTL
 		}
 	}
 
@@ -263,17 +263,17 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 
 	cacheTTLHistogram.Observe(float64(cacheTTL))
 
-	if cacheTTL > r.CacheMaxTTL {
-		cacheTTL = r.CacheMaxTTL
-	} else if cacheTTL < r.CacheMinTTL {
-		cacheTTL = r.CacheMinTTL
+	if cacheTTL > h.CacheMaxTTL {
+		cacheTTL = h.CacheMaxTTL
+	} else if cacheTTL < h.CacheMinTTL {
+		cacheTTL = h.CacheMinTTL
 	}
 
 	if cacheTTL == 0 {
 		return ""
 	}
 
-	now := r.CurrentTime()
+	now := h.CurrentTime()
 	entry := &cacheEntry{
 		time:   now,
 		expiry: now.Add(time.Duration(cacheTTL) * time.Second),
@@ -289,10 +289,10 @@ func (r *Generator) processAndWriteToCache(key string, keyDomain string, q *dns.
 		matchType = "domain"
 	}
 
-	r.cacheWriteLock.Lock()
-	r.cache.Add(key, entry)
-	r.cacheWriteLock.Unlock()
+	h.cacheWriteLock.Lock()
+	h.cache.Add(key, entry)
+	h.cacheWriteLock.Unlock()
 
-	cacheSize.Set(float64(r.cache.Len()))
+	cacheSize.Set(float64(h.cache.Len()))
 	return matchType
 }

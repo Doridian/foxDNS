@@ -4,8 +4,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/Doridian/foxDNS/generator"
-	"github.com/Doridian/foxDNS/generator/static"
+	"github.com/Doridian/foxDNS/handler/generator"
+	"github.com/Doridian/foxDNS/handler/generator/static"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Doridian/foxDNS/handler/generator"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,14 +19,20 @@ func TestExistingRecordWithCache(t *testing.T) {
 		return fakedTime
 	}
 
-	qmsg := &dns.Question{
-		Name:   "example.com.",
-		Qtype:  dns.TypeA,
-		Qclass: dns.ClassINET,
+	testWriter := &generator.TestResponseWriter{}
+	qmsg := &dns.Msg{
+		Question: []dns.Question{
+			{
+				Name:   "example.com.",
+				Qtype:  dns.TypeA,
+				Qclass: dns.ClassINET,
+			},
+		},
 	}
-	recs, ns, _, rcode := resolverGenerator.HandleQuestion(qmsg, net.IPv4(127, 0, 0, 1))
+	resolverGenerator.ServeDNS(testWriter, qmsg)
 
-	assert.Equal(t, dns.RcodeSuccess, rcode)
+	assert.True(t, testWriter.HadWrites)
+	assert.Equal(t, dns.RcodeSuccess, testWriter.LastMsg.Rcode)
 	assert.ElementsMatch(t, []dns.RR{
 		&dns.A{
 			Hdr: dns.RR_Header{
@@ -37,8 +44,8 @@ func TestExistingRecordWithCache(t *testing.T) {
 			},
 			A: net.ParseIP("10.13.37.0").To4(),
 		},
-	}, recs)
-	assert.ElementsMatch(t, []dns.RR{}, ns)
+	}, testWriter.LastMsg.Answer)
+	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Ns)
 
 	// Empty out zone such that any returned A record must come from cache
 	dummyServer.SetHandler(emptyZoneHandler)
@@ -46,9 +53,11 @@ func TestExistingRecordWithCache(t *testing.T) {
 	// Fake time 0.8 seconds ahead to test TTL countdown not tripping just yet
 	fakedTime = timeBegin.Add(800 * time.Millisecond)
 
-	recs, ns, _, rcode = resolverGenerator.HandleQuestion(qmsg, net.IPv4(127, 0, 0, 1))
+	testWriter = &generator.TestResponseWriter{}
+	resolverGenerator.ServeDNS(testWriter, qmsg)
 
-	assert.Equal(t, dns.RcodeSuccess, rcode)
+	assert.True(t, testWriter.HadWrites)
+	assert.Equal(t, dns.RcodeSuccess, testWriter.LastMsg.Rcode)
 	assert.ElementsMatch(t, []dns.RR{
 		&dns.A{
 			Hdr: dns.RR_Header{
@@ -60,15 +69,17 @@ func TestExistingRecordWithCache(t *testing.T) {
 			},
 			A: net.ParseIP("10.13.37.0").To4(),
 		},
-	}, recs)
-	assert.ElementsMatch(t, []dns.RR{}, ns)
+	}, testWriter.LastMsg.Answer)
+	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Ns)
 
 	// Fake time 3.1 seconds ahead to test TTL countdown
 	fakedTime = timeBegin.Add(3100 * time.Millisecond)
 
-	recs, ns, _, rcode = resolverGenerator.HandleQuestion(qmsg, net.IPv4(127, 0, 0, 1))
+	testWriter = &generator.TestResponseWriter{}
+	resolverGenerator.ServeDNS(testWriter, qmsg)
 
-	assert.Equal(t, dns.RcodeSuccess, rcode)
+	assert.True(t, testWriter.HadWrites)
+	assert.Equal(t, dns.RcodeSuccess, testWriter.LastMsg.Rcode)
 	assert.ElementsMatch(t, []dns.RR{
 		&dns.A{
 			Hdr: dns.RR_Header{
@@ -80,16 +91,18 @@ func TestExistingRecordWithCache(t *testing.T) {
 			},
 			A: net.ParseIP("10.13.37.0").To4(),
 		},
-	}, recs)
-	assert.ElementsMatch(t, []dns.RR{}, ns)
+	}, testWriter.LastMsg.Answer)
+	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Ns)
 
-	// Fake time 6 seconds ahead to force record to be uncached
+	// Fake time 6 secodns ahead to force record to be uncached
 	fakedTime = timeBegin.Add(6 * time.Second)
 
-	recs, ns, _, rcode = resolverGenerator.HandleQuestion(qmsg, net.IPv4(127, 0, 0, 1))
+	testWriter = &generator.TestResponseWriter{}
+	resolverGenerator.ServeDNS(testWriter, qmsg)
 
-	assert.Equal(t, dns.RcodeSuccess, rcode)
-	assert.ElementsMatch(t, []dns.RR{}, recs)
+	assert.True(t, testWriter.HadWrites)
+	assert.Equal(t, dns.RcodeSuccess, testWriter.LastMsg.Rcode)
+	assert.ElementsMatch(t, []dns.RR{}, testWriter.LastMsg.Answer)
 	assert.ElementsMatch(t, []dns.RR{
 		&dns.SOA{
 			Hdr: dns.RR_Header{
@@ -107,7 +120,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 			Expire:  604800,
 			Minttl:  300,
 		},
-	}, ns)
+	}, testWriter.LastMsg.Ns)
 
 	resolverGenerator.CurrentTime = time.Now
 }

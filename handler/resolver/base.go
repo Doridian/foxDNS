@@ -33,7 +33,7 @@ const (
 	StrategyFailover
 )
 
-type Generator struct {
+type Handler struct {
 	ServerStrategy ServerStrategy
 	Servers        []*ServerConfig
 
@@ -45,6 +45,8 @@ type Generator struct {
 
 	connCleanupTicker *time.Ticker
 	shouldPadLen      int
+
+	RequireCookie bool
 
 	CacheMaxTTL               int
 	CacheMinTTL               int
@@ -66,10 +68,10 @@ type Generator struct {
 	cacheCleanupTicker *time.Ticker
 }
 
-func New(servers []*ServerConfig) *Generator {
+func New(servers []*ServerConfig) *Handler {
 	cache, _ := lru.New[string, *cacheEntry](4096)
 
-	gen := &Generator{
+	gen := &Handler{
 		ServerStrategy: StrategyRoundRobin,
 		Servers:        servers,
 		MaxIdleTime:    time.Second * 15,
@@ -126,55 +128,55 @@ func New(servers []*ServerConfig) *Generator {
 	return gen
 }
 
-func (r *Generator) Refresh() error {
+func (h *Handler) Refresh() error {
 	return nil
 }
 
-func (r *Generator) Start() error {
-	err := r.Stop()
+func (h *Handler) Start() error {
+	err := h.Stop()
 	if err != nil {
 		return err
 	}
 
 	cacheCleanupTicker := time.NewTicker(time.Minute)
-	r.cacheCleanupTicker = cacheCleanupTicker
+	h.cacheCleanupTicker = cacheCleanupTicker
 	go func() {
 		for {
 			_, ok := <-cacheCleanupTicker.C
 			if !ok {
 				return
 			}
-			r.cleanupCache()
+			h.cleanupCache()
 		}
 	}()
 
-	connCleanupTicker := time.NewTicker(r.MaxIdleTime / 2)
-	r.connCleanupTicker = connCleanupTicker
+	connCleanupTicker := time.NewTicker(h.MaxIdleTime / 2)
+	h.connCleanupTicker = connCleanupTicker
 	go func() {
 		for {
 			_, ok := <-connCleanupTicker.C
 			if !ok {
 				return
 			}
-			r.cleanupAllQuerySlots()
+			h.cleanupAllQuerySlots()
 		}
 	}()
 
 	return nil
 }
 
-func (r *Generator) Stop() error {
-	if r.cacheCleanupTicker != nil {
-		r.cacheCleanupTicker.Stop()
-		r.cacheCleanupTicker = nil
+func (h *Handler) Stop() error {
+	if h.cacheCleanupTicker != nil {
+		h.cacheCleanupTicker.Stop()
+		h.cacheCleanupTicker = nil
 	}
-	if r.connCleanupTicker != nil {
-		r.connCleanupTicker.Stop()
-		r.connCleanupTicker = nil
+	if h.connCleanupTicker != nil {
+		h.connCleanupTicker.Stop()
+		h.connCleanupTicker = nil
 	}
 	return nil
 }
 
-func (r *Generator) GetName() string {
+func (h *Handler) GetName() string {
 	return "resolver"
 }

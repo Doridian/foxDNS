@@ -2,22 +2,27 @@ package resolver
 
 import (
 	"log"
+	"time"
 
+	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
 
-func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
+func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
+	startTime := time.Now()
+
 	reply := &dns.Msg{
 		Compress: true,
+		MsgHdr: dns.MsgHdr{
+			Authoritative:      false,
+			RecursionAvailable: true,
+		},
 	}
-	if len(msg.Question) != 1 {
-		_ = wr.WriteMsg(reply.SetRcode(msg, dns.RcodeRefused))
-		return
-	}
+
 	reply.SetRcode(msg, dns.RcodeServerFailure)
 
-	ok, option := util.ApplyEDNS0ReplyEarly(msg, reply, wr, r.RequireCookie)
+	ok, option := util.ApplyEDNS0ReplyEarly(msg, reply, wr, h.RequireCookie)
 	if !ok {
 		_ = wr.WriteMsg(reply)
 		return
@@ -26,7 +31,7 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	var upstreamReplyEdns0 *dns.OPT
 
 	defer func() {
-		replyEdns0 := util.ApplyEDNS0Reply(msg, reply, option, wr, r.RequireCookie)
+		replyEdns0 := util.ApplyEDNS0Reply(msg, reply, option, wr, h.RequireCookie)
 		if replyEdns0 != nil && upstreamReplyEdns0 != nil && upstreamReplyEdns0.Version() == replyEdns0.Version() {
 			for _, upstreamOpt := range upstreamReplyEdns0.Option {
 				if upstreamOpt.Option() != dns.EDNS0EDE {
@@ -46,16 +51,22 @@ func (r *Generator) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		_ = wr.WriteMsg(reply)
 	}()
 
-	reply.RecursionAvailable = true
+	if len(msg.Question) != 1 {
+		reply.Rcode = dns.RcodeRefused
+		return
+	}
 
 	q := &msg.Question[0]
 	if util.IsBadQuery(q) {
 		reply.Rcode = dns.RcodeRefused
 		return
 	}
+
+	defer handler.MeasureQuery(startTime, reply, h.GetName())
+
 	q.Name = dns.CanonicalName(q.Name)
 
-	cacheResult, matchType, upstreamReply, err := r.getOrAddCache(q, false, 1)
+	cacheResult, matchType, upstreamReply, err := h.getOrAddCache(q, false, 1)
 	if err != nil {
 		log.Printf("Error handling DNS request: %v", err)
 		return
