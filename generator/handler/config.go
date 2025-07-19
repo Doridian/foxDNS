@@ -57,29 +57,31 @@ func (h *Handler) loadConfig(config Config) {
 	h.recursionAvailable = config.RecursionAvailable != nil && *config.RecursionAvailable
 	h.authoritative = config.Authoritative != nil && *config.Authoritative
 
+	if !h.authoritative {
+		return
+	}
+
 	h.signatures = make(map[string]*dns.RRSIG)
 	h.enableSignatureCache = true
 
-	if h.authoritative && len(config.Nameservers) > 0 {
-		h.soa = []dns.RR{
-			FillAuthHeader(&dns.SOA{
-				Ns:      dns.CanonicalName(config.Nameservers[0]),
-				Mbox:    dns.CanonicalName(config.Mbox),
-				Serial:  config.Serial,
-				Refresh: uint32(config.Refresh.Seconds()),
-				Retry:   uint32(config.Retry.Seconds()),
-				Expire:  uint32(config.Expire.Seconds()),
-				Minttl:  uint32(config.Minttl.Seconds()),
-			}, dns.TypeSOA, h.zone, uint32(config.SOATtl.Seconds())),
-		}
+	h.soa = []dns.RR{
+		FillAuthHeader(&dns.SOA{
+			Ns:      dns.CanonicalName(config.Nameservers[0]),
+			Mbox:    dns.CanonicalName(config.Mbox),
+			Serial:  config.Serial,
+			Refresh: uint32(config.Refresh.Seconds()),
+			Retry:   uint32(config.Retry.Seconds()),
+			Expire:  uint32(config.Expire.Seconds()),
+			Minttl:  uint32(config.Minttl.Seconds()),
+		}, dns.TypeSOA, h.zone, uint32(config.SOATtl.Seconds())),
+	}
 
-		h.ns = make([]dns.RR, 0, len(config.Nameservers))
-		nsTtl := uint32(config.NSTtl.Seconds())
-		for _, ns := range config.Nameservers {
-			h.ns = append(h.ns, FillAuthHeader(&dns.NS{
-				Ns: dns.CanonicalName(ns),
-			}, dns.TypeNS, h.zone, nsTtl))
-		}
+	h.ns = make([]dns.RR, 0, len(config.Nameservers))
+	nsTtl := uint32(config.NSTtl.Seconds())
+	for _, ns := range config.Nameservers {
+		h.ns = append(h.ns, FillAuthHeader(&dns.NS{
+			Ns: dns.CanonicalName(ns),
+		}, dns.TypeNS, h.zone, nsTtl))
 	}
 
 	publicZSKFile := util.StringOrEmpty(config.DNSSECPublicZSKFile)

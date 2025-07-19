@@ -46,7 +46,7 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	startTime := time.Now()
 
 	reply.Answer = nil
-	if q.Name == h.zone {
+	if h.authoritative && q.Name == h.zone {
 		switch q.Qtype {
 		case dns.TypeSOA:
 			reply.Answer = h.soa

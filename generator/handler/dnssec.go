@@ -10,6 +10,10 @@ import (
 )
 
 func (h *Handler) signResponse(q *dns.Question, answer []dns.RR) (dns.RR, error) {
+	if !h.authoritative {
+		return nil, nil
+	}
+
 	dnskey := h.zskDNSKEY
 	privkey := h.zskPrivateKey
 	if q.Qtype == dns.TypeDNSKEY {

@@ -27,9 +27,9 @@ func loadSimpleZone(zone string) dns.Handler {
 		panic(err)
 	}
 
-	boolTrue := true
+	boolFalse := false
 	return handler.New(nil, staticHandler, "example.com.", handler.Config{
-		Authoritative: &boolTrue,
+		Authoritative: &boolFalse,
 	})
 }
 
