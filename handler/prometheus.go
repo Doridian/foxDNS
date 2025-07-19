@@ -22,6 +22,10 @@ var (
 )
 
 func MeasureQuery(startTime time.Time, reply *dns.Msg, handlerName string) {
+	if len(reply.Question) == 0 {
+		return
+	}
+
 	duration := time.Since(startTime)
 
 	q := &reply.Question[0]
