@@ -33,7 +33,7 @@ type Config struct {
 			Addr               string        `yaml:"addr"`
 			Proto              string        `yaml:"proto"`
 			ServerName         string        `yaml:"server-name"`
-			RequireCookie      *bool         `yaml:"require-cookie"`
+			RequireCookie      bool          `yaml:"require-cookie"`
 			MaxParallelQueries int           `yaml:"max-parallel-queries"`
 			Timeout            time.Duration `yaml:"timeout"`
 		} `yaml:"nameservers"`

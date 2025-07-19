@@ -25,13 +25,6 @@ func ExtractIP(addr net.Addr) net.IP {
 	}
 }
 
-func StringOrEmpty(strPtr *string) string {
-	if strPtr == nil {
-		return ""
-	}
-	return *strPtr
-}
-
 func IPIsPrivateOrLocal(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsPrivate()
 }

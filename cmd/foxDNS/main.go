@@ -106,7 +106,7 @@ func reloadConfig() {
 				Addr:               ns.Addr,
 				Proto:              ns.Proto,
 				ServerName:         ns.ServerName,
-				RequireCookie:      ns.RequireCookie != nil && *ns.RequireCookie,
+				RequireCookie:      ns.RequireCookie,
 				MaxParallelQueries: ns.MaxParallelQueries,
 				Timeout:            ns.Timeout,
 			}
