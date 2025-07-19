@@ -56,7 +56,7 @@ func testQuestion(t *testing.T, zone string, config handler.Config, q dns.Questi
 	if edns0 {
 		qmsg.SetEdns0(util.UDPSize, false)
 	}
-	hdl := handler.New(testHandler, zone, config)
+	hdl := handler.New(nil, testHandler, zone, config)
 	hdl.ServeDNS(wr, qmsg)
 
 	if edns0 {

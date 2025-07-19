@@ -6,6 +6,12 @@ import (
 	"github.com/miekg/dns"
 )
 
+type Addressable interface {
+	LocalAddr() net.Addr
+	RemoteAddr() net.Addr
+	Network() string
+}
+
 func ExtractIP(addr net.Addr) net.IP {
 	switch convAddr := addr.(type) {
 	case *net.TCPAddr:

@@ -47,7 +47,7 @@ func IsSecureProtocol(proto string) bool {
 	return secureProtocols[proto]
 }
 
-func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr dns.ResponseWriter, requireCookie bool) *dns.OPT {
+func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr Addressable, requireCookie bool) *dns.OPT {
 	queryEdns0 := query.IsEdns0()
 	if queryEdns0 == nil {
 		if reply.Rcode > 0xF {
@@ -75,9 +75,8 @@ func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr dns.
 	return SetEDNS0(reply, option, paddingLen, queryEdns0.Do())
 }
 
-func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter, requireCookie bool) (bool, []dns.EDNS0) {
+func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr Addressable, requireCookie bool) (bool, []dns.EDNS0) {
 	queryEdns0 := query.IsEdns0()
-	option := make([]dns.EDNS0, 0, 1)
 
 	if IsSecureProtocol(wr.LocalAddr().Network()) {
 		requireCookie = false
@@ -96,6 +95,8 @@ func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr dns.ResponseWriter,
 		SetEDNS0(reply, nil, 0, false)
 		return false, nil
 	}
+
+	option := make([]dns.EDNS0, 0, 1)
 
 	cookieMatch := false
 	cookieFound := false

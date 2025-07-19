@@ -29,6 +29,11 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		_ = wr.WriteMsg(reply)
 	}()
 
+	if len(msg.Question) != 1 {
+		reply.Rcode = dns.RcodeFormatError
+		return
+	}
+
 	q := &msg.Question[0]
 	if util.IsBadQuery(q) {
 		reply.Rcode = dns.RcodeRefused
@@ -68,10 +73,8 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		}
 	}
 
-	// There can only legally ever be 1 CNAME, so dont even bother checking is multiple records
-	if msg.RecursionDesired && reply.Rcode == dns.RcodeSuccess && len(reply.Answer) == 1 && q.Qtype != dns.TypeCNAME {
-		// TODO: Check if CNAME already resolved (static handler and resolver can do this)
-		// TODO: Resolve CNAMEs here
+	if msg.RecursionDesired {
+		h.resolveIfCNAME(reply, q, wr)
 	}
 
 	if reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError {

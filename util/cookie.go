@@ -5,8 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"time"
-
-	"github.com/miekg/dns"
 )
 
 var previousCookieSecret []byte
@@ -70,7 +68,7 @@ func GenerateClientCookie(previous bool, server string) []byte {
 	return generateCookie(previous, ClientCookieLength, clientCookiePrefix, []byte(server))
 }
 
-func GenerateServerCookie(previous bool, clientCookie []byte, wr dns.ResponseWriter) []byte {
+func GenerateServerCookie(previous bool, clientCookie []byte, wr Addressable) []byte {
 	serverIp := ExtractIP(wr.LocalAddr())
 	clientIp := ExtractIP(wr.RemoteAddr())
 	return generateCookie(previous, ServerCookieLength, serverCookiePrefix, serverIp, clientIp, clientCookie)

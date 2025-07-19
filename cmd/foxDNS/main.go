@@ -106,7 +106,7 @@ func registerGenerator(mux *dns.ServeMux, gen generator.Generator, zone string, 
 }
 
 func registerGeneratorMulti(mux *dns.ServeMux, gen generator.Generator, handlerZone string, zones []string, config handler.Config) *handler.Handler {
-	hdl := handler.New(gen, handlerZone, config)
+	hdl := handler.New(mux, gen, handlerZone, config)
 	loaders = append(loaders, gen, hdl)
 	for _, z := range zones {
 		mux.Handle(z, hdl)

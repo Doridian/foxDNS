@@ -26,6 +26,7 @@ var (
 
 type Handler struct {
 	child generator.Generator
+	mux   *dns.ServeMux
 
 	RequireCookie bool
 	soa           []dns.RR
@@ -46,10 +47,11 @@ type Handler struct {
 	recursionAvailable bool
 }
 
-func New(child generator.Generator, zone string, config Config) *Handler {
+func New(mux *dns.ServeMux, child generator.Generator, zone string, config Config) *Handler {
 	hdl := &Handler{
 		child: child,
 		zone:  dns.CanonicalName(zone),
+		mux:   mux,
 	}
 	hdl.loadConfig(config)
 	return hdl
