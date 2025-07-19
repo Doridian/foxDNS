@@ -27,9 +27,8 @@ func loadSimpleZone(zone string) dns.Handler {
 		panic(err)
 	}
 
-	boolFalse := false
 	return generator.New(nil, staticHandler, "example.com.", generator.Config{
-		Authoritative: &boolFalse,
+		Authoritative: false,
 	})
 }
 
