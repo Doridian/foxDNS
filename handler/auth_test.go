@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Doridian/foxDNS/generator"
-	"github.com/Doridian/foxDNS/generator/handler"
+	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"

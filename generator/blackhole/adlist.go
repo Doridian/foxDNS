@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Doridian/foxDNS/generator/handler"
+	"github.com/Doridian/foxDNS/handler"
 	"github.com/miekg/dns"
 )
 

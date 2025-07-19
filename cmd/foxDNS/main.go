@@ -9,11 +9,11 @@ import (
 
 	"github.com/Doridian/foxDNS/generator"
 	"github.com/Doridian/foxDNS/generator/blackhole"
-	"github.com/Doridian/foxDNS/generator/handler"
 	"github.com/Doridian/foxDNS/generator/localizer"
 	"github.com/Doridian/foxDNS/generator/rdns"
 	"github.com/Doridian/foxDNS/generator/resolver"
 	"github.com/Doridian/foxDNS/generator/static"
+	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/server"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"

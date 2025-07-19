@@ -4,8 +4,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Doridian/foxDNS/generator/handler"
 	"github.com/Doridian/foxDNS/generator/localizer"
+	"github.com/Doridian/foxDNS/handler"
 	"gopkg.in/yaml.v3"
 )
 
