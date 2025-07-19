@@ -81,9 +81,8 @@ func testQuestion(t *testing.T, zone string, config generator.Config, q dns.Ques
 }
 
 func TestBasics(t *testing.T) {
-	boolTrue := true
 	soaConfig := generator.Config{
-		Authoritative: &boolTrue,
+		Authoritative: true,
 		SOATtl:        300 * time.Second,
 		NSTtl:         300 * time.Second,
 		Mbox:          "hostmaster.example.com",

@@ -24,80 +24,13 @@ var configFile string
 var srv *server.Server
 var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
-func mergeHandlerConfig(config *generator.Config, base generator.Config) generator.Config {
-	if config == nil {
-		return base
-	}
+var globalConfig generator.Config
 
-	if config.Nameservers != nil {
-		base.Nameservers = config.Nameservers
+func getConfig(config *generator.Config) generator.Config {
+	if config != nil {
+		return *config
 	}
-
-	if config.Mbox != "" {
-		base.Mbox = config.Mbox
-	}
-
-	if config.SOATtl > 0 {
-		base.SOATtl = config.SOATtl
-	}
-
-	if config.NSTtl > 0 {
-		base.NSTtl = config.NSTtl
-	}
-
-	if config.Serial > 0 {
-		base.Serial = config.Serial
-	}
-
-	if config.Refresh > 0 {
-		base.Refresh = config.Refresh
-	}
-
-	if config.Retry > 0 {
-		base.Retry = config.Retry
-	}
-
-	if config.Expire > 0 {
-		base.Expire = config.Expire
-	}
-
-	if config.Minttl > 0 {
-		base.Minttl = config.Minttl
-	}
-
-	if config.DNSSECPublicZSKFile != nil {
-		base.DNSSECPublicZSKFile = config.DNSSECPublicZSKFile
-	}
-
-	if config.DNSSECPrivateZSKFile != nil {
-		base.DNSSECPrivateZSKFile = config.DNSSECPrivateZSKFile
-	}
-
-	if config.DNSSECPublicKSKFile != nil {
-		base.DNSSECPublicKSKFile = config.DNSSECPublicKSKFile
-	}
-
-	if config.DNSSECPrivateKSKFile != nil {
-		base.DNSSECPrivateKSKFile = config.DNSSECPrivateKSKFile
-	}
-
-	if config.DNSSECSignerName != nil {
-		base.DNSSECSignerName = config.DNSSECSignerName
-	}
-
-	if config.DNSSECCacheSignatures != nil {
-		base.DNSSECCacheSignatures = config.DNSSECCacheSignatures
-	}
-
-	if config.RequireCookie != nil {
-		base.RequireCookie = config.RequireCookie
-	}
-
-	if config.RecursionAvailable != nil {
-		base.RecursionAvailable = config.RecursionAvailable
-	}
-
-	return base
+	return globalConfig
 }
 
 func registerGenerator(mux *dns.ServeMux, gen generator.Generator, zone string, config generator.Config) *generator.Handler {
@@ -121,10 +54,10 @@ func reloadConfig() {
 		util.UDPSize = uint16(config.Global.UDPSize)
 	}
 
-	globalHandlerConfig := mergeHandlerConfig(config.Global.Config, generator.GetDefaultConfig())
-
 	loaders = make([]generator.Loadable, 0)
 	mux := dns.NewServeMux()
+
+	globalConfig = *config.Global.Config
 
 	for _, rdnsConf := range config.RDNS {
 		rdnsGen := rdns.NewRDNSGenerator(rdnsConf.IPVersion)
@@ -152,7 +85,7 @@ func reloadConfig() {
 			rdnsGen.PtrTtl = uint32(rdnsConf.PtrTtl.Seconds())
 		}
 
-		registerGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), mergeHandlerConfig(rdnsConf.AddrConfig, globalHandlerConfig))
+		registerGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), getConfig(rdnsConf.AddrConfig))
 
 		for zone, ptrAuthConfig := range rdnsConf.PTRConfigs {
 			rdnsConf.PTRConfigs[dns.CanonicalName(zone)] = ptrAuthConfig
@@ -160,10 +93,9 @@ func reloadConfig() {
 			rdnsConf.PTRConfigs[strings.ToLower(dns.CanonicalName(zone))] = ptrAuthConfig
 		}
 
-		ptrAuthorityConfigBase := mergeHandlerConfig(rdnsConf.PTRConfigs["__default__"], globalHandlerConfig)
 		ptrZones := rdnsGen.GetPTRZones()
 		for _, zone := range ptrZones {
-			registerGenerator(mux, rdnsGen, zone, mergeHandlerConfig(rdnsConf.PTRConfigs[zone], ptrAuthorityConfigBase))
+			registerGenerator(mux, rdnsGen, zone, getConfig(rdnsConf.PTRConfigs[zone]))
 		}
 	}
 
@@ -293,10 +225,9 @@ func reloadConfig() {
 				}
 			}
 
-			boolFalse := false
-			locAuthConfig := mergeHandlerConfig(locConfig.Config, globalHandlerConfig)
-			locAuthConfig.DNSSECCacheSignatures = &boolFalse
-			registerGenerator(mux, loc, locConfig.Zone, locAuthConfig)
+			locGenConfig := getConfig(locConfig.Config)
+			locGenConfig.DNSSECCacheSignatures = false
+			registerGenerator(mux, loc, locConfig.Zone, locGenConfig)
 		}
 
 		log.Printf("Localizer enabled for %d zones", len(config.Localizers.Zones))
@@ -309,14 +240,14 @@ func reloadConfig() {
 			if err != nil {
 				log.Panicf("Error loading static zone file %s: %v", statConf.File, err)
 			}
-			registerGenerator(mux, stat, statConf.Zone, mergeHandlerConfig(statConf.Config, globalHandlerConfig))
+			registerGenerator(mux, stat, statConf.Zone, getConfig(statConf.Config))
 		}
 
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))
 	}
 
 	if len(config.AdLists.BlockLists) > 0 {
-		adlistGen := blackhole.NewAdlist(config.AdLists.BlockLists, config.AdLists.AllowLists, mux, config.AdLists.RefreshInterval, mergeHandlerConfig(config.AdLists.Config, globalHandlerConfig))
+		adlistGen := blackhole.NewAdlist(config.AdLists.BlockLists, config.AdLists.AllowLists, mux, config.AdLists.RefreshInterval, getConfig(config.AdLists.Config))
 		loaders = append(loaders, adlistGen)
 	}
 

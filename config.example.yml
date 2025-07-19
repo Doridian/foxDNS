@@ -3,8 +3,20 @@ global:
     nameservers:
       - nameserver.example.com
     mailbox: email.example.com
-    recursion-available: true
+    soa-ttl: 24h
+    ns-ttl: 24h
+    serial: 2025042069
+    refresh: 2h
+    retry: 30m
+    expire: 336h
+    minttl: 1h
+
     authoritative: true
+    require-cookie: false
+    recursion-available: true
+
+    dnssec-cache-signatures: true
+
   listen:
     - :8053
   prometheus-listen: :9001
