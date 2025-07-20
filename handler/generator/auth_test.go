@@ -90,7 +90,7 @@ func TestBasics(t *testing.T) {
 		Refresh:       43200 * time.Second,
 		Retry:         3600 * time.Second,
 		Expire:        86400 * time.Second,
-		Minttl:        300 * time.Second,
+		MinTtl:        300 * time.Second,
 		Nameservers:   []string{"ns1.example.com", "ns2.example.com"},
 	}
 	zone := "example.com."

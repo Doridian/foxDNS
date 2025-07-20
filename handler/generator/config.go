@@ -16,7 +16,9 @@ type Config struct {
 	Refresh     time.Duration `yaml:"refresh"`
 	Retry       time.Duration `yaml:"retry"`
 	Expire      time.Duration `yaml:"expire"`
-	Minttl      time.Duration `yaml:"minttl"`
+	MinTtl      time.Duration `yaml:"min-ttl"`
+
+	Zone string `yaml:"zone"`
 
 	RequireCookie      bool `yaml:"require-cookie"`
 	Authoritative      bool `yaml:"authoritative"`
@@ -26,11 +28,10 @@ type Config struct {
 	DNSSECPrivateZSKFile  string `yaml:"dnssec-private-zsk"`
 	DNSSECPublicKSKFile   string `yaml:"dnssec-public-ksk"`
 	DNSSECPrivateKSKFile  string `yaml:"dnssec-private-ksk"`
-	DNSSECSignerName      string `yaml:"dnssec-signer-name"`
 	DNSSECCacheSignatures bool   `yaml:"dnssec-cache-signatures"`
 }
 
-func (h *Handler) loadConfig(config Config) {
+func (h *Handler) loadConfig(config Config, zone string) {
 	h.soa = nil
 	h.ns = nil
 	h.recursionAvailable = config.RecursionAvailable
@@ -38,6 +39,12 @@ func (h *Handler) loadConfig(config Config) {
 
 	if !h.authoritative {
 		return
+	}
+
+	if config.Zone != "" {
+		h.zone = dns.CanonicalName(config.Zone)
+	} else {
+		h.zone = zone
 	}
 
 	h.signatures = make(map[string]*dns.RRSIG)
@@ -51,7 +58,7 @@ func (h *Handler) loadConfig(config Config) {
 			Refresh: uint32(config.Refresh.Seconds()),
 			Retry:   uint32(config.Retry.Seconds()),
 			Expire:  uint32(config.Expire.Seconds()),
-			Minttl:  uint32(config.Minttl.Seconds()),
+			Minttl:  uint32(config.MinTtl.Seconds()),
 		}, dns.TypeSOA, h.zone, uint32(config.SOATtl.Seconds())),
 	}
 
@@ -112,10 +119,4 @@ func (h *Handler) loadConfig(config Config) {
 	}
 
 	h.enableSignatureCache = config.DNSSECCacheSignatures
-
-	if config.DNSSECSignerName != "" {
-		h.signerName = dns.CanonicalName(config.DNSSECSignerName)
-	} else {
-		h.signerName = h.zone
-	}
 }

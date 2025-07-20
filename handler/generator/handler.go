@@ -15,14 +15,13 @@ type Handler struct {
 	RequireCookie bool
 	soa           []dns.RR
 	ns            []dns.RR
-	zone          string
 
+	zone          string
 	authoritative bool
 
 	enableSignatureCache bool
 	signatureLock        sync.Mutex
 	signatures           map[string]*dns.RRSIG
-	signerName           string
 	zskDNSKEY            *dns.DNSKEY
 	zskPrivateKey        crypto.PrivateKey
 	kskDNSKEY            *dns.DNSKEY
@@ -34,10 +33,9 @@ type Handler struct {
 func New(mux *dns.ServeMux, child Generator, zone string, config Config) *Handler {
 	hdl := &Handler{
 		child: child,
-		zone:  dns.CanonicalName(zone),
 		mux:   mux,
 	}
-	hdl.loadConfig(config)
+	hdl.loadConfig(config, dns.CanonicalName(zone))
 	return hdl
 }
 

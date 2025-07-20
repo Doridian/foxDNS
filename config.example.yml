@@ -9,7 +9,7 @@ global:
     refresh: 2h
     retry: 30m
     expire: 336h
-    minttl: 1h
+    min-ttl: 1h
 
     authoritative: true
     require-cookie: false
