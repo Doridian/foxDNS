@@ -17,25 +17,9 @@ func (h *Handler) resolveIfCNAME(reply *dns.Msg, questions []dns.Question, wr ut
 		return
 	}
 
-	target := dns.CanonicalName(cname.Target)
-
-	for _, q := range questions {
-		if q.Name == target {
-			return // Already queried this CNAME
-		}
-	}
-
-	resp := &RecursiveResponseWriter{
-		wr: wr,
-	}
-
-	cnameQ := &dns.Msg{}
-	cnameQ.SetQuestion(target, qtype)
-	cnameQ.Question = append(cnameQ.Question, questions...)
-
-	h.mux.ServeDNS(resp, cnameQ)
-
-	if resp.reply != nil && resp.reply.Rcode == dns.RcodeSuccess {
-		reply.Answer = append(reply.Answer, resp.reply.Answer...)
-	}
+	h.subQuery(reply, questions, dns.Question{
+		Name:   dns.CanonicalName(cname.Target),
+		Qtype:  qtype,
+		Qclass: dns.ClassINET,
+	}, wr)
 }

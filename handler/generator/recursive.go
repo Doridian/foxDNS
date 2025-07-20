@@ -8,6 +8,34 @@ import (
 	"github.com/miekg/dns"
 )
 
+func (h *Handler) subQuery(reply *dns.Msg, questions []dns.Question, q dns.Question, wr util.Addressable) {
+	for _, oldQ := range questions {
+		if oldQ.Name == q.Name && oldQ.Qtype == q.Qtype && oldQ.Qclass == q.Qclass {
+			return // Already queried this one
+		}
+	}
+
+	resp := &RecursiveResponseWriter{
+		wr: wr,
+	}
+
+	subQ := &dns.Msg{
+		MsgHdr: dns.MsgHdr{
+			Id:               dns.Id(),
+			RecursionDesired: true,
+		},
+		Question: make([]dns.Question, 1, len(questions)+1),
+	}
+	subQ.Question[0] = q
+	subQ.Question = append(subQ.Question, questions...)
+
+	h.mux.ServeDNS(resp, subQ)
+
+	if resp.reply != nil && resp.reply.Rcode == dns.RcodeSuccess {
+		reply.Answer = append(reply.Answer, resp.reply.Answer...)
+	}
+}
+
 type RecursiveResponseWriter struct {
 	wr    util.Addressable
 	reply *dns.Msg
