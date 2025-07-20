@@ -85,7 +85,7 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 
 	if msg.RecursionDesired && h.recursionAvailable && queryDepth < util.MaxRecursionDepth {
-		h.resolveIfCNAME(reply, msg, q, wr, queryDepth)
+		h.resolveIfCNAME(reply, msg, q, wr)
 		// TODO: Resolve NS referrals
 	}
 

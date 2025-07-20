@@ -5,7 +5,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (h *Handler) resolveIfCNAME(reply *dns.Msg, msg *dns.Msg, q *dns.Question, wr util.Addressable, queryDepth int) {
+func (h *Handler) resolveIfCNAME(reply *dns.Msg, msg *dns.Msg, q *dns.Question, wr util.Addressable) {
 	// There can only legally ever be 1 CNAME, so dont even bother checking is multiple records
 	if reply.Rcode != dns.RcodeSuccess || q.Qtype == dns.TypeCNAME || len(reply.Answer) != 1 {
 		return
