@@ -32,7 +32,15 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		_ = wr.WriteMsg(reply)
 	}()
 
-	if len(msg.Question) != 1 {
+	if len(msg.Question) == 0 {
+		reply.Rcode = dns.RcodeFormatError
+		return
+	}
+
+	queryDepth := 0
+	if util.IsLocalQuery(wr) {
+		queryDepth = len(msg.Question) - 1
+	} else if len(msg.Question) > 1 {
 		reply.Rcode = dns.RcodeFormatError
 		return
 	}
@@ -47,8 +55,6 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	q.Name = dns.CanonicalName(q.Name)
 	remoteIP := util.ExtractIP(wr.RemoteAddr())
-
-	queryDepth := util.GetQueryDepth(msg, wr)
 
 	reply.Answer = nil
 	if h.authoritative && q.Name == h.zone {
@@ -79,7 +85,7 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 
 	if msg.RecursionDesired && h.recursionAvailable && queryDepth < util.MaxRecursionDepth {
-		h.resolveIfCNAME(reply, q, wr, queryDepth)
+		h.resolveIfCNAME(reply, msg, q, wr, queryDepth)
 		// TODO: Resolve NS referrals
 	}
 

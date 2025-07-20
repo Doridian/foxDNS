@@ -18,7 +18,7 @@ type Config struct {
 		PrometheusListen  string            `yaml:"prometheus-listen"`
 		Config            *generator.Config `yaml:"config"`
 		UDPSize           int               `yaml:"udp-size"`
-		MaxRecursionDepth uint64            `yaml:"max-recursion-depth"`
+		MaxRecursionDepth int               `yaml:"max-recursion-depth"`
 	} `yaml:"global"`
 
 	RDNS []struct {

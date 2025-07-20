@@ -51,8 +51,13 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		_ = wr.WriteMsg(reply)
 	}()
 
-	if len(msg.Question) != 1 {
-		reply.Rcode = dns.RcodeRefused
+	if len(msg.Question) == 0 {
+		reply.Rcode = dns.RcodeFormatError
+		return
+	}
+
+	if !util.IsLocalQuery(wr) && len(msg.Question) > 1 {
+		reply.Rcode = dns.RcodeFormatError
 		return
 	}
 

@@ -6,6 +6,8 @@ import (
 	"github.com/miekg/dns"
 )
 
+const NetworkLocal = "local"
+
 type Addressable interface {
 	LocalAddr() net.Addr
 	RemoteAddr() net.Addr
@@ -41,4 +43,8 @@ func FillHeader(rr dns.RR, name string, rtype uint16, ttl uint32) dns.RR {
 
 func IsBadQuery(q *dns.Question) bool {
 	return q.Qclass != dns.ClassINET || q.Qtype == dns.TypeIXFR || q.Qtype == dns.TypeAXFR || q.Qtype == dns.TypeMAILA || q.Qtype == dns.TypeMAILB || q.Qtype == dns.TypeANY
+}
+
+func IsLocalQuery(wr Addressable) bool {
+	return wr.Network() == NetworkLocal
 }
