@@ -50,8 +50,6 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		return
 	}
 
-	defer MeasureQuery(startTime, reply, h.child.GetName())
-
 	q.Name = dns.CanonicalName(q.Name)
 	remoteIP := util.ExtractIP(wr.RemoteAddr())
 
@@ -109,4 +107,31 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 			reply.Answer = newAnswers
 		}
 	}
+
+	duration := time.Since(startTime)
+
+	rcode := dns.RcodeToString[reply.Rcode]
+	if reply.Rcode == dns.RcodeSuccess && len(reply.Answer) == 0 {
+		rcode = "NXRECORD"
+	}
+
+	extendedRCode := ""
+	replyEdns0 := reply.IsEdns0()
+	if replyEdns0 != nil {
+		for _, opt := range replyEdns0.Option {
+			if opt.Option() != dns.EDNS0EDE {
+				continue
+			}
+
+			edeOpt, ok := opt.(*dns.EDNS0_EDE)
+			if !ok {
+				continue
+			}
+			extendedRCode = dns.ExtendedErrorCodeToString[edeOpt.InfoCode]
+			break
+		}
+	}
+
+	queriesProcessed.WithLabelValues(dns.TypeToString[q.Qtype], rcode, h.child.GetName(), extendedRCode).Inc()
+	queryProcessingTime.WithLabelValues(h.child.GetName()).Observe(duration.Seconds())
 }
