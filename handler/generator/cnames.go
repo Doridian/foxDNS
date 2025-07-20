@@ -1,17 +1,9 @@
 package generator
 
 import (
-	"errors"
-	"net"
-
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
-
-type CNAMEProxyResponseWriter struct {
-	wr    util.Addressable
-	reply *dns.Msg
-}
 
 func (h *Handler) resolveIfCNAME(reply *dns.Msg, q *dns.Question, wr util.Addressable, queryDepth uint64) {
 	// There can only legally ever be 1 CNAME, so dont even bother checking is multiple records
@@ -24,7 +16,7 @@ func (h *Handler) resolveIfCNAME(reply *dns.Msg, q *dns.Question, wr util.Addres
 		return
 	}
 
-	resp := &CNAMEProxyResponseWriter{
+	resp := &RecursiveResponseWriter{
 		wr: wr,
 	}
 
@@ -37,44 +29,4 @@ func (h *Handler) resolveIfCNAME(reply *dns.Msg, q *dns.Question, wr util.Addres
 	if resp.reply != nil && resp.reply.Rcode == dns.RcodeSuccess {
 		reply.Answer = append(reply.Answer, resp.reply.Answer...)
 	}
-}
-
-func (c *CNAMEProxyResponseWriter) Close() error {
-	return errors.New("unimplemented")
-}
-
-func (c *CNAMEProxyResponseWriter) Hijack() {
-	panic("unimplemented")
-}
-
-func (c *CNAMEProxyResponseWriter) LocalAddr() net.Addr {
-	return c.wr.LocalAddr()
-}
-
-func (c *CNAMEProxyResponseWriter) Network() string {
-	return util.NetworkLocal
-}
-
-func (c *CNAMEProxyResponseWriter) RemoteAddr() net.Addr {
-	return c.wr.RemoteAddr()
-}
-
-func (c *CNAMEProxyResponseWriter) TsigStatus() error {
-	return errors.New("unimplemented")
-}
-
-func (c *CNAMEProxyResponseWriter) TsigTimersOnly(bool) {
-	// no-op
-}
-
-func (c *CNAMEProxyResponseWriter) Write([]byte) (int, error) {
-	return 0, errors.New("unimplemented")
-}
-
-func (c *CNAMEProxyResponseWriter) WriteMsg(reply *dns.Msg) error {
-	if c.reply != nil {
-		return errors.New("cannot write multiple messages to CNAMEProxyResponseWriter")
-	}
-	c.reply = reply
-	return nil
 }
