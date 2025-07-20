@@ -41,15 +41,14 @@ func (h *Handler) loadConfig(config Config, zone string) {
 		return
 	}
 
-	h.zone = ""
-	if config.Zone != "" {
-		h.zone = config.Zone
-	} else if zone != "" {
-		h.zone = zone
+	if zone == "" {
+		panic("Tried to use authoritative config for zoneless handler")
 	}
 
-	if h.zone == "" {
-		panic("No zone specified for authoritative config")
+	if config.Zone != "" {
+		h.zone = config.Zone
+	} else {
+		h.zone = zone
 	}
 
 	h.zone = dns.CanonicalName(h.zone)

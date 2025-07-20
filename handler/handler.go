@@ -35,7 +35,7 @@ func New(mux *dns.ServeMux, child Generator, zone string, config Config) *Handle
 		child: child,
 		mux:   mux,
 	}
-	hdl.loadConfig(config, dns.CanonicalName(zone))
+	hdl.loadConfig(config, zone)
 	return hdl
 }
 
