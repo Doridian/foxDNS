@@ -31,11 +31,19 @@ type Handler struct {
 }
 
 func New(mux *dns.ServeMux, child Generator, zone string, config Config) *Handler {
+	return new(mux, child, zone, false, config)
+}
+
+func NewRaw(mux *dns.ServeMux, child Generator, config Config) *Handler {
+	return new(mux, child, "", true, config)
+}
+
+func new(mux *dns.ServeMux, child Generator, zone string, raw bool, config Config) *Handler {
 	hdl := &Handler{
 		child: child,
 		mux:   mux,
 	}
-	hdl.loadConfig(config, zone)
+	hdl.loadConfig(config, zone, raw)
 	return hdl
 }
 

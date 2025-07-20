@@ -31,7 +31,7 @@ type Config struct {
 	DNSSECCacheSignatures bool   `yaml:"dnssec-cache-signatures"`
 }
 
-func (h *Handler) loadConfig(config Config, zone string) {
+func (h *Handler) loadConfig(config Config, zone string, raw bool) {
 	h.soa = nil
 	h.ns = nil
 	h.recursionAvailable = config.RecursionAvailable
@@ -42,11 +42,12 @@ func (h *Handler) loadConfig(config Config, zone string) {
 		return
 	}
 
-	switch zone {
-	case SpecialZoneEmpty:
-		panic("Tried to use authoritative config for zoneless handler")
-	case SpecialZoneFake:
+	if raw {
 		return
+	}
+
+	if zone == "" {
+		panic("Tried to use authoritative config for zoneless handler")
 	}
 
 	if config.Zone != "" {

@@ -21,11 +21,6 @@ var (
 	}, []string{"handler"})
 )
 
-const (
-	SpecialZoneEmpty = ""
-	SpecialZoneFake  = "$_$_FAKE_$_$"
-)
-
 type Generator interface {
 	GetName() string
 	HandleQuestion(q *dns.Question, remoteIP net.IP) (answer []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int)
