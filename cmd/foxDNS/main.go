@@ -187,10 +187,17 @@ func reloadConfig() {
 
 		loaders = append(loaders, resolv)
 
-		resolvConfig := getConfig(resolvConf.Config)
-		resolvConfig.Authoritative = false
-		resolvConfig.RecursionAvailable = true
-		hdl := handler.NewRaw(mux, resolv, resolvConfig)
+		resolvConfig := &handler.Config{
+			Authoritative:      false,
+			RecursionAvailable: true,
+		}
+		if resolvConf.RequireCookie != nil {
+			resolvConfig.RequireCookie = *resolvConf.RequireCookie
+		} else {
+			resolvConfig.RequireCookie = globalConfig.RequireCookie
+		}
+
+		hdl := handler.NewRaw(mux, resolv, *resolvConfig)
 		loaders = append(loaders, hdl)
 		for _, zone := range resolvConf.Zones {
 			mux.Handle(zone, hdl)

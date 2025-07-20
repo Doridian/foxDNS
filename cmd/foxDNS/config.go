@@ -43,7 +43,7 @@ type Config struct {
 		} `yaml:"nameservers"`
 		NameServerStrategy string `yaml:"nameserver-strategy"`
 
-		Config *handler.Config `yaml:"config"`
+		RequireCookie *bool `yaml:"require-cookie"`
 
 		MaxIdleTime time.Duration `yaml:"max-idle-time"`
 		Attempts    int           `yaml:"attempts"`

@@ -20,14 +20,14 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 	reply.SetRcode(msg, dns.RcodeSuccess)
 
-	ok, edns0Options := util.ApplyEDNS0ReplyEarly(msg, reply, wr, h.RequireCookie)
+	ok, edns0Options := util.ApplyEDNS0ReplyEarly(msg, reply, wr, h.requireCookie)
 	if !ok {
 		_ = wr.WriteMsg(reply)
 		return
 	}
 
 	defer func() {
-		util.ApplyEDNS0Reply(msg, reply, edns0Options, wr, h.RequireCookie)
+		util.ApplyEDNS0Reply(msg, reply, edns0Options, wr, h.requireCookie)
 		_ = wr.WriteMsg(reply)
 	}()
 

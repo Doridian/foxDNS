@@ -12,7 +12,7 @@ type Handler struct {
 	child Generator
 	mux   *dns.ServeMux
 
-	RequireCookie bool
+	requireCookie bool
 	soa           []dns.RR
 	ns            []dns.RR
 
