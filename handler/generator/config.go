@@ -41,11 +41,18 @@ func (h *Handler) loadConfig(config Config, zone string) {
 		return
 	}
 
+	h.zone = ""
 	if config.Zone != "" {
-		h.zone = dns.CanonicalName(config.Zone)
-	} else {
+		h.zone = config.Zone
+	} else if zone != "" {
 		h.zone = zone
 	}
+
+	if h.zone == "" {
+		panic("No zone specified for authoritative config")
+	}
+
+	h.zone = dns.CanonicalName(h.zone)
 
 	h.signatures = make(map[string]*dns.RRSIG)
 	h.enableSignatureCache = true
