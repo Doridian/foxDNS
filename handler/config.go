@@ -36,6 +36,7 @@ func (h *Handler) loadConfig(config Config, zone string) {
 	h.ns = nil
 	h.recursionAvailable = config.RecursionAvailable
 	h.authoritative = config.Authoritative
+	h.zone = ""
 
 	if !h.authoritative {
 		return
