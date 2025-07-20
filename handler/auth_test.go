@@ -1,11 +1,11 @@
-package generator_test
+package handler_test
 
 import (
 	"net"
 	"testing"
 	"time"
 
-	"github.com/Doridian/foxDNS/handler/generator"
+	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
@@ -38,8 +38,8 @@ func (t *TestHandler) HandleQuestion(q *dns.Question, _ net.IP) (recs []dns.RR, 
 	return t.recs, nil, nil, t.rcode
 }
 
-func testQuestion(t *testing.T, zone string, config generator.Config, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool, edns0 bool) {
-	wr := &generator.TestResponseWriter{}
+func testQuestion(t *testing.T, zone string, config handler.Config, q dns.Question, rr []dns.RR, soaRR []dns.RR, nxdomain bool, edns0 bool) {
+	wr := &handler.TestResponseWriter{}
 
 	testHandler := &TestHandler{
 		recs:  []dns.RR{},
@@ -55,7 +55,7 @@ func testQuestion(t *testing.T, zone string, config generator.Config, q dns.Ques
 	if edns0 {
 		qmsg.SetEdns0(util.UDPSize, false)
 	}
-	hdl := generator.New(nil, testHandler, zone, config)
+	hdl := handler.New(nil, testHandler, zone, config)
 	hdl.ServeDNS(wr, qmsg)
 
 	if edns0 {
@@ -81,7 +81,7 @@ func testQuestion(t *testing.T, zone string, config generator.Config, q dns.Ques
 }
 
 func TestBasics(t *testing.T) {
-	soaConfig := generator.Config{
+	soaConfig := handler.Config{
 		Authoritative: true,
 		SOATtl:        300 * time.Second,
 		NSTtl:         300 * time.Second,
@@ -96,7 +96,7 @@ func TestBasics(t *testing.T) {
 	zone := "example.com."
 
 	soaRecs := []dns.RR{
-		generator.FillAuthHeader(&dns.SOA{
+		handler.FillAuthHeader(&dns.SOA{
 			Ns:      "ns1.example.com.",
 			Mbox:    "hostmaster.example.com.",
 			Serial:  2022010169,
@@ -108,10 +108,10 @@ func TestBasics(t *testing.T) {
 	}
 
 	nsRecs := []dns.RR{
-		generator.FillAuthHeader(&dns.NS{
+		handler.FillAuthHeader(&dns.NS{
 			Ns: "ns1.example.com.",
 		}, dns.TypeNS, zone, 300),
-		generator.FillAuthHeader(&dns.NS{
+		handler.FillAuthHeader(&dns.NS{
 			Ns: "ns2.example.com.",
 		}, dns.TypeNS, zone, 300),
 	}

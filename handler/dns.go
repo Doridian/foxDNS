@@ -1,10 +1,9 @@
-package generator
+package handler
 
 import (
 	"log"
 	"time"
 
-	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
@@ -51,7 +50,7 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		return
 	}
 
-	defer handler.MeasureQuery(startTime, reply, h.child.GetName())
+	defer MeasureQuery(startTime, reply, h.child.GetName())
 
 	q.Name = dns.CanonicalName(q.Name)
 	remoteIP := util.ExtractIP(wr.RemoteAddr())

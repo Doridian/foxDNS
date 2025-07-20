@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/Doridian/foxDNS/handler/generator/rdns"
+	"github.com/Doridian/foxDNS/handler/rdns"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 )

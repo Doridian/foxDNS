@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Doridian/foxDNS/handler/generator"
+	"github.com/Doridian/foxDNS/handler"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +19,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 		return fakedTime
 	}
 
-	testWriter := &generator.TestResponseWriter{}
+	testWriter := &handler.TestResponseWriter{}
 	qmsg := &dns.Msg{
 		Question: []dns.Question{
 			{
@@ -53,7 +53,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 	// Fake time 0.8 seconds ahead to test TTL countdown not tripping just yet
 	fakedTime = timeBegin.Add(800 * time.Millisecond)
 
-	testWriter = &generator.TestResponseWriter{}
+	testWriter = &handler.TestResponseWriter{}
 	resolverGenerator.ServeDNS(testWriter, qmsg)
 
 	assert.True(t, testWriter.HadWrites)
@@ -75,7 +75,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 	// Fake time 3.1 seconds ahead to test TTL countdown
 	fakedTime = timeBegin.Add(3100 * time.Millisecond)
 
-	testWriter = &generator.TestResponseWriter{}
+	testWriter = &handler.TestResponseWriter{}
 	resolverGenerator.ServeDNS(testWriter, qmsg)
 
 	assert.True(t, testWriter.HadWrites)
@@ -97,7 +97,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 	// Fake time 6 secodns ahead to force record to be uncached
 	fakedTime = timeBegin.Add(6 * time.Second)
 
-	testWriter = &generator.TestResponseWriter{}
+	testWriter = &handler.TestResponseWriter{}
 	resolverGenerator.ServeDNS(testWriter, qmsg)
 
 	assert.True(t, testWriter.HadWrites)

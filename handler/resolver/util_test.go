@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Doridian/foxDNS/handler/generator"
-	"github.com/Doridian/foxDNS/handler/generator/static"
+	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/handler/resolver"
+	"github.com/Doridian/foxDNS/handler/static"
 	"github.com/Doridian/foxDNS/server"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +27,7 @@ func loadSimpleZone(zone string) dns.Handler {
 		panic(err)
 	}
 
-	return generator.New(nil, staticHandler, "example.com.", generator.Config{
+	return handler.New(nil, staticHandler, "example.com.", handler.Config{
 		Authoritative: false,
 	})
 }
@@ -62,7 +62,7 @@ func initTests() {
 func queryResolver(t *testing.T, q dns.Question) *dns.Msg {
 	initTests()
 
-	testWriter := &generator.TestResponseWriter{}
+	testWriter := &handler.TestResponseWriter{}
 	qmsg := &dns.Msg{
 		Question: []dns.Question{q},
 	}

@@ -1,4 +1,4 @@
-package generator
+package handler
 
 import (
 	"crypto/ecdsa"

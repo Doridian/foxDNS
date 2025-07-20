@@ -1,4 +1,4 @@
-package generator
+package handler
 
 import (
 	"github.com/Doridian/foxDNS/util"

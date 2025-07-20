@@ -4,14 +4,14 @@ import (
 	"net"
 	"testing"
 
-	"github.com/Doridian/foxDNS/handler/generator"
-	"github.com/Doridian/foxDNS/handler/generator/static"
+	"github.com/Doridian/foxDNS/handler"
+	"github.com/Doridian/foxDNS/handler/static"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 )
 
-func runStaticTest(handler generator.Generator, q *dns.Question) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+func runStaticTest(handler handler.Generator, q *dns.Question) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	return handler.HandleQuestion(q, net.IPv4(127, 0, 0, 1))
 }
 

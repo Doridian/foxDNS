@@ -4,8 +4,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Doridian/foxDNS/handler/generator"
-	"github.com/Doridian/foxDNS/handler/generator/localizer"
+	"github.com/Doridian/foxDNS/handler"
+	"github.com/Doridian/foxDNS/handler/localizer"
 	"gopkg.in/yaml.v3"
 )
 
@@ -14,21 +14,21 @@ type Config struct {
 	Templates interface{} `yaml:"templates"`
 
 	Global struct {
-		Listen            []string          `yaml:"listen"`
-		PrometheusListen  string            `yaml:"prometheus-listen"`
-		Config            *generator.Config `yaml:"config"`
-		UDPSize           int               `yaml:"udp-size"`
-		MaxRecursionDepth int               `yaml:"max-recursion-depth"`
+		Listen            []string        `yaml:"listen"`
+		PrometheusListen  string          `yaml:"prometheus-listen"`
+		Config            *handler.Config `yaml:"config"`
+		UDPSize           int             `yaml:"udp-size"`
+		MaxRecursionDepth int             `yaml:"max-recursion-depth"`
 	} `yaml:"global"`
 
 	RDNS []struct {
-		IPVersion  int                          `yaml:"ip_version"`
-		Suffix     string                       `yaml:"suffix"`
-		Subnets    []string                     `yaml:"subnets"`
-		PTRConfigs map[string]*generator.Config `yaml:"ptr-configs"`
-		AddrConfig *generator.Config            `yaml:"addr-config"`
-		AddressTtl time.Duration                `yaml:"address-ttl"`
-		PtrTtl     time.Duration                `yaml:"ptr-ttl"`
+		IPVersion  int                        `yaml:"ip_version"`
+		Suffix     string                     `yaml:"suffix"`
+		Subnets    []string                   `yaml:"subnets"`
+		PTRConfigs map[string]*handler.Config `yaml:"ptr-configs"`
+		AddrConfig *handler.Config            `yaml:"addr-config"`
+		AddressTtl time.Duration              `yaml:"address-ttl"`
+		PtrTtl     time.Duration              `yaml:"ptr-ttl"`
 	} `yaml:"rdns"`
 
 	Resolvers []struct {
@@ -42,6 +42,8 @@ type Config struct {
 			Timeout            time.Duration `yaml:"timeout"`
 		} `yaml:"nameservers"`
 		NameServerStrategy string `yaml:"nameserver-strategy"`
+
+		Config *handler.Config `yaml:"config"`
 
 		MaxIdleTime time.Duration `yaml:"max-idle-time"`
 		Attempts    int           `yaml:"attempts"`
@@ -69,23 +71,23 @@ type Config struct {
 			Zone     string                       `yaml:"zone"`
 			Subnets  []string                     `yaml:"subnets"`
 			Ttl      time.Duration                `yaml:"ttl"`
-			Config   *generator.Config            `yaml:"config"`
+			Config   *handler.Config              `yaml:"config"`
 			Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
 			V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
 		} `yaml:"zones"`
 	} `yaml:"localizers"`
 
 	StaticZones []struct {
-		Zone   string            `yaml:"zone"`
-		File   string            `yaml:"file"`
-		Config *generator.Config `yaml:"config"`
+		Zone   string          `yaml:"zone"`
+		File   string          `yaml:"file"`
+		Config *handler.Config `yaml:"config"`
 	} `yaml:"static-zones"`
 
 	AdLists struct {
-		AllowLists      []string          `yaml:"allow-lists"`
-		BlockLists      []string          `yaml:"block-lists"`
-		RefreshInterval time.Duration     `yaml:"refresh-interval"`
-		Config          *generator.Config `yaml:"config"`
+		AllowLists      []string        `yaml:"allow-lists"`
+		BlockLists      []string        `yaml:"block-lists"`
+		RefreshInterval time.Duration   `yaml:"refresh-interval"`
+		Config          *handler.Config `yaml:"config"`
 	} `yaml:"ad-lists"`
 }
 

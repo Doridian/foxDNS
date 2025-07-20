@@ -7,34 +7,34 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Doridian/foxDNS/handler/generator"
-	"github.com/Doridian/foxDNS/handler/generator/blackhole"
-	"github.com/Doridian/foxDNS/handler/generator/localizer"
-	"github.com/Doridian/foxDNS/handler/generator/rdns"
-	"github.com/Doridian/foxDNS/handler/generator/static"
+	"github.com/Doridian/foxDNS/handler"
+	"github.com/Doridian/foxDNS/handler/blackhole"
+	"github.com/Doridian/foxDNS/handler/localizer"
+	"github.com/Doridian/foxDNS/handler/rdns"
 	"github.com/Doridian/foxDNS/handler/resolver"
+	"github.com/Doridian/foxDNS/handler/static"
 	"github.com/Doridian/foxDNS/server"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var loaders = make([]generator.Loadable, 0)
+var loaders = make([]handler.Loadable, 0)
 var configFile string
 var srv *server.Server
 var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
-var globalConfig generator.Config
+var globalConfig handler.Config
 
-func getConfig(config *generator.Config) generator.Config {
+func getConfig(config *handler.Config) handler.Config {
 	if config != nil {
 		return *config
 	}
 	return globalConfig
 }
 
-func registerGenerator(mux *dns.ServeMux, gen generator.Generator, zone string, config generator.Config) *generator.Handler {
-	hdl := generator.New(mux, gen, zone, config)
+func registerGenerator(mux *dns.ServeMux, gen handler.Generator, zone string, config handler.Config) *handler.Handler {
+	hdl := handler.New(mux, gen, zone, config)
 	loaders = append(loaders, gen, hdl)
 	mux.Handle(zone, hdl)
 	return hdl
@@ -57,7 +57,7 @@ func reloadConfig() {
 		util.MaxRecursionDepth = config.Global.MaxRecursionDepth
 	}
 
-	loaders = make([]generator.Loadable, 0)
+	loaders = make([]handler.Loadable, 0)
 	mux := dns.NewServeMux()
 
 	globalConfig = *config.Global.Config
