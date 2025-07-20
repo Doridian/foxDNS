@@ -33,7 +33,7 @@ const (
 	StrategyFailover
 )
 
-type Handler struct {
+type Generator struct {
 	ServerStrategy ServerStrategy
 	Servers        []*ServerConfig
 
@@ -68,10 +68,10 @@ type Handler struct {
 	cacheCleanupTicker *time.Ticker
 }
 
-func New(servers []*ServerConfig) *Handler {
+func New(servers []*ServerConfig) *Generator {
 	cache, _ := lru.New[string, *cacheEntry](4096)
 
-	gen := &Handler{
+	gen := &Generator{
 		ServerStrategy: StrategyRoundRobin,
 		Servers:        servers,
 		MaxIdleTime:    time.Second * 15,
@@ -128,55 +128,55 @@ func New(servers []*ServerConfig) *Handler {
 	return gen
 }
 
-func (h *Handler) Refresh() error {
+func (g *Generator) Refresh() error {
 	return nil
 }
 
-func (h *Handler) Start() error {
-	err := h.Stop()
+func (g *Generator) Start() error {
+	err := g.Stop()
 	if err != nil {
 		return err
 	}
 
 	cacheCleanupTicker := time.NewTicker(time.Minute)
-	h.cacheCleanupTicker = cacheCleanupTicker
+	g.cacheCleanupTicker = cacheCleanupTicker
 	go func() {
 		for {
 			_, ok := <-cacheCleanupTicker.C
 			if !ok {
 				return
 			}
-			h.cleanupCache()
+			g.cleanupCache()
 		}
 	}()
 
-	connCleanupTicker := time.NewTicker(h.MaxIdleTime / 2)
-	h.connCleanupTicker = connCleanupTicker
+	connCleanupTicker := time.NewTicker(g.MaxIdleTime / 2)
+	g.connCleanupTicker = connCleanupTicker
 	go func() {
 		for {
 			_, ok := <-connCleanupTicker.C
 			if !ok {
 				return
 			}
-			h.cleanupAllQuerySlots()
+			g.cleanupAllQuerySlots()
 		}
 	}()
 
 	return nil
 }
 
-func (h *Handler) Stop() error {
-	if h.cacheCleanupTicker != nil {
-		h.cacheCleanupTicker.Stop()
-		h.cacheCleanupTicker = nil
+func (g *Generator) Stop() error {
+	if g.cacheCleanupTicker != nil {
+		g.cacheCleanupTicker.Stop()
+		g.cacheCleanupTicker = nil
 	}
-	if h.connCleanupTicker != nil {
-		h.connCleanupTicker.Stop()
-		h.connCleanupTicker = nil
+	if g.connCleanupTicker != nil {
+		g.connCleanupTicker.Stop()
+		g.connCleanupTicker = nil
 	}
 	return nil
 }
 
-func (h *Handler) GetName() string {
+func (g *Generator) GetName() string {
 	return "resolver"
 }

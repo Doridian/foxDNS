@@ -31,20 +31,20 @@ var (
 	}, []string{"server"})
 )
 
-func (h *Handler) acquireQuerySlot(currentTry int) (info *querySlotInfo, err error) {
+func (g *Generator) acquireQuerySlot(currentTry int) (info *querySlotInfo, err error) {
 	var server *ServerConfig
-	switch h.ServerStrategy {
+	switch g.ServerStrategy {
 	case StrategyRoundRobin:
-		server = h.Servers[h.lastServerIdx]
-		nextServerIdx := h.lastServerIdx + 1
-		if nextServerIdx >= len(h.Servers) {
+		server = g.Servers[g.lastServerIdx]
+		nextServerIdx := g.lastServerIdx + 1
+		if nextServerIdx >= len(g.Servers) {
 			nextServerIdx = 0
 		}
-		h.lastServerIdx = nextServerIdx
+		g.lastServerIdx = nextServerIdx
 	case StrategyRandom:
-		server = h.Servers[rand.Int()%len(h.Servers)]
+		server = g.Servers[rand.Int()%len(g.Servers)]
 	case StrategyFailover:
-		server = h.Servers[(currentTry-1)%len(h.Servers)]
+		server = g.Servers[(currentTry-1)%len(g.Servers)]
 	}
 
 	server.querySlotCond.L.Lock()
@@ -74,7 +74,7 @@ func (h *Handler) acquireQuerySlot(currentTry int) (info *querySlotInfo, err err
 	}
 }
 
-func (h *Handler) returnQuerySlot(info *querySlotInfo, err error) {
+func (g *Generator) returnQuerySlot(info *querySlotInfo, err error) {
 	if info == nil {
 		return
 	}
@@ -85,7 +85,7 @@ func (h *Handler) returnQuerySlot(info *querySlotInfo, err error) {
 	defer server.querySlotCond.L.Unlock()
 
 	if err == nil {
-		info.lastUse = h.CurrentTime()
+		info.lastUse = g.CurrentTime()
 		server.freeQuerySlots.PushFront(info)
 	} else {
 		log.Printf("Returning upstream connection to %s with error %v", info.server.Addr, err)
@@ -99,7 +99,7 @@ func (h *Handler) returnQuerySlot(info *querySlotInfo, err error) {
 	server.querySlotCond.Signal()
 }
 
-func (h *Handler) cleanupServerQuerySlots(server *ServerConfig) {
+func (g *Generator) cleanupServerQuerySlots(server *ServerConfig) {
 	server.querySlotCond.L.Lock()
 	defer server.querySlotCond.L.Unlock()
 
@@ -112,7 +112,7 @@ func (h *Handler) cleanupServerQuerySlots(server *ServerConfig) {
 		}
 		info := lastElem.Value.(*querySlotInfo)
 
-		if time.Since(info.lastUse) > h.MaxIdleTime {
+		if time.Since(info.lastUse) > g.MaxIdleTime {
 			server.freeQuerySlots.Remove(lastElem)
 			server.inFlightQueries--
 			openConnections.WithLabelValues(server.Addr).Set(float64(server.inFlightQueries))
@@ -128,8 +128,8 @@ func (h *Handler) cleanupServerQuerySlots(server *ServerConfig) {
 	}
 }
 
-func (h *Handler) cleanupAllQuerySlots() {
-	for _, server := range h.Servers {
-		h.cleanupServerQuerySlots(server)
+func (g *Generator) cleanupAllQuerySlots() {
+	for _, server := range g.Servers {
+		g.cleanupServerQuerySlots(server)
 	}
 }

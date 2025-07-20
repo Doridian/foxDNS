@@ -7,10 +7,10 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (h *Handler) HandleQuestion(q *dns.Question, _ net.IP) (answer []dns.RR, ns []dns.RR, edns0 []dns.EDNS0, rcode int) {
+func (g *Generator) HandleQuestion(q *dns.Question, _ net.IP) (answer []dns.RR, ns []dns.RR, edns0 []dns.EDNS0, rcode int) {
 	rcode = dns.RcodeServerFailure
 
-	cacheResult, matchType, upstreamReply, err := h.getOrAddCache(q, false, 1)
+	cacheResult, matchType, upstreamReply, err := g.getOrAddCache(q, false, 1)
 	if err != nil {
 		log.Printf("Error handling DNS request: %v", err)
 		return

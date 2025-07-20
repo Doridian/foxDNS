@@ -16,7 +16,7 @@ const dummyZone = "$TTL 5\n@ IN SOA ns1.example.com. hostmaster.example.com. 1 3
 const emptyZone = "$TTL 5\n@ IN SOA ns1.example.com. hostmaster.example.com. 1 3600 900 604800 300\n@ IN NS ns1.example.com.\n@ IN NS ns2.example.com."
 
 var dummyServer *server.Server
-var resolverGenerator *resolver.Handler
+var resolverGenerator *resolver.Generator
 var simpleHandler dns.Handler
 
 func loadSimpleZone(zone string) dns.Handler {

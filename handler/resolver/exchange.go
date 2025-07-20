@@ -25,8 +25,8 @@ var (
 	}, []string{"server"})
 )
 
-func (h *Handler) exchange(info *querySlotInfo, m *dns.Msg) (resp *dns.Msg, err error) {
-	startTime := h.CurrentTime()
+func (g *Generator) exchange(info *querySlotInfo, m *dns.Msg) (resp *dns.Msg, err error) {
+	startTime := g.CurrentTime()
 	m.Id = dns.Id()
 	resp, _, err = info.server.client.ExchangeWithConn(m, info.conn)
 
@@ -39,22 +39,22 @@ func (h *Handler) exchange(info *querySlotInfo, m *dns.Msg) (resp *dns.Msg, err 
 
 var ErrCookieMismatch = errors.New("client cookie returned from server invalid")
 
-func (h *Handler) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
+func (g *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) {
 	var info *querySlotInfo
 	keepConn := false
 
-	for currentTry := 1; currentTry <= h.Attempts; currentTry++ {
+	for currentTry := 1; currentTry <= g.Attempts; currentTry++ {
 		if info != nil && !keepConn {
-			h.returnQuerySlot(info, err)
+			g.returnQuerySlot(info, err)
 			upstreamQueryErrors.WithLabelValues(info.server.Addr).Inc()
 			info = nil
 			err = nil
-			time.Sleep(h.RetryWait)
+			time.Sleep(g.RetryWait)
 		}
 
 		keepConn = false
 		if info == nil {
-			info, err = h.acquireQuerySlot(currentTry)
+			info, err = g.acquireQuerySlot(currentTry)
 		}
 
 		if err != nil {
@@ -84,9 +84,9 @@ func (h *Handler) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) 
 				Cookie: hex.EncodeToString(append(clientCookie, info.serverCookie...)),
 			})
 		}
-		util.SetEDNS0(m, edns0Opts, h.shouldPadLen, true)
+		util.SetEDNS0(m, edns0Opts, g.shouldPadLen, true)
 
-		resp, err = h.exchange(info, m)
+		resp, err = g.exchange(info, m)
 		if err != nil {
 			continue
 		}
@@ -129,13 +129,13 @@ func (h *Handler) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error) 
 			continue
 		}
 
-		h.returnQuerySlot(info, nil)
+		g.returnQuerySlot(info, nil)
 		return
 	}
 
-	h.returnQuerySlot(info, err)
+	g.returnQuerySlot(info, err)
 
-	if h.LogFailures && (err != nil || resp == nil || resp.Rcode == dns.RcodeServerFailure) {
+	if g.LogFailures && (err != nil || resp == nil || resp.Rcode == dns.RcodeServerFailure) {
 		rcodeStr := ""
 		if resp != nil {
 			rcodeStr = dns.RcodeToString[resp.Rcode]
