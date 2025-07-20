@@ -41,8 +41,11 @@ func (h *Handler) loadConfig(config Config, zone string) {
 		return
 	}
 
-	if zone == "" {
+	switch zone {
+	case SpecialZoneEmpty:
 		panic("Tried to use authoritative config for zoneless handler")
+	case SpecialZoneFake:
+		return
 	}
 
 	if config.Zone != "" {

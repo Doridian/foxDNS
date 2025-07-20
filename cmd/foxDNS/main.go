@@ -187,7 +187,7 @@ func reloadConfig() {
 
 		loaders = append(loaders, resolv)
 
-		hdl := handler.New(mux, resolv, "", getConfig(resolvConf.Config))
+		hdl := handler.New(mux, resolv, handler.SpecialZoneEmpty, getConfig(resolvConf.Config))
 		loaders = append(loaders, hdl)
 		for _, zone := range resolvConf.Zones {
 			mux.Handle(zone, hdl)
