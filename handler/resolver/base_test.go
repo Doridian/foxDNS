@@ -9,7 +9,7 @@ import (
 )
 
 func TestExistingRecord(t *testing.T) {
-	response := queryResolver(t, dns.Question{
+	response := queryResolver(dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
@@ -32,7 +32,7 @@ func TestExistingRecord(t *testing.T) {
 }
 
 func TestNonExistingRecord(t *testing.T) {
-	response := queryResolver(t, dns.Question{
+	response := queryResolver(dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeMX,
 		Qclass: dns.ClassINET,
@@ -61,7 +61,7 @@ func TestNonExistingRecord(t *testing.T) {
 }
 
 func TestNXDOMAIN(t *testing.T) {
-	response := queryResolver(t, dns.Question{
+	response := queryResolver(dns.Question{
 		Name:   "nx.example.com.",
 		Qtype:  dns.TypeMX,
 		Qclass: dns.ClassINET,
@@ -90,7 +90,7 @@ func TestNXDOMAIN(t *testing.T) {
 }
 
 func TestRefusesNonINET(t *testing.T) {
-	response := queryResolver(t, dns.Question{
+	response := queryResolver(dns.Question{
 		Name:   "nx.example.com.",
 		Qtype:  dns.TypeMX,
 		Qclass: dns.ClassCHAOS,

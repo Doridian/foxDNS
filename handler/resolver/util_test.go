@@ -2,7 +2,7 @@ package resolver_test
 
 import (
 	"bytes"
-	"testing"
+	"net"
 	"time"
 
 	"github.com/Doridian/foxDNS/handler"
@@ -10,7 +10,6 @@ import (
 	"github.com/Doridian/foxDNS/handler/static"
 	"github.com/Doridian/foxDNS/server"
 	"github.com/miekg/dns"
-	"github.com/stretchr/testify/assert"
 )
 
 const dummyZone = "$TTL 5\n@ IN SOA ns1.example.com. hostmaster.example.com. 1 3600 900 604800 300\n@ IN NS ns1.example.com.\n@ IN NS ns2.example.com.\n@ IN A 10.13.37.0"
@@ -59,16 +58,16 @@ func initTests() {
 	}
 }
 
-func queryResolver(t *testing.T, q dns.Question) *dns.Msg {
+func queryResolver(q dns.Question) *dns.Msg {
 	initTests()
 
-	testWriter := &handler.TestResponseWriter{}
-	qmsg := &dns.Msg{
-		Question: []dns.Question{q},
+	answer, ns, _, rcode := resolverGenerator.HandleQuestion(&q, net.IPv4(127, 0, 0, 1))
+
+	return &dns.Msg{
+		MsgHdr: dns.MsgHdr{
+			Rcode: rcode,
+		},
+		Answer: answer,
+		Ns:     ns,
 	}
-	resolverGenerator.ServeDNS(testWriter, qmsg)
-
-	assert.True(t, testWriter.HadWrites)
-
-	return testWriter.LastMsg
 }
