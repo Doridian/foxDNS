@@ -7,3 +7,4 @@ import (
 const DefaultTimeout = time.Duration(5) * time.Second
 
 var UDPSize uint16 = 1232
+var MaxRecursionDepth uint64 = 10

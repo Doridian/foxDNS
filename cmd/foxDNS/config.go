@@ -14,10 +14,11 @@ type Config struct {
 	Templates interface{} `yaml:"templates"`
 
 	Global struct {
-		Listen           []string          `yaml:"listen"`
-		PrometheusListen string            `yaml:"prometheus-listen"`
-		Config           *generator.Config `yaml:"config"`
-		UDPSize          int               `yaml:"udp-size"`
+		Listen            []string          `yaml:"listen"`
+		PrometheusListen  string            `yaml:"prometheus-listen"`
+		Config            *generator.Config `yaml:"config"`
+		UDPSize           int               `yaml:"udp-size"`
+		MaxRecursionDepth uint64            `yaml:"max-recursion-depth"`
 	} `yaml:"global"`
 
 	RDNS []struct {

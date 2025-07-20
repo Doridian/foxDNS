@@ -37,10 +37,11 @@ func SetEDNS0(msg *dns.Msg, option []dns.EDNS0, paddingLen int, dnssecOk bool) *
 }
 
 var secureProtocols = map[string]bool{
-	"tcp":     true,
-	"tcp-tls": true,
-	"tcp4":    true,
-	"tcp6":    true,
+	"tcp":        true,
+	"tcp-tls":    true,
+	"tcp4":       true,
+	"tcp6":       true,
+	NetworkLocal: true,
 }
 
 func IsSecureProtocol(proto string) bool {

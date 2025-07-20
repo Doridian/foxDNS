@@ -53,6 +53,9 @@ func reloadConfig() {
 	if config.Global.UDPSize > 0 {
 		util.UDPSize = uint16(config.Global.UDPSize)
 	}
+	if config.Global.MaxRecursionDepth > 0 {
+		util.MaxRecursionDepth = config.Global.MaxRecursionDepth
+	}
 
 	loaders = make([]generator.Loadable, 0)
 	mux := dns.NewServeMux()

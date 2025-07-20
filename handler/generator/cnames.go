@@ -13,7 +13,7 @@ type CNAMEProxyResponseWriter struct {
 	reply *dns.Msg
 }
 
-func (h *Handler) resolveIfCNAME(reply *dns.Msg, q *dns.Question, wr util.Addressable) {
+func (h *Handler) resolveIfCNAME(reply *dns.Msg, q *dns.Question, wr util.Addressable, queryDepth uint64) {
 	// There can only legally ever be 1 CNAME, so dont even bother checking is multiple records
 	if reply.Rcode != dns.RcodeSuccess || q.Qtype == dns.TypeCNAME || len(reply.Answer) != 1 {
 		return
@@ -30,6 +30,7 @@ func (h *Handler) resolveIfCNAME(reply *dns.Msg, q *dns.Question, wr util.Addres
 
 	cnameQ := &dns.Msg{}
 	cnameQ.SetQuestion(cname.Target, q.Qtype)
+	util.SetQueryDepth(cnameQ, queryDepth+1)
 
 	h.mux.ServeDNS(resp, cnameQ)
 
@@ -51,7 +52,7 @@ func (c *CNAMEProxyResponseWriter) LocalAddr() net.Addr {
 }
 
 func (c *CNAMEProxyResponseWriter) Network() string {
-	return c.wr.Network()
+	return util.NetworkLocal
 }
 
 func (c *CNAMEProxyResponseWriter) RemoteAddr() net.Addr {
