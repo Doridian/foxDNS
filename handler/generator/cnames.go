@@ -5,9 +5,10 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (h *Handler) resolveIfCNAME(reply *dns.Msg, msg *dns.Msg, q *dns.Question, wr util.Addressable) {
+func (h *Handler) resolveIfCNAME(reply *dns.Msg, questions []dns.Question, wr util.Addressable) {
+	qtype := questions[0].Qtype
 	// There can only legally ever be 1 CNAME, so dont even bother checking is multiple records
-	if reply.Rcode != dns.RcodeSuccess || q.Qtype == dns.TypeCNAME || len(reply.Answer) != 1 {
+	if reply.Rcode != dns.RcodeSuccess || qtype == dns.TypeCNAME || len(reply.Answer) != 1 {
 		return
 	}
 
@@ -16,8 +17,10 @@ func (h *Handler) resolveIfCNAME(reply *dns.Msg, msg *dns.Msg, q *dns.Question, 
 		return
 	}
 
-	for auxQs := range msg.Question {
-		if msg.Question[auxQs].Name == cname.Target {
+	target := dns.CanonicalName(cname.Target)
+
+	for _, q := range questions {
+		if q.Name == target {
 			return // Already queried this CNAME
 		}
 	}
@@ -27,8 +30,8 @@ func (h *Handler) resolveIfCNAME(reply *dns.Msg, msg *dns.Msg, q *dns.Question, 
 	}
 
 	cnameQ := &dns.Msg{}
-	cnameQ.SetQuestion(cname.Target, q.Qtype)
-	cnameQ.Question = append(cnameQ.Question, msg.Question...)
+	cnameQ.SetQuestion(target, qtype)
+	cnameQ.Question = append(cnameQ.Question, questions...)
 
 	h.mux.ServeDNS(resp, cnameQ)
 
