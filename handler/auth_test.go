@@ -33,7 +33,7 @@ func (t *TestHandler) Refresh() error {
 	return nil
 }
 
-func (t *TestHandler) HandleQuestion(q *dns.Question, _ net.IP) (recs []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int) {
+func (t *TestHandler) HandleQuestion(q *dns.Question, _ bool, _ net.IP) (recs []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int) {
 	t.q = q
 	return t.recs, nil, nil, t.rcode
 }

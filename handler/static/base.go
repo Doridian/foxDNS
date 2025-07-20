@@ -137,7 +137,7 @@ func (r *Generator) findAuthorityRecords(q *dns.Question, rcodeNameError int) ([
 	return nil, nil, nil, rcodeNameError
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+func (r *Generator) HandleQuestion(q *dns.Question, recurse bool, _ net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	r.recordsLock.RLock()
 	defer r.recordsLock.RUnlock()
 
@@ -166,7 +166,7 @@ func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.R
 		Name:   cname.Target,
 		Qtype:  q.Qtype,
 		Qclass: q.Qclass,
-	}, nil)
+	}, recurse, nil)
 
 	if localResolvedRecs != nil {
 		typedRecs = append(typedRecs, localResolvedRecs...)

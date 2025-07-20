@@ -91,7 +91,7 @@ func (r *Generator) isAllowed(ip net.IP) bool {
 	return false
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, _ net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+func (r *Generator) HandleQuestion(q *dns.Question, _ bool, _ net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	var resp dns.RR
 	var ttl uint32
 

@@ -15,7 +15,7 @@ func runRDNSTest(t *testing.T, handler *rdns.Generator, host string, qtype uint1
 		Name:   host,
 		Qtype:  qtype,
 		Qclass: dns.ClassINET,
-	}, net.IPv4(127, 0, 0, 1))
+	}, true, net.IPv4(127, 0, 0, 1))
 	assert.Equal(t, dns.RcodeSuccess, rcode)
 
 	if expected == nil {

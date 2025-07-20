@@ -7,7 +7,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (g *Generator) HandleQuestion(q *dns.Question, _ net.IP) (answer []dns.RR, ns []dns.RR, edns0 []dns.EDNS0, rcode int) {
+func (g *Generator) HandleQuestion(q *dns.Question, recurse bool, _ net.IP) (answer []dns.RR, ns []dns.RR, edns0 []dns.EDNS0, rcode int) {
 	rcode = dns.RcodeServerFailure
 
 	cacheResult, matchType, upstreamReply, err := g.getOrAddCache(q, false, 1)
