@@ -83,10 +83,9 @@ type Config struct {
 	} `yaml:"static-zones"`
 
 	AdLists struct {
-		AllowLists      []string        `yaml:"allow-lists"`
-		BlockLists      []string        `yaml:"block-lists"`
-		RefreshInterval time.Duration   `yaml:"refresh-interval"`
-		Config          *handler.Config `yaml:"config"`
+		AllowLists      []string      `yaml:"allow-lists"`
+		BlockLists      []string      `yaml:"block-lists"`
+		RefreshInterval time.Duration `yaml:"refresh-interval"`
 	} `yaml:"ad-lists"`
 }
 

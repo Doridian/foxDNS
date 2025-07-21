@@ -26,8 +26,6 @@ type Adlist struct {
 	managedHosts map[string]string
 	refreshLock  sync.Mutex
 
-	config handler.Config
-
 	mux             *dns.ServeMux
 	handlerMap      map[string]dns.Handler
 	refreshInterval time.Duration
@@ -51,7 +49,7 @@ var hardcodeIgnoredAdHosts = map[string]bool{
 	".":                      true,
 }
 
-func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refreshInterval time.Duration, config handler.Config) *Adlist {
+func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refreshInterval time.Duration) *Adlist {
 	blockListsMap := make(adlistMap)
 	for _, list := range blockLists {
 		blockListsMap[list] = nil
@@ -65,7 +63,6 @@ func NewAdlist(blockLists []string, allowLists []string, mux *dns.ServeMux, refr
 		blockLists:      blockListsMap,
 		allowLists:      allowListsMap,
 		mux:             mux,
-		config:          config,
 		handlerMap:      make(map[string]dns.Handler),
 		managedHosts:    make(map[string]string),
 		refreshInterval: refreshInterval,
@@ -151,7 +148,7 @@ func (r *Adlist) getHandler(list string) dns.Handler {
 	hdl, ok := r.handlerMap[list]
 	if !ok {
 		gen := New("adlist: " + list)
-		hdl = handler.NewRaw(nil, gen, true, r.config)
+		hdl = handler.NewRaw(nil, gen, true)
 		r.handlerMap[list] = hdl
 	}
 	return hdl

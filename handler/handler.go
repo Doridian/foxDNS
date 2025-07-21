@@ -28,21 +28,21 @@ type Handler struct {
 }
 
 func New(mux *dns.ServeMux, child Generator, zone string, authoritative bool, config Config) *Handler {
-	return new(mux, child, zone, authoritative, false, config)
-}
-
-func NewRaw(mux *dns.ServeMux, child Generator, authoritative bool, config Config) *Handler {
-	return new(mux, child, "", authoritative, true, config)
-}
-
-func new(mux *dns.ServeMux, child Generator, zone string, authoritative bool, raw bool, config Config) *Handler {
 	hdl := &Handler{
 		child:         child,
 		mux:           mux,
 		authoritative: authoritative,
 	}
-	hdl.loadConfig(config, zone, raw)
+	hdl.loadConfig(config, zone)
 	return hdl
+}
+
+func NewRaw(mux *dns.ServeMux, child Generator, authoritative bool) *Handler {
+	return &Handler{
+		child:         child,
+		mux:           mux,
+		authoritative: authoritative,
+	}
 }
 
 func (h *Handler) clearCache() {

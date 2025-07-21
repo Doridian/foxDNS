@@ -27,16 +27,8 @@ type Config struct {
 	DNSSECCacheSignatures bool   `yaml:"dnssec-cache-signatures"`
 }
 
-func (h *Handler) loadConfig(config Config, zone string, raw bool) {
-	h.soa = nil
-	h.ns = nil
-	h.zone = ""
-
+func (h *Handler) loadConfig(config Config, zone string) {
 	if !h.authoritative {
-		return
-	}
-
-	if raw {
 		return
 	}
 

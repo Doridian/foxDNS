@@ -187,7 +187,7 @@ func reloadConfig() {
 		}
 
 		loaders = append(loaders, resolv)
-		hdl := handler.NewRaw(mux, resolv, false, globalConfig)
+		hdl := handler.NewRaw(mux, resolv, false)
 		loaders = append(loaders, hdl)
 		for _, zone := range resolvConf.Zones {
 			mux.Handle(zone, hdl)
@@ -253,7 +253,7 @@ func reloadConfig() {
 	}
 
 	if len(config.AdLists.BlockLists) > 0 {
-		adlistGen := blackhole.NewAdlist(config.AdLists.BlockLists, config.AdLists.AllowLists, mux, config.AdLists.RefreshInterval, getConfig(config.AdLists.Config))
+		adlistGen := blackhole.NewAdlist(config.AdLists.BlockLists, config.AdLists.AllowLists, mux, config.AdLists.RefreshInterval)
 		loaders = append(loaders, adlistGen)
 	}
 
