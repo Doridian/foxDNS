@@ -38,7 +38,8 @@ localizers:
 
 static-zones:
   - zone: static.example.com
-    file: static.example.com.db
+    files:
+      - static.example.com.db
 
 ad-lists:
   block-lists:
