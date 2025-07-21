@@ -2,22 +2,11 @@ package handler
 
 import (
 	"os"
-	"time"
 
 	"github.com/miekg/dns"
 )
 
 type Config struct {
-	Nameservers []string      `yaml:"nameservers"`
-	Mbox        string        `yaml:"mailbox"`
-	SOATtl      time.Duration `yaml:"soa-ttl"`
-	NSTtl       time.Duration `yaml:"ns-ttl"`
-	Serial      uint32        `yaml:"serial"`
-	Refresh     time.Duration `yaml:"refresh"`
-	Retry       time.Duration `yaml:"retry"`
-	Expire      time.Duration `yaml:"expire"`
-	MinTtl      time.Duration `yaml:"min-ttl"`
-
 	Zone string `yaml:"zone"`
 
 	DNSSECPublicZSKFile   string `yaml:"dnssec-public-zsk"`
@@ -46,26 +35,6 @@ func (h *Handler) loadConfig(config Config, zone string) {
 
 	h.signatures = make(map[string]*dns.RRSIG)
 	h.enableSignatureCache = true
-
-	h.soa = []dns.RR{
-		FillAuthHeader(&dns.SOA{
-			Ns:      dns.CanonicalName(config.Nameservers[0]),
-			Mbox:    dns.CanonicalName(config.Mbox),
-			Serial:  config.Serial,
-			Refresh: uint32(config.Refresh.Seconds()),
-			Retry:   uint32(config.Retry.Seconds()),
-			Expire:  uint32(config.Expire.Seconds()),
-			Minttl:  uint32(config.MinTtl.Seconds()),
-		}, dns.TypeSOA, h.zone, uint32(config.SOATtl.Seconds())),
-	}
-
-	h.ns = make([]dns.RR, 0, len(config.Nameservers))
-	nsTtl := uint32(config.NSTtl.Seconds())
-	for _, ns := range config.Nameservers {
-		h.ns = append(h.ns, FillAuthHeader(&dns.NS{
-			Ns: dns.CanonicalName(ns),
-		}, dns.TypeNS, h.zone, nsTtl))
-	}
 
 	if config.DNSSECPublicZSKFile != "" {
 		// Load ZSK

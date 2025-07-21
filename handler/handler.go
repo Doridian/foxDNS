@@ -12,9 +12,6 @@ type Handler struct {
 	child Generator
 	mux   *dns.ServeMux
 
-	soa []dns.RR
-	ns  []dns.RR
-
 	zone          string
 	authoritative bool
 
