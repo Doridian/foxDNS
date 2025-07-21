@@ -66,7 +66,7 @@ type Config struct {
 
 	StaticZones []struct {
 		Zone   string               `yaml:"zone"`
-		File   string               `yaml:"file"`
+		Files  []string             `yaml:"files"`
 		DNSSEC *static.DNSSECConfig `yaml:"dnssec"`
 	} `yaml:"static-zones"`
 
