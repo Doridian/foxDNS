@@ -176,6 +176,8 @@ func reloadConfig() {
 				}
 			}
 
+			// TODO: This will turn into a sub-handler on static, so then
+			//       this entire function will go away
 			registerAuthGenerator(mux, loc, locConfig.Zone)
 		}
 
@@ -189,7 +191,9 @@ func reloadConfig() {
 			if err != nil {
 				log.Panicf("Error loading static zone file %s: %v", statConf.File, err)
 			}
-			registerAuthGenerator(mux, stat, statConf.Zone)
+
+			loaders = append(loaders, stat)
+			mux.Handle(statConf.Zone, handler.New(stat, true))
 		}
 
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))
