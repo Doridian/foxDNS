@@ -55,7 +55,7 @@ func testQuestion(t *testing.T, zone string, config handler.Config, q dns.Questi
 	if edns0 {
 		qmsg.SetEdns0(util.UDPSize, false)
 	}
-	hdl := handler.New(nil, testHandler, zone, config)
+	hdl := handler.New(nil, testHandler, zone, true, config)
 	hdl.ServeDNS(wr, qmsg)
 
 	if edns0 {
@@ -82,16 +82,15 @@ func testQuestion(t *testing.T, zone string, config handler.Config, q dns.Questi
 
 func TestBasics(t *testing.T) {
 	soaConfig := handler.Config{
-		Authoritative: true,
-		SOATtl:        300 * time.Second,
-		NSTtl:         300 * time.Second,
-		Mbox:          "hostmaster.example.com",
-		Serial:        2022010169,
-		Refresh:       43200 * time.Second,
-		Retry:         3600 * time.Second,
-		Expire:        86400 * time.Second,
-		MinTtl:        300 * time.Second,
-		Nameservers:   []string{"ns1.example.com", "ns2.example.com"},
+		SOATtl:      300 * time.Second,
+		NSTtl:       300 * time.Second,
+		Mbox:        "hostmaster.example.com",
+		Serial:      2022010169,
+		Refresh:     43200 * time.Second,
+		Retry:       3600 * time.Second,
+		Expire:      86400 * time.Second,
+		MinTtl:      300 * time.Second,
+		Nameservers: []string{"ns1.example.com", "ns2.example.com"},
 	}
 	zone := "example.com."
 

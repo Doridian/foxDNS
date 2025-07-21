@@ -12,9 +12,8 @@ type Handler struct {
 	child Generator
 	mux   *dns.ServeMux
 
-	requireCookie bool
-	soa           []dns.RR
-	ns            []dns.RR
+	soa []dns.RR
+	ns  []dns.RR
 
 	zone          string
 	authoritative bool
@@ -26,22 +25,21 @@ type Handler struct {
 	zskPrivateKey        crypto.PrivateKey
 	kskDNSKEY            *dns.DNSKEY
 	kskPrivateKey        crypto.PrivateKey
-
-	recursionAvailable bool
 }
 
-func New(mux *dns.ServeMux, child Generator, zone string, config Config) *Handler {
-	return new(mux, child, zone, false, config)
+func New(mux *dns.ServeMux, child Generator, zone string, authoritative bool, config Config) *Handler {
+	return new(mux, child, zone, authoritative, false, config)
 }
 
-func NewRaw(mux *dns.ServeMux, child Generator, config Config) *Handler {
-	return new(mux, child, "", true, config)
+func NewRaw(mux *dns.ServeMux, child Generator, authoritative bool, config Config) *Handler {
+	return new(mux, child, "", authoritative, true, config)
 }
 
-func new(mux *dns.ServeMux, child Generator, zone string, raw bool, config Config) *Handler {
+func new(mux *dns.ServeMux, child Generator, zone string, authoritative bool, raw bool, config Config) *Handler {
 	hdl := &Handler{
-		child: child,
-		mux:   mux,
+		child:         child,
+		mux:           mux,
+		authoritative: authoritative,
 	}
 	hdl.loadConfig(config, zone, raw)
 	return hdl

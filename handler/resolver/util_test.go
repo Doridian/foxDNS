@@ -26,9 +26,7 @@ func loadSimpleZone(zone string) dns.Handler {
 		panic(err)
 	}
 
-	return handler.New(nil, staticHandler, "example.com.", handler.Config{
-		Authoritative: false,
-	})
+	return handler.New(nil, staticHandler, "example.com.", false, handler.Config{})
 }
 
 func initTests() {

@@ -11,10 +11,6 @@ global:
     expire: 336h
     min-ttl: 1h
 
-    authoritative: true
-    require-cookie: false
-    recursion-available: true
-
     dnssec-cache-signatures: true
 
   listen:

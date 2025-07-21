@@ -33,8 +33,8 @@ func getConfig(config *handler.Config) handler.Config {
 	return globalConfig
 }
 
-func registerGenerator(mux *dns.ServeMux, gen handler.Generator, zone string, config handler.Config) *handler.Handler {
-	hdl := handler.New(mux, gen, zone, config)
+func registerAuthGenerator(mux *dns.ServeMux, gen handler.Generator, zone string, config handler.Config) *handler.Handler {
+	hdl := handler.New(mux, gen, zone, true, config)
 	loaders = append(loaders, gen, hdl)
 	mux.Handle(zone, hdl)
 	return hdl
@@ -56,6 +56,7 @@ func reloadConfig() {
 	if config.Global.MaxRecursionDepth > 0 {
 		util.MaxRecursionDepth = config.Global.MaxRecursionDepth
 	}
+	util.RequireCookie = config.Global.RequireCookie
 
 	loaders = make([]handler.Loadable, 0)
 	mux := dns.NewServeMux()
@@ -88,7 +89,7 @@ func reloadConfig() {
 			rdnsGen.PtrTtl = uint32(rdnsConf.PtrTtl.Seconds())
 		}
 
-		registerGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), getConfig(rdnsConf.AddrConfig))
+		registerAuthGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), getConfig(rdnsConf.AddrConfig))
 
 		for zone, ptrAuthConfig := range rdnsConf.PTRConfigs {
 			rdnsConf.PTRConfigs[dns.CanonicalName(zone)] = ptrAuthConfig
@@ -98,7 +99,7 @@ func reloadConfig() {
 
 		ptrZones := rdnsGen.GetPTRZones()
 		for _, zone := range ptrZones {
-			registerGenerator(mux, rdnsGen, zone, getConfig(rdnsConf.PTRConfigs[zone]))
+			registerAuthGenerator(mux, rdnsGen, zone, getConfig(rdnsConf.PTRConfigs[zone]))
 		}
 	}
 
@@ -186,18 +187,7 @@ func reloadConfig() {
 		}
 
 		loaders = append(loaders, resolv)
-
-		resolvConfig := &handler.Config{
-			Authoritative:      false,
-			RecursionAvailable: true,
-		}
-		if resolvConf.RequireCookie != nil {
-			resolvConfig.RequireCookie = *resolvConf.RequireCookie
-		} else {
-			resolvConfig.RequireCookie = globalConfig.RequireCookie
-		}
-
-		hdl := handler.NewRaw(mux, resolv, *resolvConfig)
+		hdl := handler.NewRaw(mux, resolv, false, globalConfig)
 		loaders = append(loaders, hdl)
 		for _, zone := range resolvConf.Zones {
 			mux.Handle(zone, hdl)
@@ -243,7 +233,7 @@ func reloadConfig() {
 
 			locGenConfig := getConfig(locConfig.Config)
 			locGenConfig.DNSSECCacheSignatures = false
-			registerGenerator(mux, loc, locConfig.Zone, locGenConfig)
+			registerAuthGenerator(mux, loc, locConfig.Zone, locGenConfig)
 		}
 
 		log.Printf("Localizer enabled for %d zones", len(config.Localizers.Zones))
@@ -256,7 +246,7 @@ func reloadConfig() {
 			if err != nil {
 				log.Panicf("Error loading static zone file %s: %v", statConf.File, err)
 			}
-			registerGenerator(mux, stat, statConf.Zone, getConfig(statConf.Config))
+			registerAuthGenerator(mux, stat, statConf.Zone, getConfig(statConf.Config))
 		}
 
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))

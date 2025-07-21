@@ -15,19 +15,19 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		Compress: true,
 		MsgHdr: dns.MsgHdr{
 			Authoritative:      h.authoritative,
-			RecursionAvailable: h.recursionAvailable,
+			RecursionAvailable: util.MaxRecursionDepth > 0,
 		},
 	}
 	reply.SetRcode(msg, dns.RcodeSuccess)
 
-	ok, edns0Options := util.ApplyEDNS0ReplyEarly(msg, reply, wr, h.requireCookie)
+	ok, edns0Options := util.ApplyEDNS0ReplyEarly(msg, reply, wr)
 	if !ok {
 		_ = wr.WriteMsg(reply)
 		return
 	}
 
 	defer func() {
-		util.ApplyEDNS0Reply(msg, reply, edns0Options, wr, h.requireCookie)
+		util.ApplyEDNS0Reply(msg, reply, edns0Options, wr)
 		_ = wr.WriteMsg(reply)
 	}()
 
@@ -52,7 +52,7 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 
 	q.Name = dns.CanonicalName(q.Name)
 	remoteIP := util.ExtractIP(wr.RemoteAddr())
-	recurse := msg.RecursionDesired && h.recursionAvailable
+	recurse := msg.RecursionDesired && queryDepth < util.MaxRecursionDepth
 
 	reply.Answer = nil
 	if h.authoritative && q.Name == h.zone {
@@ -82,7 +82,7 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		}
 	}
 
-	if recurse && queryDepth < util.MaxRecursionDepth {
+	if recurse {
 		h.resolveIfCNAME(reply, msg.Question, wr)
 		// TODO: Resolve NS referrals
 	}

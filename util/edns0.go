@@ -48,7 +48,7 @@ func IsSecureProtocol(proto string) bool {
 	return secureProtocols[proto]
 }
 
-func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr Addressable, requireCookie bool) *dns.OPT {
+func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr Addressable) *dns.OPT {
 	queryEdns0 := query.IsEdns0()
 	if queryEdns0 == nil {
 		if reply.Rcode > 0xF {
@@ -58,7 +58,7 @@ func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr Addr
 		return nil
 	}
 
-	paddingAllowed := requireCookie || IsSecureProtocol(wr.Network())
+	paddingAllowed := RequireCookie || IsSecureProtocol(wr.Network())
 	clientRequestedPadding := false
 
 	for _, opt := range queryEdns0.Option {
@@ -76,15 +76,16 @@ func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr Addr
 	return SetEDNS0(reply, option, paddingLen, queryEdns0.Do())
 }
 
-func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr Addressable, requireCookie bool) (bool, []dns.EDNS0) {
+func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr Addressable) (bool, []dns.EDNS0) {
 	queryEdns0 := query.IsEdns0()
 
+	doRequireCookie := RequireCookie
 	if IsSecureProtocol(wr.Network()) {
-		requireCookie = false
+		doRequireCookie = false
 	}
 
 	if queryEdns0 == nil {
-		if requireCookie {
+		if doRequireCookie {
 			reply.Rcode = dns.RcodeRefused
 			return false, nil
 		}
@@ -142,7 +143,7 @@ func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr Addressable, requir
 		break
 	}
 
-	if requireCookie && !cookieMatch {
+	if doRequireCookie && !cookieMatch {
 		if cookieFound {
 			reply.Rcode = dns.RcodeBadCookie
 		} else {

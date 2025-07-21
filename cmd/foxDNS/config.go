@@ -19,6 +19,7 @@ type Config struct {
 		Config            *handler.Config `yaml:"config"`
 		UDPSize           int             `yaml:"udp-size"`
 		MaxRecursionDepth int             `yaml:"max-recursion-depth"`
+		RequireCookie     bool            `yaml:"require-cookie"`
 	} `yaml:"global"`
 
 	RDNS []struct {
@@ -42,8 +43,6 @@ type Config struct {
 			Timeout            time.Duration `yaml:"timeout"`
 		} `yaml:"nameservers"`
 		NameServerStrategy string `yaml:"nameserver-strategy"`
-
-		RequireCookie *bool `yaml:"require-cookie"`
 
 		MaxIdleTime time.Duration `yaml:"max-idle-time"`
 		Attempts    int           `yaml:"attempts"`

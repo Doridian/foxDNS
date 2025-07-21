@@ -20,10 +20,6 @@ type Config struct {
 
 	Zone string `yaml:"zone"`
 
-	RequireCookie      bool `yaml:"require-cookie"`
-	Authoritative      bool `yaml:"authoritative"`
-	RecursionAvailable bool `yaml:"recursion-available"`
-
 	DNSSECPublicZSKFile   string `yaml:"dnssec-public-zsk"`
 	DNSSECPrivateZSKFile  string `yaml:"dnssec-private-zsk"`
 	DNSSECPublicKSKFile   string `yaml:"dnssec-public-ksk"`
@@ -34,9 +30,6 @@ type Config struct {
 func (h *Handler) loadConfig(config Config, zone string, raw bool) {
 	h.soa = nil
 	h.ns = nil
-	h.recursionAvailable = config.RecursionAvailable
-	h.authoritative = config.Authoritative
-	h.requireCookie = config.RequireCookie
 	h.zone = ""
 
 	if !h.authoritative {
