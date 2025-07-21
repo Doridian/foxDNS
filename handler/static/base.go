@@ -1,12 +1,13 @@
 package static
 
 import (
+	"crypto"
 	"io"
 	"log"
-	"net"
 	"os"
 	"sync"
 
+	"github.com/Doridian/foxDNS/util"
 	"github.com/fsnotify/fsnotify"
 	"github.com/miekg/dns"
 )
@@ -24,15 +25,28 @@ type Generator struct {
 	recordsLock    sync.RWMutex
 	watcher        *fsnotify.Watcher
 	enableFSNotify bool
+
+	mux dns.Handler
+
+	zone                 string
+	enableSignatureCache bool
+	signatureLock        sync.Mutex
+	signatures           map[string]*dns.RRSIG
+	zskDNSKEY            *dns.DNSKEY
+	zskPrivateKey        crypto.PrivateKey
+	kskDNSKEY            *dns.DNSKEY
+	kskPrivateKey        crypto.PrivateKey
 }
 
-func New(enableFSNotify bool) *Generator {
-	return &Generator{
+func New(enableFSNotify bool, dnssec *DNSSECConfig) *Generator {
+	gen := &Generator{
 		configs:        make([]zoneConfig, 0),
 		records:        make(map[string]map[uint16][]dns.RR),
 		watcher:        nil,
 		enableFSNotify: enableFSNotify,
 	}
+	gen.loadDNSSEC(dnssec)
+	return gen
 }
 
 func (r *Generator) LoadZoneFile(file string, origin string, defaultTTL uint32, includeAllowed bool) error {
@@ -137,7 +151,27 @@ func (r *Generator) findAuthorityRecords(q *dns.Question, rcodeNameError int) ([
 	return nil, nil, nil, rcodeNameError
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, recurse bool, _ net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+func (r *Generator) HandleQuestion(questions []dns.Question, recurse bool, dnssec bool, wr util.Addressable) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+	answer, ns, edns0, rcode := r.handleQuestionLocal(&questions[0])
+
+	if recurse {
+		r.resolveIfCNAME(questions, rcode, answer, wr)
+		// TODO: Resolve NS referrals
+	}
+
+	if dnssec {
+		signer, err := r.signResponse(&questions[0], answer)
+		if err != nil {
+			log.Printf("Error signing record for %s: %v", answer[0].Header().Name, err)
+		} else if signer != nil {
+			answer = append(answer, signer)
+		}
+	}
+
+	return answer, ns, edns0, rcode
+}
+
+func (r *Generator) handleQuestionLocal(q *dns.Question) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	r.recordsLock.RLock()
 	defer r.recordsLock.RUnlock()
 
@@ -162,11 +196,11 @@ func (r *Generator) HandleQuestion(q *dns.Question, recurse bool, _ net.IP) ([]d
 
 	cname := typedRecs[0].(*dns.CNAME)
 
-	localResolvedRecs, _, _, _ := r.HandleQuestion(&dns.Question{
+	localResolvedRecs, _, _, _ := r.handleQuestionLocal(&dns.Question{
 		Name:   cname.Target,
 		Qtype:  q.Qtype,
 		Qclass: q.Qclass,
-	}, recurse, nil)
+	})
 
 	if localResolvedRecs != nil {
 		typedRecs = append(typedRecs, localResolvedRecs...)
@@ -175,7 +209,15 @@ func (r *Generator) HandleQuestion(q *dns.Question, recurse bool, _ net.IP) ([]d
 	return typedRecs, nil, nil, dns.RcodeSuccess
 }
 
+func (r *Generator) clearCache() {
+	r.signatureLock.Lock()
+	r.signatures = make(map[string]*dns.RRSIG)
+	r.signatureLock.Unlock()
+}
+
 func (r *Generator) Refresh() error {
+	defer r.clearCache()
+
 	r.recordsLock.Lock()
 	defer r.recordsLock.Unlock()
 
@@ -191,6 +233,8 @@ func (r *Generator) Refresh() error {
 }
 
 func (r *Generator) Start() error {
+	defer r.clearCache()
+
 	if !r.enableFSNotify {
 		return nil
 	}
@@ -236,6 +280,8 @@ func (r *Generator) Start() error {
 }
 
 func (r *Generator) Stop() error {
+	defer r.clearCache()
+
 	err := r.watcher.Close()
 	if err != nil {
 		return err

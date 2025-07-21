@@ -2,15 +2,15 @@ package resolver
 
 import (
 	"log"
-	"net"
 
+	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
 
-func (g *Generator) HandleQuestion(q *dns.Question, recurse bool, _ net.IP) (answer []dns.RR, ns []dns.RR, edns0 []dns.EDNS0, rcode int) {
+func (g *Generator) HandleQuestion(questions []dns.Question, recurse bool, dnssec bool, _ util.Addressable) (answer []dns.RR, ns []dns.RR, edns0 []dns.EDNS0, rcode int) {
 	rcode = dns.RcodeServerFailure
 
-	cacheResult, matchType, upstreamReply, err := g.getOrAddCache(q, recurse, false, 1)
+	cacheResult, matchType, upstreamReply, err := g.getOrAddCache(&questions[0], recurse, false, 1)
 	if err != nil {
 		log.Printf("Error handling DNS request: %v", err)
 		return
@@ -34,5 +34,18 @@ func (g *Generator) HandleQuestion(q *dns.Question, recurse bool, _ net.IP) (ans
 			break
 		}
 	}
+
+	if !dnssec {
+		newAnswers := make([]dns.RR, 0, len(answer))
+		for _, rr := range answer {
+			rrType := rr.Header().Rrtype
+			if rrType == dns.TypeRRSIG || rrType == dns.TypeNSEC || rrType == dns.TypeNSEC3 {
+				continue
+			}
+			newAnswers = append(newAnswers, rr)
+		}
+		answer = newAnswers
+	}
+
 	return
 }

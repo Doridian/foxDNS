@@ -1,4 +1,4 @@
-package handler
+package static
 
 import (
 	"os"
@@ -16,29 +16,14 @@ type DNSSECConfig struct {
 	CacheSignatures bool   `yaml:"cache-signatures"`
 }
 
-func (h *Handler) loadDNSSEC(config *DNSSECConfig, zone string) {
+func (r *Generator) loadDNSSEC(config *DNSSECConfig) {
 	if config == nil {
 		return
 	}
 
-	if !h.authoritative {
-		panic("DNSSEC configuration can only be loaded for authoritative handlers")
-	}
-
-	if config.Zone != "" {
-		h.zone = config.Zone
-	} else {
-		h.zone = zone
-	}
-
-	if h.zone == "" {
-		panic("DNSSEC zone must be set")
-	}
-
-	h.zone = dns.CanonicalName(h.zone)
-
-	h.signatures = make(map[string]*dns.RRSIG)
-	h.enableSignatureCache = true
+	r.signatures = make(map[string]*dns.RRSIG)
+	r.enableSignatureCache = config.CacheSignatures
+	r.zone = config.Zone
 
 	if config.PublicZSKFile != "" {
 		// Load ZSK
@@ -52,13 +37,13 @@ func (h *Handler) loadDNSSEC(config *DNSSECConfig, zone string) {
 			panic(err)
 		}
 
-		h.zskDNSKEY = pubkey.(*dns.DNSKEY)
+		r.zskDNSKEY = pubkey.(*dns.DNSKEY)
 
 		fh, err = os.Open(config.PrivateZSKFile)
 		if err != nil {
 			panic(err)
 		}
-		h.zskPrivateKey, err = h.zskDNSKEY.ReadPrivateKey(fh, config.PrivateZSKFile)
+		r.zskPrivateKey, err = r.zskDNSKEY.ReadPrivateKey(fh, config.PrivateZSKFile)
 		_ = fh.Close()
 		if err != nil {
 			panic(err)
@@ -75,18 +60,16 @@ func (h *Handler) loadDNSSEC(config *DNSSECConfig, zone string) {
 			panic(err)
 		}
 
-		h.kskDNSKEY = pubkey.(*dns.DNSKEY)
+		r.kskDNSKEY = pubkey.(*dns.DNSKEY)
 
 		fh, err = os.Open(config.PrivateKSKFile)
 		if err != nil {
 			panic(err)
 		}
-		h.kskPrivateKey, err = h.kskDNSKEY.ReadPrivateKey(fh, config.PrivateKSKFile)
+		r.kskPrivateKey, err = r.kskDNSKEY.ReadPrivateKey(fh, config.PrivateKSKFile)
 		_ = fh.Close()
 		if err != nil {
 			panic(err)
 		}
 	}
-
-	h.enableSignatureCache = config.CacheSignatures
 }

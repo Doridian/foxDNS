@@ -4,8 +4,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/handler/localizer"
+	"github.com/Doridian/foxDNS/handler/static"
 	"gopkg.in/yaml.v3"
 )
 
@@ -65,9 +65,9 @@ type Config struct {
 	} `yaml:"localizers"`
 
 	StaticZones []struct {
-		Zone   string                `yaml:"zone"`
-		File   string                `yaml:"file"`
-		DNSSEC *handler.DNSSECConfig `yaml:"dnssec"`
+		Zone   string               `yaml:"zone"`
+		File   string               `yaml:"file"`
+		DNSSEC *static.DNSSECConfig `yaml:"dnssec"`
 	} `yaml:"static-zones"`
 
 	AdLists struct {

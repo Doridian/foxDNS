@@ -1,8 +1,7 @@
 package blackhole
 
 import (
-	"net"
-
+	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 )
 
@@ -39,7 +38,7 @@ func New(reason string) *Generator {
 	}
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, _ bool, _ net.IP) (recs []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int) {
+func (r *Generator) HandleQuestion(_ []dns.Question, _ bool, _ bool, _ util.Addressable) (recs []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int) {
 	return nil, r.soa, r.edns0, dns.RcodeNameError
 }
 

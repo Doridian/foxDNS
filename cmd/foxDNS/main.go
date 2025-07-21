@@ -21,9 +21,9 @@ var configFile string
 var srv *server.Server
 var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
-func registerAuthGenerator(mux *dns.ServeMux, gen handler.Generator, zone string, config *handler.DNSSECConfig) *handler.Handler {
-	hdl := handler.New(mux, gen, zone, true, config)
-	loaders = append(loaders, gen, hdl)
+func registerAuthGenerator(mux *dns.ServeMux, gen handler.Generator, zone string) *handler.Handler {
+	hdl := handler.New(gen, true)
+	loaders = append(loaders, gen)
 	mux.Handle(zone, hdl)
 	return hdl
 }
@@ -133,8 +133,7 @@ func reloadConfig() {
 		}
 
 		loaders = append(loaders, resolv)
-		hdl := handler.NewRaw(mux, resolv, false)
-		loaders = append(loaders, hdl)
+		hdl := handler.New(resolv, false)
 		for _, zone := range resolvConf.Zones {
 			mux.Handle(zone, hdl)
 		}
@@ -177,7 +176,7 @@ func reloadConfig() {
 				}
 			}
 
-			registerAuthGenerator(mux, loc, locConfig.Zone, nil)
+			registerAuthGenerator(mux, loc, locConfig.Zone)
 		}
 
 		log.Printf("Localizer enabled for %d zones", len(config.Localizers.Zones))
@@ -185,12 +184,12 @@ func reloadConfig() {
 
 	if len(config.StaticZones) > 0 {
 		for _, statConf := range config.StaticZones {
-			stat := static.New(enableFSNotify)
+			stat := static.New(enableFSNotify, statConf.DNSSEC)
 			err := stat.LoadZoneFile(statConf.File, statConf.Zone, 3600, false)
 			if err != nil {
 				log.Panicf("Error loading static zone file %s: %v", statConf.File, err)
 			}
-			registerAuthGenerator(mux, stat, statConf.Zone, statConf.DNSSEC)
+			registerAuthGenerator(mux, stat, statConf.Zone)
 		}
 
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))

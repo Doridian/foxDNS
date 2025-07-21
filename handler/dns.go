@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"log"
 	"time"
 
 	"github.com/Doridian/foxDNS/util"
@@ -51,40 +50,13 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	}
 
 	q.Name = dns.CanonicalName(q.Name)
-	remoteIP := util.ExtractIP(wr.RemoteAddr())
 	recurse := msg.RecursionDesired && queryDepth < util.MaxRecursionDepth
+	dnssec := msg.IsEdns0() != nil && msg.IsEdns0().Do()
 
 	var childEdns0 []dns.EDNS0
-	reply.Answer, reply.Ns, childEdns0, reply.Rcode = h.child.HandleQuestion(q, recurse, remoteIP)
+	reply.Answer, reply.Ns, childEdns0, reply.Rcode = h.child.HandleQuestion(msg.Question, recurse, dnssec, wr)
 	if childEdns0 != nil {
 		edns0Options = append(edns0Options, childEdns0...)
-	}
-
-	if recurse {
-		h.resolveIfCNAME(reply, msg.Question, wr)
-		// TODO: Resolve NS referrals
-	}
-
-	if !util.IsLocalQuery(wr) && (reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError) {
-		msgEdns0 := msg.IsEdns0()
-		if msgEdns0 != nil && msgEdns0.Do() {
-			signer, err := h.signResponse(q, reply.Answer)
-			if err != nil {
-				log.Printf("Error signing record for %s: %v", reply.Answer[0].Header().Name, err)
-			} else if signer != nil {
-				reply.Answer = append(reply.Answer, signer)
-			}
-		} else {
-			newAnswers := make([]dns.RR, 0, len(reply.Answer))
-			for _, rr := range reply.Answer {
-				rrType := rr.Header().Rrtype
-				if rrType == dns.TypeRRSIG || rrType == dns.TypeNSEC || rrType == dns.TypeNSEC3 {
-					continue
-				}
-				newAnswers = append(newAnswers, rr)
-			}
-			reply.Answer = newAnswers
-		}
 	}
 
 	duration := time.Since(startTime)

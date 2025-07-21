@@ -10,6 +10,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type dummyAddressable struct {
+	remoteAddr net.Addr
+}
+
+func (d *dummyAddressable) LocalAddr() net.Addr {
+	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 53}
+}
+
+func (d *dummyAddressable) RemoteAddr() net.Addr {
+	return d.remoteAddr
+}
+
+func (d *dummyAddressable) Network() string {
+	return util.NetworkLocal
+}
+
 func runLocalizerTest(t *testing.T, host string, qtype uint16, remoteIP net.IP, rewrites []localizer.LocalizerRewrite, expected dns.RR) {
 	handler := localizer.New()
 	assert.NoError(t, handler.AddRewrites(rewrites))
@@ -18,11 +34,14 @@ func runLocalizerTest(t *testing.T, host string, qtype uint16, remoteIP net.IP, 
 	assert.NoError(t, handler.AddRecord("v4.example.com", "0.0.1.2/16"))
 	assert.NoError(t, handler.AddRecord("v6.example.com", "fe80::1/64"))
 
-	rr, _, _, rcode := handler.HandleQuestion(&dns.Question{
+	remoteAddr := &net.TCPAddr{IP: remoteIP, Port: 12345}
+	wr := &dummyAddressable{remoteAddr: remoteAddr}
+
+	rr, _, _, rcode := handler.HandleQuestion([]dns.Question{{
 		Name:   host,
 		Qtype:  qtype,
 		Qclass: dns.ClassINET,
-	}, true, remoteIP)
+	}}, true, true, wr)
 	assert.Equal(t, dns.RcodeSuccess, rcode)
 
 	if expected == nil {

@@ -1,8 +1,7 @@
 package handler
 
 import (
-	"net"
-
+	"github.com/Doridian/foxDNS/util"
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -23,7 +22,7 @@ var (
 
 type Generator interface {
 	GetName() string
-	HandleQuestion(q *dns.Question, recurse bool, remoteIP net.IP) (answer []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int)
+	HandleQuestion(questions []dns.Question, recurse bool, dnssec bool, wr util.Addressable) (answer []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int)
 
 	Loadable
 }

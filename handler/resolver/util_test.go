@@ -2,7 +2,6 @@ package resolver_test
 
 import (
 	"bytes"
-	"net"
 	"time"
 
 	"github.com/Doridian/foxDNS/handler"
@@ -20,13 +19,13 @@ var resolverGenerator *resolver.Generator
 var simpleHandler dns.Handler
 
 func loadSimpleZone(zone string) dns.Handler {
-	staticHandler := static.New(false)
+	staticHandler := static.New(false, nil)
 	err := staticHandler.LoadZone(bytes.NewReader([]byte(zone)), "example.com.db", "example.com.", 300, false)
 	if err != nil {
 		panic(err)
 	}
 
-	return handler.New(nil, staticHandler, "example.com.", false, nil)
+	return handler.New(staticHandler, false)
 }
 
 func initTests() {
@@ -59,7 +58,7 @@ func initTests() {
 func queryResolver(q dns.Question) *dns.Msg {
 	initTests()
 
-	answer, ns, _, rcode := resolverGenerator.HandleQuestion(&q, true, net.IPv4(127, 0, 0, 1))
+	answer, ns, _, rcode := resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
 
 	return &dns.Msg{
 		MsgHdr: dns.MsgHdr{

@@ -148,7 +148,7 @@ func (r *Adlist) getHandler(list string) dns.Handler {
 	hdl, ok := r.handlerMap[list]
 	if !ok {
 		gen := New("adlist: " + list)
-		hdl = handler.NewRaw(nil, gen, true)
+		hdl = handler.New(gen, true)
 		r.handlerMap[list] = hdl
 	}
 	return hdl

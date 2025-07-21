@@ -12,11 +12,11 @@ import (
 )
 
 func runStaticTest(handler handler.Generator, q *dns.Question) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
-	return handler.HandleQuestion(q, true, net.IPv4(127, 0, 0, 1))
+	return handler.HandleQuestion([]dns.Question{*q}, true, true, nil)
 }
 
 func TestBasicZone(t *testing.T) {
-	handler := static.New(false)
+	handler := static.New(false, nil)
 
 	recA := &dns.A{
 		A: net.IPv4(127, 0, 0, 1),
