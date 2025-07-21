@@ -14,22 +14,21 @@ type Config struct {
 	Templates interface{} `yaml:"templates"`
 
 	Global struct {
-		Listen            []string        `yaml:"listen"`
-		PrometheusListen  string          `yaml:"prometheus-listen"`
-		Config            *handler.Config `yaml:"config"`
-		UDPSize           int             `yaml:"udp-size"`
-		MaxRecursionDepth int             `yaml:"max-recursion-depth"`
-		RequireCookie     bool            `yaml:"require-cookie"`
+		Listen            []string `yaml:"listen"`
+		PrometheusListen  string   `yaml:"prometheus-listen"`
+		UDPSize           int      `yaml:"udp-size"`
+		MaxRecursionDepth int      `yaml:"max-recursion-depth"`
+		RequireCookie     bool     `yaml:"require-cookie"`
 	} `yaml:"global"`
 
 	RDNS []struct {
-		IPVersion  int                        `yaml:"ip_version"`
-		Suffix     string                     `yaml:"suffix"`
-		Subnets    []string                   `yaml:"subnets"`
-		PTRConfigs map[string]*handler.Config `yaml:"ptr-configs"`
-		AddrConfig *handler.Config            `yaml:"addr-config"`
-		AddressTtl time.Duration              `yaml:"address-ttl"`
-		PtrTtl     time.Duration              `yaml:"ptr-ttl"`
+		IPVersion  int                              `yaml:"ip_version"`
+		Suffix     string                           `yaml:"suffix"`
+		Subnets    []string                         `yaml:"subnets"`
+		PTRDNSSEC  map[string]*handler.DNSSECConfig `yaml:"ptr-dnssec"`
+		AddrDNSSEC *handler.DNSSECConfig            `yaml:"addr-dnssec"`
+		AddressTtl time.Duration                    `yaml:"address-ttl"`
+		PtrTtl     time.Duration                    `yaml:"ptr-ttl"`
 	} `yaml:"rdns"`
 
 	Resolvers []struct {
@@ -70,16 +69,16 @@ type Config struct {
 			Zone     string                       `yaml:"zone"`
 			Subnets  []string                     `yaml:"subnets"`
 			Ttl      time.Duration                `yaml:"ttl"`
-			Config   *handler.Config              `yaml:"config"`
+			DNSSEC   *handler.DNSSECConfig        `yaml:"dnssec"`
 			Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
 			V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
 		} `yaml:"zones"`
 	} `yaml:"localizers"`
 
 	StaticZones []struct {
-		Zone   string          `yaml:"zone"`
-		File   string          `yaml:"file"`
-		Config *handler.Config `yaml:"config"`
+		Zone   string                `yaml:"zone"`
+		File   string                `yaml:"file"`
+		DNSSEC *handler.DNSSECConfig `yaml:"dnssec"`
 	} `yaml:"static-zones"`
 
 	AdLists struct {

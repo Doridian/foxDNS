@@ -1,17 +1,6 @@
 global:
-  config:
-    nameservers:
-      - nameserver.example.com
-    mailbox: email.example.com
-    soa-ttl: 24h
-    ns-ttl: 24h
-    serial: 2025042069
-    refresh: 2h
-    retry: 30m
-    expire: 336h
-    min-ttl: 1h
-
-    dnssec-cache-signatures: true
+  dnssec:
+    cache-signatures: true
 
   listen:
     - :8053

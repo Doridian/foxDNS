@@ -24,16 +24,7 @@ var configFile string
 var srv *server.Server
 var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
-var globalConfig handler.Config
-
-func getConfig(config *handler.Config) handler.Config {
-	if config != nil {
-		return *config
-	}
-	return globalConfig
-}
-
-func registerAuthGenerator(mux *dns.ServeMux, gen handler.Generator, zone string, config handler.Config) *handler.Handler {
+func registerAuthGenerator(mux *dns.ServeMux, gen handler.Generator, zone string, config *handler.DNSSECConfig) *handler.Handler {
 	hdl := handler.New(mux, gen, zone, true, config)
 	loaders = append(loaders, gen, hdl)
 	mux.Handle(zone, hdl)
@@ -61,8 +52,6 @@ func reloadConfig() {
 	loaders = make([]handler.Loadable, 0)
 	mux := dns.NewServeMux()
 
-	globalConfig = *config.Global.Config
-
 	for _, rdnsConf := range config.RDNS {
 		rdnsGen := rdns.NewRDNSGenerator(rdnsConf.IPVersion)
 
@@ -89,17 +78,17 @@ func reloadConfig() {
 			rdnsGen.PtrTtl = uint32(rdnsConf.PtrTtl.Seconds())
 		}
 
-		registerAuthGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), getConfig(rdnsConf.AddrConfig))
+		registerAuthGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), rdnsConf.AddrDNSSEC)
 
-		for zone, ptrAuthConfig := range rdnsConf.PTRConfigs {
-			rdnsConf.PTRConfigs[dns.CanonicalName(zone)] = ptrAuthConfig
-			rdnsConf.PTRConfigs[strings.ToLower(zone)] = ptrAuthConfig
-			rdnsConf.PTRConfigs[strings.ToLower(dns.CanonicalName(zone))] = ptrAuthConfig
+		for zone, ptrAuthConfig := range rdnsConf.PTRDNSSEC {
+			rdnsConf.PTRDNSSEC[dns.CanonicalName(zone)] = ptrAuthConfig
+			rdnsConf.PTRDNSSEC[strings.ToLower(zone)] = ptrAuthConfig
+			rdnsConf.PTRDNSSEC[strings.ToLower(dns.CanonicalName(zone))] = ptrAuthConfig
 		}
 
 		ptrZones := rdnsGen.GetPTRZones()
 		for _, zone := range ptrZones {
-			registerAuthGenerator(mux, rdnsGen, zone, getConfig(rdnsConf.PTRConfigs[zone]))
+			registerAuthGenerator(mux, rdnsGen, zone, rdnsConf.PTRDNSSEC[zone])
 		}
 	}
 
@@ -231,8 +220,10 @@ func reloadConfig() {
 				}
 			}
 
-			locGenConfig := getConfig(locConfig.Config)
-			locGenConfig.DNSSECCacheSignatures = false
+			locGenConfig := locConfig.DNSSEC
+			if locGenConfig != nil {
+				locGenConfig.CacheSignatures = false
+			}
 			registerAuthGenerator(mux, loc, locConfig.Zone, locGenConfig)
 		}
 
@@ -246,7 +237,7 @@ func reloadConfig() {
 			if err != nil {
 				log.Panicf("Error loading static zone file %s: %v", statConf.File, err)
 			}
-			registerAuthGenerator(mux, stat, statConf.Zone, getConfig(statConf.Config))
+			registerAuthGenerator(mux, stat, statConf.Zone, statConf.DNSSEC)
 		}
 
 		log.Printf("Static zones enabled for %d zones", len(config.StaticZones))

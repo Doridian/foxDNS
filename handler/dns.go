@@ -54,32 +54,10 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 	remoteIP := util.ExtractIP(wr.RemoteAddr())
 	recurse := msg.RecursionDesired && queryDepth < util.MaxRecursionDepth
 
-	reply.Answer = nil
-	if h.authoritative && q.Name == h.zone {
-		switch q.Qtype {
-		case dns.TypeSOA:
-			reply.Answer = h.soa
-		case dns.TypeNS:
-			reply.Answer = h.ns
-		case dns.TypeDNSKEY:
-			reply.Answer = []dns.RR{}
-			if h.zskDNSKEY != nil {
-				reply.Answer = append(reply.Answer, h.zskDNSKEY)
-			}
-			if h.kskDNSKEY != nil {
-				reply.Answer = append(reply.Answer, h.kskDNSKEY)
-			}
-		}
-	}
-	if len(reply.Answer) == 0 {
-		var childEdns0 []dns.EDNS0
-		reply.Answer, reply.Ns, childEdns0, reply.Rcode = h.child.HandleQuestion(q, recurse, remoteIP)
-		if (reply.Rcode == dns.RcodeSuccess || reply.Rcode == dns.RcodeNameError) && len(reply.Answer) == 0 && len(reply.Ns) == 0 {
-			reply.Ns = h.soa
-		}
-		if childEdns0 != nil {
-			edns0Options = append(edns0Options, childEdns0...)
-		}
+	var childEdns0 []dns.EDNS0
+	reply.Answer, reply.Ns, childEdns0, reply.Rcode = h.child.HandleQuestion(q, recurse, remoteIP)
+	if childEdns0 != nil {
+		edns0Options = append(edns0Options, childEdns0...)
 	}
 
 	if recurse {
