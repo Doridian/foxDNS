@@ -59,7 +59,6 @@ type Config struct {
 			Zone     string                       `yaml:"zone"`
 			Subnets  []string                     `yaml:"subnets"`
 			Ttl      time.Duration                `yaml:"ttl"`
-			DNSSEC   *handler.DNSSECConfig        `yaml:"dnssec"`
 			Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
 			V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
 		} `yaml:"zones"`

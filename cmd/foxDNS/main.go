@@ -177,11 +177,7 @@ func reloadConfig() {
 				}
 			}
 
-			locGenConfig := locConfig.DNSSEC
-			if locGenConfig != nil {
-				locGenConfig.CacheSignatures = false
-			}
-			registerAuthGenerator(mux, loc, locConfig.Zone, locGenConfig)
+			registerAuthGenerator(mux, loc, locConfig.Zone, nil)
 		}
 
 		log.Printf("Localizer enabled for %d zones", len(config.Localizers.Zones))
