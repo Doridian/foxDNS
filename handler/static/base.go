@@ -38,12 +38,13 @@ type Generator struct {
 	kskPrivateKey        crypto.PrivateKey
 }
 
-func New(enableFSNotify bool, dnssec *DNSSECConfig) *Generator {
+func New(enableFSNotify bool, mux dns.Handler, dnssec *DNSSECConfig) *Generator {
 	gen := &Generator{
 		configs:        make([]zoneConfig, 0),
 		records:        make(map[string]map[uint16][]dns.RR),
 		watcher:        nil,
 		enableFSNotify: enableFSNotify,
+		mux:            mux,
 	}
 	gen.loadDNSSEC(dnssec)
 	return gen
@@ -155,8 +156,7 @@ func (r *Generator) HandleQuestion(questions []dns.Question, recurse bool, dnsse
 	answer, ns, edns0, rcode := r.handleQuestionLocal(&questions[0])
 
 	if recurse {
-		r.resolveIfCNAME(questions, rcode, answer, wr)
-		// TODO: Resolve NS referrals
+		answer = r.resolveIfCNAME(questions, rcode, answer, wr)
 	}
 
 	if dnssec {

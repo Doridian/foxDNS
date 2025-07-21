@@ -19,7 +19,7 @@ var resolverGenerator *resolver.Generator
 var simpleHandler dns.Handler
 
 func loadSimpleZone(zone string) dns.Handler {
-	staticHandler := static.New(false, nil)
+	staticHandler := static.New(false, nil, nil)
 	err := staticHandler.LoadZone(bytes.NewReader([]byte(zone)), "example.com.db", "example.com.", 300, false)
 	if err != nil {
 		panic(err)

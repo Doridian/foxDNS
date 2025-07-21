@@ -6,16 +6,20 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (r *Generator) resolveIfCNAME(questions []dns.Question, rcode int, recs []dns.RR, wr util.Addressable) {
+func (r *Generator) resolveIfCNAME(questions []dns.Question, rcode int, recs []dns.RR, wr util.Addressable) []dns.RR {
+	if r.mux == nil {
+		return recs
+	}
+
 	qtype := questions[0].Qtype
 	// There can only legally ever be 1 CNAME, so dont even bother checking is multiple records
 	if rcode != dns.RcodeSuccess || qtype == dns.TypeCNAME || len(recs) != 1 {
-		return
+		return recs
 	}
 
 	cname, ok := recs[0].(*dns.CNAME)
 	if !ok {
-		return
+		return recs
 	}
 
 	subQ := dns.Question{
@@ -26,7 +30,7 @@ func (r *Generator) resolveIfCNAME(questions []dns.Question, rcode int, recs []d
 
 	for _, oldQ := range questions {
 		if oldQ.Name == subQ.Name && oldQ.Qtype == subQ.Qtype && oldQ.Qclass == subQ.Qclass {
-			return // Already queried this one
+			return recs // Already queried this one
 		}
 	}
 
@@ -47,6 +51,8 @@ func (r *Generator) resolveIfCNAME(questions []dns.Question, rcode int, recs []d
 	subReply := resp.GetMsg()
 
 	if subReply != nil && subReply.Rcode == dns.RcodeSuccess {
-		recs = append(recs, subReply.Answer...)
+		return append(recs, subReply.Answer...)
 	}
+
+	return recs
 }

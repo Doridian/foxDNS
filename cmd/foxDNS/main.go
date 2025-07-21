@@ -184,7 +184,7 @@ func reloadConfig() {
 
 	if len(config.StaticZones) > 0 {
 		for _, statConf := range config.StaticZones {
-			stat := static.New(enableFSNotify, statConf.DNSSEC)
+			stat := static.New(enableFSNotify, mux, statConf.DNSSEC)
 			err := stat.LoadZoneFile(statConf.File, statConf.Zone, 3600, false)
 			if err != nil {
 				log.Panicf("Error loading static zone file %s: %v", statConf.File, err)
