@@ -175,7 +175,7 @@ func makeRecV6(ip net.IP) dns.RR {
 	}
 }
 
-func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, _ bool, _ bool, remoteIP net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+func (r *LocalizedRecordGenerator) HandleQuestion(q *dns.Question, _ bool, remoteIP net.IP) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
 	if !r.knownHosts[q.Name] {
 		return nil, nil, nil, dns.RcodeNameError
 	}

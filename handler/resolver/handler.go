@@ -7,7 +7,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (g *Generator) HandleQuestion(q *dns.Question, recurse bool, dnssec bool, _ net.IP) (answer []dns.RR, ns []dns.RR, edns0 []dns.EDNS0, rcode int) {
+func (g *Generator) HandleQuestion(q *dns.Question, recurse bool, _ net.IP) (answer []dns.RR, ns []dns.RR, edns0 []dns.EDNS0, rcode int) {
 	rcode = dns.RcodeServerFailure
 
 	cacheResult, matchType, upstreamReply, err := g.getOrAddCache(q, recurse, false, 1)
@@ -34,18 +34,5 @@ func (g *Generator) HandleQuestion(q *dns.Question, recurse bool, dnssec bool, _
 			break
 		}
 	}
-
-	if !dnssec {
-		newAnswers := make([]dns.RR, 0, len(answer))
-		for _, rr := range answer {
-			rrType := rr.Header().Rrtype
-			if rrType == dns.TypeRRSIG || rrType == dns.TypeNSEC || rrType == dns.TypeNSEC3 {
-				continue
-			}
-			newAnswers = append(newAnswers, rr)
-		}
-		answer = newAnswers
-	}
-
 	return
 }
