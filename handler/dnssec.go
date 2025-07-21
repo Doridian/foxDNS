@@ -30,15 +30,17 @@ func (h *Handler) signResponse(q *dns.Question, answer []dns.RR) (dns.RR, error)
 		return nil, nil
 	}
 
-	sb := strings.Builder{}
-	sb.WriteString(q.String())
-	for _, rr := range answer {
-		sb.WriteByte(0)
-		sb.WriteString(rr.String())
-	}
-	cacheKey := sb.String()
+	var cacheKey string
 
 	if h.enableSignatureCache {
+		sb := strings.Builder{}
+		sb.WriteString(q.String())
+		for _, rr := range answer {
+			sb.WriteByte(0)
+			sb.WriteString(rr.String())
+		}
+		cacheKey = sb.String()
+
 		h.signatureLock.Lock()
 		defer h.signatureLock.Unlock()
 		oldSigner := h.signatures[cacheKey]
