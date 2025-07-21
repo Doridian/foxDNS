@@ -24,13 +24,13 @@ type Handler struct {
 	kskPrivateKey        crypto.PrivateKey
 }
 
-func New(mux *dns.ServeMux, child Generator, zone string, authoritative bool, config Config) *Handler {
+func New(mux *dns.ServeMux, child Generator, zone string, authoritative bool, dnssec *DNSSECConfig) *Handler {
 	hdl := &Handler{
 		child:         child,
 		mux:           mux,
 		authoritative: authoritative,
 	}
-	hdl.loadConfig(config, zone)
+	hdl.loadDNSSEC(dnssec, zone)
 	return hdl
 }
 

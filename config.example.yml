@@ -1,6 +1,6 @@
 global:
-  config:
-    dnssec-cache-signatures: true
+  dnssec:
+    cache-signatures: true
 
   listen:
     - :8053
