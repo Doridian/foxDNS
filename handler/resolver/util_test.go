@@ -59,7 +59,7 @@ func initTests() {
 func queryResolver(q dns.Question) *dns.Msg {
 	initTests()
 
-	answer, ns, _, rcode := resolverGenerator.HandleQuestion(&q, true, net.IPv4(127, 0, 0, 1))
+	answer, ns, _, rcode := resolverGenerator.HandleQuestion(&q, true, true, net.IPv4(127, 0, 0, 1))
 
 	return &dns.Msg{
 		MsgHdr: dns.MsgHdr{

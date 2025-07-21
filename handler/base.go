@@ -23,7 +23,7 @@ var (
 
 type Generator interface {
 	GetName() string
-	HandleQuestion(q *dns.Question, recurse bool, remoteIP net.IP) (answer []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int)
+	HandleQuestion(q *dns.Question, recurse bool, dnssec bool, remoteIP net.IP) (answer []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int)
 
 	Loadable
 }

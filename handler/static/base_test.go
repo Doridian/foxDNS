@@ -12,7 +12,7 @@ import (
 )
 
 func runStaticTest(handler handler.Generator, q *dns.Question) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
-	return handler.HandleQuestion(q, true, net.IPv4(127, 0, 0, 1))
+	return handler.HandleQuestion(q, true, true, net.IPv4(127, 0, 0, 1))
 }
 
 func TestBasicZone(t *testing.T) {

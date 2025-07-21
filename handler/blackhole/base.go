@@ -39,7 +39,7 @@ func New(reason string) *Generator {
 	}
 }
 
-func (r *Generator) HandleQuestion(q *dns.Question, _ bool, _ net.IP) (recs []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int) {
+func (r *Generator) HandleQuestion(q *dns.Question, _ bool, _ bool, _ net.IP) (recs []dns.RR, ns []dns.RR, edns0Opts []dns.EDNS0, rcode int) {
 	return nil, r.soa, r.edns0, dns.RcodeNameError
 }
 

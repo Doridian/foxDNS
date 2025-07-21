@@ -22,7 +22,7 @@ func runLocalizerTest(t *testing.T, host string, qtype uint16, remoteIP net.IP, 
 		Name:   host,
 		Qtype:  qtype,
 		Qclass: dns.ClassINET,
-	}, true, remoteIP)
+	}, true, true, remoteIP)
 	assert.Equal(t, dns.RcodeSuccess, rcode)
 
 	if expected == nil {
