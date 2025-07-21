@@ -2,15 +2,12 @@ package main
 
 import (
 	"log"
-	"net"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/handler/blackhole"
 	"github.com/Doridian/foxDNS/handler/localizer"
-	"github.com/Doridian/foxDNS/handler/rdns"
 	"github.com/Doridian/foxDNS/handler/resolver"
 	"github.com/Doridian/foxDNS/handler/static"
 	"github.com/Doridian/foxDNS/server"
@@ -51,46 +48,6 @@ func reloadConfig() {
 
 	loaders = make([]handler.Loadable, 0)
 	mux := dns.NewServeMux()
-
-	for _, rdnsConf := range config.RDNS {
-		rdnsGen := rdns.NewRDNSGenerator(rdnsConf.IPVersion)
-
-		if rdnsGen == nil {
-			log.Panicf("Unknown IP version: %d", rdnsConf.IPVersion)
-		}
-		rdnsGen.SetPTRSuffix(rdnsConf.Suffix)
-
-		allowedSubnets := make([]*net.IPNet, 0, len(rdnsConf.Subnets))
-		for _, subnet := range rdnsConf.Subnets {
-			_, subnet, err := net.ParseCIDR(subnet)
-			if err != nil {
-				log.Panicf("Error parsing subnet %s: %v", subnet, err)
-			}
-			allowedSubnets = append(allowedSubnets, subnet)
-		}
-		rdnsGen.AllowedSubnets = allowedSubnets
-
-		if rdnsConf.AddressTtl > 0 {
-			rdnsGen.AddressTtl = uint32(rdnsConf.AddressTtl.Seconds())
-		}
-
-		if rdnsConf.PtrTtl > 0 {
-			rdnsGen.PtrTtl = uint32(rdnsConf.PtrTtl.Seconds())
-		}
-
-		registerAuthGenerator(mux, rdnsGen, rdnsGen.GetAddrZone(), rdnsConf.AddrDNSSEC)
-
-		for zone, ptrAuthConfig := range rdnsConf.PTRDNSSEC {
-			rdnsConf.PTRDNSSEC[dns.CanonicalName(zone)] = ptrAuthConfig
-			rdnsConf.PTRDNSSEC[strings.ToLower(zone)] = ptrAuthConfig
-			rdnsConf.PTRDNSSEC[strings.ToLower(dns.CanonicalName(zone))] = ptrAuthConfig
-		}
-
-		ptrZones := rdnsGen.GetPTRZones()
-		for _, zone := range ptrZones {
-			registerAuthGenerator(mux, rdnsGen, zone, rdnsConf.PTRDNSSEC[zone])
-		}
-	}
 
 	for _, resolvConf := range config.Resolvers {
 		nameServers := make([]*resolver.ServerConfig, len(resolvConf.NameServers))

@@ -21,16 +21,6 @@ type Config struct {
 		RequireCookie     bool     `yaml:"require-cookie"`
 	} `yaml:"global"`
 
-	RDNS []struct {
-		IPVersion  int                              `yaml:"ip_version"`
-		Suffix     string                           `yaml:"suffix"`
-		Subnets    []string                         `yaml:"subnets"`
-		PTRDNSSEC  map[string]*handler.DNSSECConfig `yaml:"ptr-dnssec"`
-		AddrDNSSEC *handler.DNSSECConfig            `yaml:"addr-dnssec"`
-		AddressTtl time.Duration                    `yaml:"address-ttl"`
-		PtrTtl     time.Duration                    `yaml:"ptr-ttl"`
-	} `yaml:"rdns"`
-
 	Resolvers []struct {
 		Zones       []string `yaml:"zones"`
 		NameServers []struct {

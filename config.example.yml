@@ -6,17 +6,6 @@ global:
     - :8053
   prometheus-listen: :9001
 
-rdns:
-  - ip_version: 6
-    suffix: v6.ip.example.com
-    subnets:
-      - fc00::/7
-  - ip_version: 4
-    suffix: v4.ip.example.com
-    subnets:
-      - 10.0.0.0/8
-      - 192.168.0.0/16
-
 resolvers:
   - zones:
     - .
