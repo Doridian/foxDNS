@@ -61,6 +61,27 @@ var (
 	})
 )
 
+var (
+	recursionDisabledAndNotCached = &dns.Msg{
+		MsgHdr: dns.MsgHdr{
+			Rcode: dns.RcodeServerFailure,
+		},
+		Extra: []dns.RR{
+			&dns.OPT{
+				Hdr: dns.RR_Header{
+					Rrtype: dns.TypeOPT,
+				},
+				Option: []dns.EDNS0{
+					&dns.EDNS0_EDE{
+						InfoCode:  dns.ExtendedErrorCodeOther,
+						ExtraText: "Recursion disabled and record not cached",
+					},
+				},
+			},
+		},
+	}
+)
+
 func (g *Generator) SetCacheSize(size int) {
 	g.cache.Resize(size)
 }
@@ -77,15 +98,19 @@ func cacheKeyDomain(q *dns.Question) string {
 	return fmt.Sprintf("%s:ANY", q.Name)
 }
 
-func (g *Generator) getOrAddCache(q *dns.Question, isCacheRefresh bool, incrementHits uint64) (string, string, *dns.Msg, error) {
+func (g *Generator) getOrAddCache(q *dns.Question, recurse bool, isCacheRefresh bool, incrementHits uint64) (string, string, *dns.Msg, error) {
 	key := cacheKey(q)
 	keyDomain := cacheKeyDomain(q)
 
 	if !isCacheRefresh {
-		msg, matchType := g.getFromCache(key, keyDomain, q, incrementHits)
+		msg, matchType := g.getFromCache(key, keyDomain, q, recurse, incrementHits)
 		if msg != nil {
 			return "hit", matchType, msg, nil
 		}
+	}
+
+	if !recurse {
+		return "", "", recursionDisabledAndNotCached, nil
 	}
 
 	wg := &sync.WaitGroup{}
@@ -101,7 +126,7 @@ func (g *Generator) getOrAddCache(q *dns.Question, isCacheRefresh bool, incremen
 
 		cacheLockWG.Wait()
 
-		msg, matchType := g.getFromCache(key, keyDomain, q, incrementHits)
+		msg, matchType := g.getFromCache(key, keyDomain, q, recurse, incrementHits)
 		if msg != nil {
 			return "wait", matchType, msg, nil
 		}
@@ -169,7 +194,7 @@ func (g *Generator) adjustRecordTTL(rr dns.RR) (*dns.RR_Header, int) {
 	return rrHdr, int(origTtl)
 }
 
-func (g *Generator) getFromCache(key string, keyDomain string, q *dns.Question, incrementHits uint64) (*dns.Msg, string) {
+func (g *Generator) getFromCache(key string, keyDomain string, q *dns.Question, recurse bool, incrementHits uint64) (*dns.Msg, string) {
 	entry, ok := g.cache.Get(key)
 	matchType := "exact"
 	if !ok {
@@ -199,7 +224,7 @@ func (g *Generator) getFromCache(key string, keyDomain string, q *dns.Question, 
 	if (entryExpiresIn <= 0 || (entryHits >= g.OpportunisticCacheMinHits && entryExpiresIn <= g.OpportunisticCacheMaxTimeLeft)) && !entry.refreshTriggered {
 		entry.refreshTriggered = true
 		go func() {
-			_, _, _, _ = g.getOrAddCache(q, true, 0)
+			_, _, _, _ = g.getOrAddCache(q, recurse, true, 0)
 		}()
 	}
 
