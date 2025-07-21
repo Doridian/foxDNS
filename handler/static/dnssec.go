@@ -2,7 +2,7 @@ package static
 
 import (
 	"crypto/ecdsa"
-	"strings"
+	"fmt"
 	"time"
 
 	"github.com/Doridian/foxDNS/util"
@@ -26,17 +26,9 @@ func (r *Generator) signResponse(q *dns.Question, answer []dns.RR) (dns.RR, erro
 		return nil, nil
 	}
 
-	var cacheKey string
+	cacheKey := fmt.Sprintf("%s:%d:%d", q.Name, q.Qclass, q.Qtype)
 
 	if r.enableSignatureCache {
-		sb := strings.Builder{}
-		sb.WriteString(q.String())
-		for _, rr := range answer {
-			sb.WriteByte(0)
-			sb.WriteString(rr.String())
-		}
-		cacheKey = sb.String()
-
 		r.signatureLock.Lock()
 		defer r.signatureLock.Unlock()
 		oldSigner := r.signatures[cacheKey]
