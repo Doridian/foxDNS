@@ -23,7 +23,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
 	}
-	answer, ns, _, rcode := resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
+	answer, ns, _, rcode, _ := resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
 
 	assert.Equal(t, dns.RcodeSuccess, rcode)
 	assert.ElementsMatch(t, []dns.RR{
@@ -46,7 +46,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 	// Fake time 0.8 seconds ahead to test TTL countdown not tripping just yet
 	fakedTime = timeBegin.Add(800 * time.Millisecond)
 
-	answer, ns, _, rcode = resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
+	answer, ns, _, rcode, _ = resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
 
 	assert.Equal(t, dns.RcodeSuccess, rcode)
 	assert.ElementsMatch(t, []dns.RR{
@@ -66,7 +66,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 	// Fake time 3.1 seconds ahead to test TTL countdown
 	fakedTime = timeBegin.Add(3100 * time.Millisecond)
 
-	answer, ns, _, rcode = resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
+	answer, ns, _, rcode, _ = resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
 	assert.Equal(t, dns.RcodeSuccess, rcode)
 	assert.ElementsMatch(t, []dns.RR{
 		&dns.A{
@@ -85,7 +85,7 @@ func TestExistingRecordWithCache(t *testing.T) {
 	// Fake time 6 seconds ahead to force record to be uncached
 	fakedTime = timeBegin.Add(6 * time.Second)
 
-	answer, ns, _, rcode = resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
+	answer, ns, _, rcode, _ = resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
 
 	assert.Equal(t, dns.RcodeSuccess, rcode)
 	assert.ElementsMatch(t, []dns.RR{}, answer)

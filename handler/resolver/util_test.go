@@ -58,7 +58,7 @@ func initTests() {
 func queryResolver(q dns.Question) *dns.Msg {
 	initTests()
 
-	answer, ns, _, rcode := resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
+	answer, ns, _, rcode, _ := resolverGenerator.HandleQuestion([]dns.Question{q}, true, true, nil)
 
 	return &dns.Msg{
 		MsgHdr: dns.MsgHdr{

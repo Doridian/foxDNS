@@ -49,12 +49,13 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		return
 	}
 
+	var handlerName string
 	q.Name = dns.CanonicalName(q.Name)
 	recurse := msg.RecursionDesired && queryDepth < util.MaxRecursionDepth
 	dnssec := msg.IsEdns0() != nil && msg.IsEdns0().Do()
 
 	var childEdns0 []dns.EDNS0
-	reply.Answer, reply.Ns, childEdns0, reply.Rcode = h.child.HandleQuestion(msg.Question, recurse, dnssec, wr)
+	reply.Answer, reply.Ns, childEdns0, reply.Rcode, handlerName = h.child.HandleQuestion(msg.Question, recurse, dnssec, wr)
 	if childEdns0 != nil {
 		edns0Options = append(edns0Options, childEdns0...)
 	}
@@ -83,6 +84,10 @@ func (h *Handler) ServeDNS(wr dns.ResponseWriter, msg *dns.Msg) {
 		}
 	}
 
-	queriesProcessed.WithLabelValues(dns.TypeToString[q.Qtype], rcode, h.child.GetName(), extendedRCode).Inc()
-	queryProcessingTime.WithLabelValues(h.child.GetName()).Observe(duration.Seconds())
+	if handlerName == "" {
+		handlerName = h.child.GetName()
+	}
+
+	queriesProcessed.WithLabelValues(dns.TypeToString[q.Qtype], rcode, handlerName, extendedRCode).Inc()
+	queryProcessingTime.WithLabelValues(handlerName).Observe(duration.Seconds())
 }

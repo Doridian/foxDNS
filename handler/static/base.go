@@ -138,7 +138,7 @@ func (r *Generator) addRecord(rr dns.RR) {
 	nameRecs[hdr.Rrtype] = append([]dns.RR{rr}, typeRecs...)
 }
 
-func (r *Generator) findAuthorityRecords(q *dns.Question, rcodeNameError int) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+func (r *Generator) findAuthorityRecords(q *dns.Question, rcodeNameError int) ([]dns.RR, []dns.RR, []dns.EDNS0, int, string) {
 	for off, end := 0, false; !end; off, end = dns.NextLabel(q.Name, off) {
 		name := q.Name[off:]
 
@@ -149,20 +149,20 @@ func (r *Generator) findAuthorityRecords(q *dns.Question, rcodeNameError int) ([
 
 		typedRecs := nameRecs[dns.TypeSOA]
 		if len(typedRecs) > 0 {
-			return nil, typedRecs, nil, rcodeNameError
+			return nil, typedRecs, nil, rcodeNameError, ""
 		}
 
 		typedRecs = nameRecs[dns.TypeNS]
 		if len(typedRecs) > 0 {
-			return nil, typedRecs, nil, dns.RcodeSuccess
+			return nil, typedRecs, nil, dns.RcodeSuccess, ""
 		}
 	}
 
-	return nil, nil, nil, rcodeNameError
+	return nil, nil, nil, rcodeNameError, ""
 }
 
-func (r *Generator) HandleQuestion(questions []dns.Question, recurse bool, dnssec bool, wr util.Addressable) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
-	answer, ns, edns0, rcode := r.handleQuestionLocal(questions, recurse, dnssec, wr)
+func (r *Generator) HandleQuestion(questions []dns.Question, recurse bool, dnssec bool, wr util.Addressable) ([]dns.RR, []dns.RR, []dns.EDNS0, int, string) {
+	answer, ns, edns0, rcode, handlerName := r.handleQuestionLocal(questions, recurse, dnssec, wr)
 
 	if recurse {
 		answer = r.resolveIfCNAME(questions, rcode, answer, wr)
@@ -177,10 +177,10 @@ func (r *Generator) HandleQuestion(questions []dns.Question, recurse bool, dnsse
 		}
 	}
 
-	return answer, ns, edns0, rcode
+	return answer, ns, edns0, rcode, handlerName
 }
 
-func (r *Generator) handleQuestionLocal(questions []dns.Question, recurse bool, dnssec bool, wr util.Addressable) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+func (r *Generator) handleQuestionLocal(questions []dns.Question, recurse bool, dnssec bool, wr util.Addressable) ([]dns.RR, []dns.RR, []dns.EDNS0, int, string) {
 	q := &questions[0]
 
 	r.recordsLock.RLock()
@@ -188,7 +188,8 @@ func (r *Generator) handleQuestionLocal(questions []dns.Question, recurse bool, 
 
 	subResolver := r.subResolvers[q.Name]
 	if subResolver != nil {
-		return subResolver.HandleQuestion(questions, recurse, false, wr)
+		answer, ns, edns0, rcode, _ := subResolver.HandleQuestion(questions, recurse, false, wr)
+		return answer, ns, edns0, rcode, subResolver.GetName()
 	}
 
 	nameRecs := r.records[q.Name]
@@ -198,7 +199,7 @@ func (r *Generator) handleQuestionLocal(questions []dns.Question, recurse bool, 
 
 	typedRecs := nameRecs[q.Qtype]
 	if len(typedRecs) > 0 {
-		return typedRecs, nil, nil, dns.RcodeSuccess
+		return typedRecs, nil, nil, dns.RcodeSuccess, ""
 	}
 
 	if q.Qtype == dns.TypeCNAME {
@@ -212,7 +213,7 @@ func (r *Generator) handleQuestionLocal(questions []dns.Question, recurse bool, 
 
 	cname := typedRecs[0].(*dns.CNAME)
 
-	localResolvedRecs, _, _, _ := r.handleQuestionLocal([]dns.Question{
+	localResolvedRecs, _, _, _, _ := r.handleQuestionLocal([]dns.Question{
 		{
 			Name:   cname.Target,
 			Qtype:  q.Qtype,
@@ -224,7 +225,7 @@ func (r *Generator) handleQuestionLocal(questions []dns.Question, recurse bool, 
 		typedRecs = append(typedRecs, localResolvedRecs...)
 	}
 
-	return typedRecs, nil, nil, dns.RcodeSuccess
+	return typedRecs, nil, nil, dns.RcodeSuccess, ""
 }
 
 func (r *Generator) clearCache() {

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func runStaticTest(handler handler.Generator, q *dns.Question) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+func runStaticTest(handler handler.Generator, q *dns.Question) ([]dns.RR, []dns.RR, []dns.EDNS0, int, string) {
 	return handler.HandleQuestion([]dns.Question{*q}, true, true, nil)
 }
 
@@ -47,7 +47,7 @@ func TestBasicZone(t *testing.T) {
 	util.FillHeader(recCNAME, "cname.example.com.", dns.TypeCNAME, 60)
 	handler.AddRecord(recCNAME)
 
-	rr, _, _, rcode := runStaticTest(handler, &dns.Question{
+	rr, _, _, rcode, _ := runStaticTest(handler, &dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
@@ -56,7 +56,7 @@ func TestBasicZone(t *testing.T) {
 	assert.ElementsMatch(t, []dns.RR{recA}, rr)
 
 	// Correctly gives NXDOMAIN
-	rr, _, _, rcode = runStaticTest(handler, &dns.Question{
+	rr, _, _, rcode, _ = runStaticTest(handler, &dns.Question{
 		Name:   "test.example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
@@ -65,7 +65,7 @@ func TestBasicZone(t *testing.T) {
 	assert.ElementsMatch(t, []dns.RR{}, rr)
 
 	// Does not return types not asked for and no NXDOMAIN
-	rr, _, _, rcode = runStaticTest(handler, &dns.Question{
+	rr, _, _, rcode, _ = runStaticTest(handler, &dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeAAAA,
 		Qclass: dns.ClassINET,
@@ -74,7 +74,7 @@ func TestBasicZone(t *testing.T) {
 	assert.ElementsMatch(t, []dns.RR{}, rr)
 
 	// Only gives type asked for
-	rr, _, _, rcode = runStaticTest(handler, &dns.Question{
+	rr, _, _, rcode, _ = runStaticTest(handler, &dns.Question{
 		Name:   "example.com.",
 		Qtype:  dns.TypeTXT,
 		Qclass: dns.ClassINET,
@@ -83,7 +83,7 @@ func TestBasicZone(t *testing.T) {
 	assert.ElementsMatch(t, []dns.RR{recTXT}, rr)
 
 	// Multiple records
-	rr, _, _, rcode = runStaticTest(handler, &dns.Question{
+	rr, _, _, rcode, _ = runStaticTest(handler, &dns.Question{
 		Name:   "a2.example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,
@@ -92,7 +92,7 @@ func TestBasicZone(t *testing.T) {
 	assert.ElementsMatch(t, []dns.RR{recA2_1, recA2_2}, rr)
 
 	// Resolves local CNAMEs
-	rr, _, _, rcode = runStaticTest(handler, &dns.Question{
+	rr, _, _, rcode, _ = runStaticTest(handler, &dns.Question{
 		Name:   "cname.example.com.",
 		Qtype:  dns.TypeA,
 		Qclass: dns.ClassINET,

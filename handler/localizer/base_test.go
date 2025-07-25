@@ -37,7 +37,7 @@ func runLocalizerTest(t *testing.T, host string, qtype uint16, remoteIP net.IP, 
 	remoteAddr := &net.TCPAddr{IP: remoteIP, Port: 12345}
 	wr := &dummyAddressable{remoteAddr: remoteAddr}
 
-	rr, _, _, rcode := handler.HandleQuestion([]dns.Question{{
+	rr, _, _, rcode, _ := handler.HandleQuestion([]dns.Question{{
 		Name:   host,
 		Qtype:  qtype,
 		Qclass: dns.ClassINET,
