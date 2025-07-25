@@ -21,13 +21,6 @@ var configFile string
 var srv *server.Server
 var enableFSNotify = os.Getenv("ENABLE_FSNOTIFY") != ""
 
-func registerAuthGenerator(mux *dns.ServeMux, gen handler.Generator, zone string) *handler.Handler {
-	hdl := handler.New(gen, true)
-	loaders = append(loaders, gen)
-	mux.Handle(zone, hdl)
-	return hdl
-}
-
 func reloadConfig() {
 	for _, gen := range loaders {
 		err := gen.Stop()
@@ -141,49 +134,6 @@ func reloadConfig() {
 		log.Printf("Resolver enabled for zones %v", resolvConf.Zones)
 	}
 
-	if len(config.Localizers.Zones) > 0 {
-		for _, locConfig := range config.Localizers.Zones {
-			loc := localizer.New()
-
-			if locConfig.Ttl > 0 {
-				loc.Ttl = uint32(locConfig.Ttl.Seconds())
-			}
-
-			rewrites := config.Localizers.Rewrites
-			if locConfig.Rewrites != nil {
-				rewrites = locConfig.Rewrites
-			}
-			err := loc.AddRewrites(rewrites)
-			if err != nil {
-				log.Panicf("Error adding localizer rewrites: %v", err)
-			}
-
-			v4v6s := config.Localizers.V4V6s
-			if locConfig.V4V6s != nil {
-				v4v6s = locConfig.V4V6s
-			}
-			err = loc.AddV4V6s(v4v6s)
-			if err != nil {
-				log.Panicf("Error adding localizer v4v6s: %v", err)
-			}
-
-			loaders = append(loaders, loc)
-
-			for _, ip := range locConfig.Subnets {
-				err := loc.AddRecord(locConfig.Zone, ip)
-				if err != nil {
-					log.Panicf("Error adding localizer record %s -> %s: %v", locConfig.Zone, ip, err)
-				}
-			}
-
-			// TODO: This will turn into a sub-handler on static, so then
-			//       this entire function will go away
-			registerAuthGenerator(mux, loc, locConfig.Zone)
-		}
-
-		log.Printf("Localizer enabled for %d zones", len(config.Localizers.Zones))
-	}
-
 	if len(config.StaticZones) > 0 {
 		for _, statConf := range config.StaticZones {
 			stat := static.New(enableFSNotify, mux, statConf.DNSSEC)
@@ -193,6 +143,47 @@ func reloadConfig() {
 				if err != nil {
 					log.Panicf("Error loading static zone file %s: %v", file, err)
 				}
+			}
+
+			if len(statConf.Localizers.Hosts) > 0 {
+				for _, locConfig := range statConf.Localizers.Hosts {
+					loc := localizer.New()
+
+					if locConfig.Ttl > 0 {
+						loc.Ttl = uint32(locConfig.Ttl.Seconds())
+					}
+
+					rewrites := statConf.Localizers.Rewrites
+					if locConfig.Rewrites != nil {
+						rewrites = locConfig.Rewrites
+					}
+					err := loc.AddRewrites(rewrites)
+					if err != nil {
+						log.Panicf("Error adding localizer rewrites: %v", err)
+					}
+
+					v4v6s := statConf.Localizers.V4V6s
+					if locConfig.V4V6s != nil {
+						v4v6s = locConfig.V4V6s
+					}
+					err = loc.AddV4V6s(v4v6s)
+					if err != nil {
+						log.Panicf("Error adding localizer v4v6s: %v", err)
+					}
+
+					loaders = append(loaders, loc)
+
+					for _, ip := range locConfig.Subnets {
+						err := loc.AddRecord(locConfig.Host, ip)
+						if err != nil {
+							log.Panicf("Error adding localizer record %s -> %s: %v", locConfig.Host, ip, err)
+						}
+					}
+
+					stat.AddSubHandler(locConfig.Host, loc)
+				}
+
+				log.Printf("Localizer enabled for %d hosts in %s zone", len(statConf.Localizers.Hosts), statConf.Zone)
 			}
 
 			loaders = append(loaders, stat)

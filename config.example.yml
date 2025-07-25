@@ -23,23 +23,24 @@ resolvers:
         max-parallel-queries: 10
         timeout: 200ms
 
-localizers:
-  zones:
-  - zone: x.example.com
-    subnets:
-      - 0.0.0.123/16
-      - ::7b/64
-    rewrites:
-      - from: 10.100.0.0/16
-        to: 10.2.0.0/16
-    v4v6s:
-      - v4: 10.0.0.0/16
-        v6: fd2c:1111:1111:1::/112
+
 
 static-zones:
   - zone: static.example.com
     files:
       - static.example.com.db
+    localizers:
+      hosts:
+      - host: x.static.example.com
+        subnets:
+          - 0.0.0.123/16
+          - ::7b/64
+        rewrites:
+          - from: 10.100.0.0/16
+            to: 10.2.0.0/16
+        v4v6s:
+          - v4: 10.0.0.0/16
+            v6: fd2c:1111:1111:1::/112
 
 ad-lists:
   block-lists:

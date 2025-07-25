@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/Doridian/foxDNS/handler"
 	"github.com/Doridian/foxDNS/util"
 	"github.com/fsnotify/fsnotify"
 	"github.com/miekg/dns"
@@ -22,6 +23,7 @@ type zoneConfig struct {
 type Generator struct {
 	configs        []zoneConfig
 	records        map[string]map[uint16][]dns.RR
+	subResolvers   map[string]handler.Generator
 	recordsLock    sync.RWMutex
 	watcher        *fsnotify.Watcher
 	enableFSNotify bool
@@ -42,6 +44,7 @@ func New(enableFSNotify bool, mux dns.Handler, dnssec *DNSSECConfig) *Generator 
 	gen := &Generator{
 		configs:        make([]zoneConfig, 0),
 		records:        make(map[string]map[uint16][]dns.RR),
+		subResolvers:   make(map[string]handler.Generator),
 		watcher:        nil,
 		enableFSNotify: enableFSNotify,
 		mux:            mux,
@@ -102,6 +105,12 @@ func (r *Generator) loadZone(rd io.Reader, file string, origin string, defaultTT
 	}
 }
 
+func (r *Generator) AddSubHandler(name string, handler handler.Generator) {
+	r.recordsLock.Lock()
+	defer r.recordsLock.Unlock()
+	r.subResolvers[dns.CanonicalName(name)] = handler
+}
+
 func (r *Generator) AddRecord(rr dns.RR) {
 	r.recordsLock.Lock()
 	defer r.recordsLock.Unlock()
@@ -153,7 +162,7 @@ func (r *Generator) findAuthorityRecords(q *dns.Question, rcodeNameError int) ([
 }
 
 func (r *Generator) HandleQuestion(questions []dns.Question, recurse bool, dnssec bool, wr util.Addressable) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
-	answer, ns, edns0, rcode := r.handleQuestionLocal(&questions[0])
+	answer, ns, edns0, rcode := r.handleQuestionLocal(questions, recurse, dnssec, wr)
 
 	if recurse {
 		answer = r.resolveIfCNAME(questions, rcode, answer, wr)
@@ -171,9 +180,16 @@ func (r *Generator) HandleQuestion(questions []dns.Question, recurse bool, dnsse
 	return answer, ns, edns0, rcode
 }
 
-func (r *Generator) handleQuestionLocal(q *dns.Question) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+func (r *Generator) handleQuestionLocal(questions []dns.Question, recurse bool, dnssec bool, wr util.Addressable) ([]dns.RR, []dns.RR, []dns.EDNS0, int) {
+	q := &questions[0]
+
 	r.recordsLock.RLock()
 	defer r.recordsLock.RUnlock()
+
+	subResolver := r.subResolvers[q.Name]
+	if subResolver != nil {
+		return subResolver.HandleQuestion(questions, recurse, false, wr)
+	}
 
 	nameRecs := r.records[q.Name]
 	if len(nameRecs) == 0 {
@@ -196,11 +212,13 @@ func (r *Generator) handleQuestionLocal(q *dns.Question) ([]dns.RR, []dns.RR, []
 
 	cname := typedRecs[0].(*dns.CNAME)
 
-	localResolvedRecs, _, _, _ := r.handleQuestionLocal(&dns.Question{
-		Name:   cname.Target,
-		Qtype:  q.Qtype,
-		Qclass: q.Qclass,
-	})
+	localResolvedRecs, _, _, _ := r.handleQuestionLocal([]dns.Question{
+		{
+			Name:   cname.Target,
+			Qtype:  q.Qtype,
+			Qclass: q.Qclass,
+		},
+	}, recurse, dnssec, wr)
 
 	if localResolvedRecs != nil {
 		typedRecs = append(typedRecs, localResolvedRecs...)

@@ -52,22 +52,22 @@ type Config struct {
 		RecordMaxTTL time.Duration `yaml:"record-max-ttl"`
 	} `yaml:"resolvers"`
 
-	Localizers struct {
-		Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
-		V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
-		Zones    []struct {
-			Zone     string                       `yaml:"zone"`
-			Subnets  []string                     `yaml:"subnets"`
-			Ttl      time.Duration                `yaml:"ttl"`
-			Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
-			V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
-		} `yaml:"zones"`
-	} `yaml:"localizers"`
-
 	StaticZones []struct {
 		Zone   string               `yaml:"zone"`
 		Files  []string             `yaml:"files"`
 		DNSSEC *static.DNSSECConfig `yaml:"dnssec"`
+
+		Localizers struct {
+			Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
+			V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
+			Hosts    []struct {
+				Host     string                       `yaml:"host"`
+				Subnets  []string                     `yaml:"subnets"`
+				Ttl      time.Duration                `yaml:"ttl"`
+				Rewrites []localizer.LocalizerRewrite `yaml:"rewrites"`
+				V4V6s    []localizer.V4V6Rewrite      `yaml:"v4v6s"`
+			} `yaml:"hosts"`
+		} `yaml:"localizers"`
 	} `yaml:"static-zones"`
 
 	AdLists struct {
