@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
-	"log"
 	"time"
 )
 
@@ -60,7 +59,6 @@ func generateCookie(previous bool, len int, data ...[]byte) []byte {
 
 	hash.Write(cookieSecret[0:32])
 	for _, d := range data {
-		log.Printf("%v", d)
 		hash.Write(d)
 	}
 	hash.Write(cookieSecret[32:64])
