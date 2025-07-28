@@ -1,8 +1,8 @@
 package util
 
 import (
-	"crypto"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"time"
 )
@@ -51,7 +51,7 @@ func getCookieSecret(previous bool) []byte {
 }
 
 func generateCookie(previous bool, len int, data ...[]byte) []byte {
-	hash := crypto.SHA256.New()
+	hash := sha256.New()
 	cookieSecret := getCookieSecret(previous)
 	if cookieSecret == nil {
 		return nil
@@ -61,7 +61,8 @@ func generateCookie(previous bool, len int, data ...[]byte) []byte {
 	for _, d := range data {
 		hash.Write(d)
 	}
-	return hash.Sum(cookieSecret[32:64])[:len]
+	hash.Write(cookieSecret[32:64])
+	return hash.Sum(nil)[:len]
 }
 
 func GenerateClientCookie(previous bool, server string) []byte {
@@ -75,7 +76,7 @@ func GenerateServerCookie(previous bool, clientCookie []byte, wr Addressable) []
 }
 
 func CookieCompare(a []byte, b []byte) bool {
-	if a == nil || b == nil || len(a) == 0 || len(b) == 0 {
+	if a == nil || b == nil || len(a) == 0 {
 		return false
 	}
 	return subtle.ConstantTimeCompare(a, b) == 1
