@@ -11,6 +11,8 @@ import (
 type RecursiveResponseWriter struct {
 	wr    util.Addressable
 	reply *dns.Msg
+
+	localAddr net.Addr
 }
 
 func NewRecursiveResponseWriter(wr util.Addressable) *RecursiveResponseWriter {
@@ -28,7 +30,10 @@ func (c *RecursiveResponseWriter) Hijack() {
 }
 
 func (c *RecursiveResponseWriter) LocalAddr() net.Addr {
-	return util.LocalAddrFromAddr(c.wr.LocalAddr())
+	if c.localAddr == nil {
+		c.localAddr = util.LocalAddrFromAddr(c.wr.LocalAddr())
+	}
+	return c.localAddr
 }
 
 func (c *RecursiveResponseWriter) RemoteAddr() net.Addr {
