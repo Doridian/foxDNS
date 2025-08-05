@@ -10,7 +10,7 @@ type Addressable interface {
 }
 
 type NetworkLocalAddr struct {
-	Parent net.Addr
+	parent net.Addr
 }
 
 func (n *NetworkLocalAddr) String() string {
@@ -19,4 +19,15 @@ func (n *NetworkLocalAddr) String() string {
 
 func (n *NetworkLocalAddr) Network() string {
 	return NetworkLocal
+}
+
+func LocalAddrFromAddr(parent net.Addr) *NetworkLocalAddr {
+	localAddr, ok := parent.(*NetworkLocalAddr)
+	if ok {
+		return localAddr
+	}
+
+	return &NetworkLocalAddr{
+		parent: parent,
+	}
 }

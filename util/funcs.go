@@ -15,7 +15,7 @@ func ExtractIP(addr net.Addr) net.IP {
 	case *net.IPAddr:
 		return convAddr.IP
 	case *NetworkLocalAddr:
-		return ExtractIP(convAddr.Parent)
+		return ExtractIP(convAddr.parent)
 	default:
 		return net.IPv4(0, 0, 0, 0)
 	}
