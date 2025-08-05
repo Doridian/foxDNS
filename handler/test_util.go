@@ -32,10 +32,6 @@ func (w *TestResponseWriter) Hijack() {
 	w.HadWrites = true
 }
 
-func (w *TestResponseWriter) Network() string {
-	return "udp"
-}
-
 func (w *TestResponseWriter) LocalAddr() net.Addr {
 	if w.LocalAddrVal == nil {
 		return &net.TCPAddr{

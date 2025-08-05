@@ -6,14 +6,6 @@ import (
 	"github.com/miekg/dns"
 )
 
-const NetworkLocal = "local"
-
-type Addressable interface {
-	LocalAddr() net.Addr
-	RemoteAddr() net.Addr
-	Network() string
-}
-
 func ExtractIP(addr net.Addr) net.IP {
 	switch convAddr := addr.(type) {
 	case *net.TCPAddr:
@@ -22,6 +14,8 @@ func ExtractIP(addr net.Addr) net.IP {
 		return convAddr.IP
 	case *net.IPAddr:
 		return convAddr.IP
+	case *NetworkLocalAddr:
+		return ExtractIP(convAddr.Parent)
 	default:
 		return net.IPv4(0, 0, 0, 0)
 	}
@@ -46,5 +40,5 @@ func IsBadQuery(q *dns.Question) bool {
 }
 
 func IsLocalQuery(wr Addressable) bool {
-	return wr.Network() == NetworkLocal
+	return wr.LocalAddr().Network() == NetworkLocal
 }

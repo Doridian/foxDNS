@@ -28,11 +28,9 @@ func (c *RecursiveResponseWriter) Hijack() {
 }
 
 func (c *RecursiveResponseWriter) LocalAddr() net.Addr {
-	return c.wr.LocalAddr()
-}
-
-func (c *RecursiveResponseWriter) Network() string {
-	return util.NetworkLocal
+	return &util.NetworkLocalAddr{
+		Parent: c.wr.LocalAddr(),
+	}
 }
 
 func (c *RecursiveResponseWriter) RemoteAddr() net.Addr {

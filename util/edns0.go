@@ -44,8 +44,8 @@ var secureProtocols = map[string]bool{
 	NetworkLocal: true,
 }
 
-func IsSecureProtocol(proto string) bool {
-	return secureProtocols[proto]
+func IsSecureProtocol(wr Addressable) bool {
+	return secureProtocols[wr.LocalAddr().Network()]
 }
 
 func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr Addressable) *dns.OPT {
@@ -58,7 +58,7 @@ func ApplyEDNS0Reply(query *dns.Msg, reply *dns.Msg, option []dns.EDNS0, wr Addr
 		return nil
 	}
 
-	paddingAllowed := RequireCookie || IsSecureProtocol(wr.Network())
+	paddingAllowed := RequireCookie || IsSecureProtocol(wr)
 	clientRequestedPadding := false
 
 	for _, opt := range queryEdns0.Option {
@@ -80,7 +80,7 @@ func ApplyEDNS0ReplyEarly(query *dns.Msg, reply *dns.Msg, wr Addressable) (bool,
 	queryEdns0 := query.IsEdns0()
 
 	doRequireCookie := RequireCookie
-	if IsSecureProtocol(wr.Network()) {
+	if IsSecureProtocol(wr) {
 		doRequireCookie = false
 	}
 

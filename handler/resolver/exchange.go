@@ -78,7 +78,7 @@ func (g *Generator) exchangeWithRetry(q *dns.Question) (resp *dns.Msg, err error
 		}
 
 		edns0Opts := make([]dns.EDNS0, 0, 1)
-		if info.server.RequireCookie || !util.IsSecureProtocol(info.conn.RemoteAddr().Network()) {
+		if info.server.RequireCookie || !util.IsSecureProtocol(info.conn) {
 			edns0Opts = append(edns0Opts, &dns.EDNS0_COOKIE{
 				Code:   dns.EDNS0COOKIE,
 				Cookie: hex.EncodeToString(append(clientCookie, info.serverCookie...)),
